@@ -1,6 +1,6 @@
 # STATE.md
 ## Current phase
-Phase 2 — JWT auth: register/login/refresh endpoints + custom User model wiring (not started)
+Phase 3 — Company/Role/Round data endpoints (not started)
 
 ## Done
 
@@ -41,25 +41,47 @@ Phase 2 — JWT auth: register/login/refresh endpoints + custom User model wirin
 - `manage.py check` → 0 issues (verified locally)
 - `makemigrations` → clean output, no warnings
 
-## Phase 1 Checkpoint (run these after pulling)
+### Phase 2 ✅
+- `apps/accounts/serializers.py` — RegisterSerializer (email uniqueness check,
+  password confirmation, validate_password), LoginSerializer (email + password)
+- `apps/accounts/views.py` — RegisterView (POST → 201 + tokens), LoginView
+  (email lookup → authenticate by username → 200 + tokens); both AllowAny
+- `apps/accounts/urls.py` — /api/auth/register/, /api/auth/login/
+- `backend/config/urls.py` — auth URLs + simplejwt TokenRefreshView at
+  /api/auth/token/refresh/; health check phase bumped to 2
+- _token_response() helper returns access, refresh, and user snapshot
+  (id, email, username, subscription_plan) in one payload
+
+## Phase 2 Checkpoint (run these after pulling)
 ```bash
 docker compose up --build -d
 docker compose exec backend python manage.py migrate
-docker compose exec backend python manage.py createsuperuser
-# visit http://localhost:8000/admin — confirm all models appear:
-# Users, Companies, Roles, Rounds, InterviewQuestions, InterviewSessions
-# Manually add one test Company via admin
+
+# Register
+curl -s -X POST http://localhost:8000/api/auth/register/ \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","username":"testuser","password":"Str0ng!Pass","password2":"Str0ng!Pass"}' | python3 -m json.tool
+
+# Login
+curl -s -X POST http://localhost:8000/api/auth/login/ \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"Str0ng!Pass"}' | python3 -m json.tool
+
+# Refresh (paste refresh token from login response)
+curl -s -X POST http://localhost:8000/api/auth/token/refresh/ \
+  -H "Content-Type: application/json" \
+  -d '{"refresh":"<REFRESH_TOKEN>"}' | python3 -m json.tool
 ```
 
 ## Next
-Phase 2 — JWT auth: register/login/refresh endpoints
+Phase 3 — Company/Role/Round read endpoints
 
-### What Phase 2 must deliver:
-- `apps/accounts/serializers.py` — RegisterSerializer, LoginSerializer
-- `apps/accounts/views.py` — RegisterView, LoginView (using simplejwt)
-- `apps/accounts/urls.py` — routes for /api/auth/register/, /api/auth/login/
-- `backend/config/urls.py` — wire auth URLs + simplejwt refresh endpoint
-- Verified checkpoint: POST /api/auth/register/ and /api/auth/login/ return tokens
+### What Phase 3 must deliver:
+- `apps/companies/serializers.py` — CompanySerializer, RoleSerializer, RoundSerializer, InterviewQuestionSerializer
+- `apps/companies/views.py` — list/detail views (read-only for regular users, write via admin)
+- `apps/companies/urls.py` — /api/companies/, /api/companies/<id>/roles/, /api/companies/<id>/roles/<id>/rounds/
+- `backend/config/urls.py` — wire companies URLs
+- Verified checkpoint: authenticated GET requests return company/role/round data
 
 ## Decisions / deviations from spec
 - Next.js pinned to 14.2.35 (patched version for Dec 2025 RSC CVEs)
@@ -67,6 +89,8 @@ Phase 2 — JWT auth: register/login/refresh endpoints
   so the folder structure is fully in place from the start.
 - `InterviewSession` uses `settings.AUTH_USER_MODEL` (not a direct import of
   `User`) — correct Django pattern to avoid circular imports.
+- Login uses email lookup + authenticate(username=...) because Django's
+  default backend authenticates by username; no custom backend needed.
 
 ## Known issues
 - None

@@ -1,20 +1,22 @@
 """
-Root URL conf. Phase 0: admin only, so the project boots and
-http://localhost:8000 returns something. API routes (/api/auth/,
-/api/companies/, /api/interviews/, /api/subscriptions/) are wired in
-as each app's urls.py is built (Phases 2-7), per Section 5 of the spec.
+Root URL conf.
+Phase 2: auth endpoints wired (/api/auth/register/, /api/auth/login/,
+/api/auth/token/refresh/). Health check updated to reflect current phase.
 """
 
 from django.contrib import admin
 from django.http import JsonResponse
-from django.urls import path
+from django.urls import include, path
+from rest_framework_simplejwt.views import TokenRefreshView
 
 
 def health_check(request):
-    return JsonResponse({"status": "ok", "phase": 0})
+    return JsonResponse({"status": "ok", "phase": 2})
 
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("", health_check),
+    path("api/auth/", include("apps.accounts.urls")),
+    path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
 ]
