@@ -1,6 +1,6 @@
 # STATE.md
 ## Current phase
-Phase 3 — Company/Role/Round data endpoints (not started)
+Phase 4 — InterviewSession endpoints (not started)
 
 ## Done
 
@@ -52,36 +52,64 @@ Phase 3 — Company/Role/Round data endpoints (not started)
 - _token_response() helper returns access, refresh, and user snapshot
   (id, email, username, subscription_plan) in one payload
 
-## Phase 2 Checkpoint (run these after pulling)
+### Phase 3 ✅
+- `apps/companies/serializers.py` — CompanyListSerializer (flat, for list),
+  CompanySerializer (nested roles→rounds→questions, for detail),
+  RoleSerializer (nested rounds→questions), RoundSerializer (nested questions),
+  InterviewQuestionSerializer
+- `apps/companies/views.py` — CompanyListView, CompanyDetailView, RoleListView,
+  RoundListView, RoundDetailView; all require IsAuthenticated; prefetch_related
+  used throughout to avoid N+1 queries
+- `apps/companies/urls.py` — /api/companies/, /api/companies/<id>/,
+  /api/companies/<id>/roles/, /api/companies/<id>/roles/<id>/rounds/,
+  /api/companies/<id>/roles/<id>/rounds/<id>/
+- `backend/config/urls.py` — companies URLs wired; health check bumped to phase 3
+
+## Phase 3 Checkpoint (run these after pulling)
 ```bash
 docker compose up --build -d
 docker compose exec backend python manage.py migrate
 
-# Register
-curl -s -X POST http://localhost:8000/api/auth/register/ \
+# Get a token first (register or login from Phase 2)
+TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/login/ \
   -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","username":"testuser","password":"Str0ng!Pass","password2":"Str0ng!Pass"}' | python3 -m json.tool
+  -d '{"email":"test@example.com","password":"Str0ng!Pass"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['access'])")
 
-# Login
-curl -s -X POST http://localhost:8000/api/auth/login/ \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"Str0ng!Pass"}' | python3 -m json.tool
+# Seed some data via Django admin or shell, then:
 
-# Refresh (paste refresh token from login response)
-curl -s -X POST http://localhost:8000/api/auth/token/refresh/ \
-  -H "Content-Type: application/json" \
-  -d '{"refresh":"<REFRESH_TOKEN>"}' | python3 -m json.tool
+# List companies
+curl -s http://localhost:8000/api/companies/ \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+
+# Company detail (with nested roles/rounds/questions)
+curl -s http://localhost:8000/api/companies/1/ \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+
+# Roles for a company
+curl -s http://localhost:8000/api/companies/1/roles/ \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+
+# Rounds for a role
+curl -s http://localhost:8000/api/companies/1/roles/1/rounds/ \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+
+# Single round with questions
+curl -s http://localhost:8000/api/companies/1/roles/1/rounds/1/ \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+
+# Unauthenticated request should return 401
+curl -s http://localhost:8000/api/companies/ | python3 -m json.tool
 ```
 
 ## Next
-Phase 3 — Company/Role/Round read endpoints
+Phase 4 — InterviewSession endpoints
 
-### What Phase 3 must deliver:
-- `apps/companies/serializers.py` — CompanySerializer, RoleSerializer, RoundSerializer, InterviewQuestionSerializer
-- `apps/companies/views.py` — list/detail views (read-only for regular users, write via admin)
-- `apps/companies/urls.py` — /api/companies/, /api/companies/<id>/roles/, /api/companies/<id>/roles/<id>/rounds/
-- `backend/config/urls.py` — wire companies URLs
-- Verified checkpoint: authenticated GET requests return company/role/round data
+### What Phase 4 must deliver:
+- `apps/interviews/serializers.py` — InterviewSessionSerializer
+- `apps/interviews/views.py` — create session, list user's sessions, retrieve single session
+- `apps/interviews/urls.py` — /api/interviews/, /api/interviews/<id>/
+- `backend/config/urls.py` — wire interviews URLs
+- Verified checkpoint: authenticated user can create and list their own sessions only
 
 ## Decisions / deviations from spec
 - Next.js pinned to 14.2.35 (patched version for Dec 2025 RSC CVEs)
@@ -91,6 +119,8 @@ Phase 3 — Company/Role/Round read endpoints
   `User`) — correct Django pattern to avoid circular imports.
 - Login uses email lookup + authenticate(username=...) because Django's
   default backend authenticates by username; no custom backend needed.
+- CompanyListView uses flat CompanyListSerializer (no nested roles) to keep list
+  payloads small; full nesting only on /api/companies/<id>/ detail endpoint.
 
 ## Known issues
 - None
