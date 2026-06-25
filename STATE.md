@@ -1,6 +1,6 @@
 # STATE.md
 ## Current phase
-Phase 4 — InterviewSession endpoints (not started)
+Phase 5 — AI interview engine (not started)
 
 ## Done
 
@@ -101,15 +101,53 @@ curl -s http://localhost:8000/api/companies/1/roles/1/rounds/1/ \
 curl -s http://localhost:8000/api/companies/ | python3 -m json.tool
 ```
 
-## Next
-Phase 4 — InterviewSession endpoints
+### Phase 4 ✅
+- `apps/interviews/serializers.py` — `InterviewSessionSerializer` (create/retrieve/patch;
+  injects `request.user` on create) and `InterviewSessionListSerializer` (flat, omits
+  transcript/scores for list payloads)
+- `apps/interviews/views.py` — `InterviewSessionListCreateView` (GET list + POST create),
+  `InterviewSessionDetailView` (GET detail + PATCH partial update); both scope queryset
+  to `request.user` — users can never read or modify each other's sessions
+- `apps/interviews/urls.py` — `/api/interviews/`, `/api/interviews/<id>/`
+- `backend/config/urls.py` — interviews URLs wired; health check bumped to phase 4
 
-### What Phase 4 must deliver:
-- `apps/interviews/serializers.py` — InterviewSessionSerializer
-- `apps/interviews/views.py` — create session, list user's sessions, retrieve single session
-- `apps/interviews/urls.py` — /api/interviews/, /api/interviews/<id>/
-- `backend/config/urls.py` — wire interviews URLs
-- Verified checkpoint: authenticated user can create and list their own sessions only
+## Phase 4 Checkpoint
+```bash
+docker compose up --build -d
+docker compose exec backend python manage.py migrate
+
+TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/login/ \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"Str0ng!Pass"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['access'])")
+
+# Create a session (round id=1 must exist)
+curl -s -X POST http://localhost:8000/api/interviews/ \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"round": 1, "status": "in_progress", "transcript": [], "scores": {}}' | python3 -m json.tool
+
+# List user's sessions
+curl -s http://localhost:8000/api/interviews/ \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+
+# Retrieve single session
+curl -s http://localhost:8000/api/interviews/1/ \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+
+# Patch — mark completed and write scores
+curl -s -X PATCH http://localhost:8000/api/interviews/1/ \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "completed", "scores": {"overall": 82}}' | python3 -m json.tool
+
+# Unauthenticated → 401
+curl -s http://localhost:8000/api/interviews/ | python3 -m json.tool
+
+# Another user's session → 404 (not 403 — no resource leakage)
+```
+
+## Next
+Phase 5 — AI interview engine
 
 ## Decisions / deviations from spec
 - Next.js pinned to 14.2.35 (patched version for Dec 2025 RSC CVEs)

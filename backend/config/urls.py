@@ -1,6 +1,6 @@
 """
 Root URL conf.
-Phase 3: companies/roles/rounds read endpoints wired (/api/companies/...).
+Phase 4: InterviewSession endpoints wired (/api/interviews/...).
 """
 
 from django.contrib import admin
@@ -10,7 +10,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 
 
 def health_check(request):
-    return JsonResponse({"status": "ok", "phase": 3})
+    return JsonResponse({"status": "ok", "phase": 4})
 
 
 urlpatterns = [
@@ -19,4 +19,5 @@ urlpatterns = [
     path("api/auth/", include("apps.accounts.urls")),
     path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
     path("api/companies/", include("apps.companies.urls")),
+    path("api/interviews/", include("apps.interviews.urls")),
 ]

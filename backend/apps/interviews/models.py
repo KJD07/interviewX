@@ -5,6 +5,11 @@ from apps.companies.models import Round
 
 
 class InterviewSession(models.Model):
+    class Status(models.TextChoices):
+        IN_PROGRESS = "in_progress", "In Progress"
+        COMPLETED = "completed", "Completed"
+        ABANDONED = "abandoned", "Abandoned"
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -13,6 +18,11 @@ class InterviewSession(models.Model):
     round = models.ForeignKey(
         Round,
         on_delete=models.CASCADE,
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.IN_PROGRESS,
     )
     # [{"role": "user"/"ai", "text": "...", "ts": "..."}]
     transcript = models.JSONField(default=list)
