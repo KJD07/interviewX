@@ -1,6 +1,6 @@
 """
 Root URL conf.
-Phase 4: InterviewSession endpoints wired (/api/interviews/...).
+Phase 5: AI interview engine wired (/api/interviews/start/, /chat/, /end/).
 """
 
 from django.contrib import admin
@@ -10,7 +10,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 
 
 def health_check(request):
-    return JsonResponse({"status": "ok", "phase": 4})
+    return JsonResponse({"status": "ok", "phase": 5})
 
 
 urlpatterns = [
