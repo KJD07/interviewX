@@ -1,6 +1,6 @@
 # STATE.md
 ## Current phase
-Phase 5 — AI interview engine (not started)
+Phase 7 — Interview flow UI (next)
 
 ## Done
 
@@ -21,133 +21,98 @@ Phase 5 — AI interview engine (not started)
 
 ### Phase 1 ✅
 - `AUTH_USER_MODEL = "accounts.User"` added to `backend/config/settings.py`
-  (BEFORE any migration was ever run — critical ordering satisfied)
-- `apps/accounts/models.py` — custom `User(AbstractUser)` with exact field names
-  from spec Section 4: `subscription_plan`, `interviews_this_month`, `subscription_end_date`
+- `apps/accounts/models.py` — custom `User(AbstractUser)` with fields:
+  `subscription_plan`, `interviews_this_month`, `subscription_end_date`
 - `apps/companies/models.py` — `Company`, `Role`, `Round`, `InterviewQuestion`
-  with exact field names from spec Section 4
-- `apps/interviews/models.py` — `InterviewSession` referencing `settings.AUTH_USER_MODEL`
-  and `apps.companies.models.Round`; transcript/scores as JSONField per spec
-- `apps/subscriptions/models.py` — placeholder (real logic Phase 7)
-- All admin files created: `accounts/admin.py`, `companies/admin.py`,
-  `interviews/admin.py`, `subscriptions/admin.py`
-  - UserAdmin extends BaseUserAdmin, exposes subscription fields
-  - CompanyAdmin has RoleInline, RoleAdmin has RoundInline, RoundAdmin has
-    InterviewQuestionInline — easy data entry during dev
-- Migrations generated and committed:
-  - `apps/accounts/migrations/0001_initial.py`
-  - `apps/companies/migrations/0001_initial.py`
-  - `apps/interviews/migrations/0001_initial.py`
-- `manage.py check` → 0 issues (verified locally)
-- `makemigrations` → clean output, no warnings
+- `apps/interviews/models.py` — `InterviewSession` with transcript/scores as JSONField
+- `apps/subscriptions/models.py` — placeholder
+- All admin files created with inline nesting
+- Migrations generated and committed
 
 ### Phase 2 ✅
-- `apps/accounts/serializers.py` — RegisterSerializer (email uniqueness check,
-  password confirmation, validate_password), LoginSerializer (email + password)
+- `apps/accounts/serializers.py` — RegisterSerializer, LoginSerializer
 - `apps/accounts/views.py` — RegisterView (POST → 201 + tokens), LoginView
-  (email lookup → authenticate by username → 200 + tokens); both AllowAny
 - `apps/accounts/urls.py` — /api/auth/register/, /api/auth/login/
 - `backend/config/urls.py` — auth URLs + simplejwt TokenRefreshView at
-  /api/auth/token/refresh/; health check phase bumped to 2
-- _token_response() helper returns access, refresh, and user snapshot
-  (id, email, username, subscription_plan) in one payload
+  /api/auth/token/refresh/
 
 ### Phase 3 ✅
-- `apps/companies/serializers.py` — CompanyListSerializer (flat, for list),
-  CompanySerializer (nested roles→rounds→questions, for detail),
-  RoleSerializer (nested rounds→questions), RoundSerializer (nested questions),
-  InterviewQuestionSerializer
+- `apps/companies/serializers.py` — flat list + nested detail serializers
 - `apps/companies/views.py` — CompanyListView, CompanyDetailView, RoleListView,
-  RoundListView, RoundDetailView; all require IsAuthenticated; prefetch_related
-  used throughout to avoid N+1 queries
+  RoundListView, RoundDetailView; all IsAuthenticated; prefetch_related throughout
 - `apps/companies/urls.py` — /api/companies/, /api/companies/<id>/,
   /api/companies/<id>/roles/, /api/companies/<id>/roles/<id>/rounds/,
   /api/companies/<id>/roles/<id>/rounds/<id>/
-- `backend/config/urls.py` — companies URLs wired; health check bumped to phase 3
-
-## Phase 3 Checkpoint (run these after pulling)
-```bash
-docker compose up --build -d
-docker compose exec backend python manage.py migrate
-
-# Get a token first (register or login from Phase 2)
-TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/login/ \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"Str0ng!Pass"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['access'])")
-
-# Seed some data via Django admin or shell, then:
-
-# List companies
-curl -s http://localhost:8000/api/companies/ \
-  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
-
-# Company detail (with nested roles/rounds/questions)
-curl -s http://localhost:8000/api/companies/1/ \
-  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
-
-# Roles for a company
-curl -s http://localhost:8000/api/companies/1/roles/ \
-  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
-
-# Rounds for a role
-curl -s http://localhost:8000/api/companies/1/roles/1/rounds/ \
-  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
-
-# Single round with questions
-curl -s http://localhost:8000/api/companies/1/roles/1/rounds/1/ \
-  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
-
-# Unauthenticated request should return 401
-curl -s http://localhost:8000/api/companies/ | python3 -m json.tool
-```
 
 ### Phase 4 ✅
-- `apps/interviews/serializers.py` — `InterviewSessionSerializer` (create/retrieve/patch;
-  injects `request.user` on create) and `InterviewSessionListSerializer` (flat, omits
-  transcript/scores for list payloads)
-- `apps/interviews/views.py` — `InterviewSessionListCreateView` (GET list + POST create),
-  `InterviewSessionDetailView` (GET detail + PATCH partial update); both scope queryset
-  to `request.user` — users can never read or modify each other's sessions
-- `apps/interviews/urls.py` — `/api/interviews/`, `/api/interviews/<id>/`
-- `backend/config/urls.py` — interviews URLs wired; health check bumped to phase 4
+- `apps/interviews/serializers.py` — InterviewSessionSerializer +
+  InterviewSessionListSerializer
+- `apps/interviews/views.py` — InterviewSessionListCreateView,
+  InterviewSessionDetailView; scoped to request.user
+- `apps/interviews/urls.py` — /api/interviews/, /api/interviews/<id>/
 
-## Phase 4 Checkpoint
-```bash
-docker compose up --build -d
-docker compose exec backend python manage.py migrate
+### Phase 5 ✅
+NOTE: Phase 5 was fully built before STATE.md was updated. All three AI engine
+endpoints exist and are wired. STATE.md was incorrectly saying "not started."
 
-TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/login/ \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"Str0ng!Pass"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['access'])")
+- `core/openrouter_client.py` — `build_interview_system_prompt`,
+  `build_feedback_prompt`, `chat_completion` (httpx, GPT-4o-mini via OpenRouter)
+- `apps/interviews/views.py` — `StartInterviewView` (POST /api/interviews/start/),
+  `ChatView` (POST /api/interviews/<id>/chat/),
+  `EndInterviewView` (POST /api/interviews/<id>/end/)
+- `apps/interviews/models.py` — `feedback` TextField added, `ended_at` field
+- `apps/interviews/urls.py` — all three AI engine routes wired
+- Plan limit enforcement: free users capped at 2 interviews/month
+- Feedback scoring: communication, technical, problem_solving, overall (0–10)
 
-# Create a session (round id=1 must exist)
-curl -s -X POST http://localhost:8000/api/interviews/ \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"round": 1, "status": "in_progress", "transcript": [], "scores": {}}' | python3 -m json.tool
+### Phase 6 ✅
+Files changed (all in `frontend/src/`):
 
-# List user's sessions
-curl -s http://localhost:8000/api/interviews/ \
-  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+- `lib/api.ts` — Full fetch wrapper with:
+  - JWT Bearer header injection
+  - Auto-refresh on 401 (with concurrent-request queue to prevent token
+    race conditions)
+  - `ApiError` class (status + detail + optional code)
+  - Typed endpoints: `auth.register`, `auth.login`, `companies.list`,
+    `companies.detail`, `interviews.list`, `interviews.detail`,
+    `interviews.start`, `interviews.chat`, `interviews.end`
+  - `tokens` object for localStorage access/refresh storage (SSR-safe)
 
-# Retrieve single session
-curl -s http://localhost:8000/api/interviews/1/ \
-  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+- `lib/auth.ts` — Re-exports `tokens` and types from api.ts (keeps old
+  import path alive)
 
-# Patch — mark completed and write scores
-curl -s -X PATCH http://localhost:8000/api/interviews/1/ \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"status": "completed", "scores": {"overall": 82}}' | python3 -m json.tool
+- `context/AuthContext.tsx` — React context providing `user`, `loading`,
+  `login`, `register`, `logout`; user snapshot persisted to `ix_user` in
+  localStorage for instant hydration on reload
 
-# Unauthenticated → 401
-curl -s http://localhost:8000/api/interviews/ | python3 -m json.tool
+- `hooks/useAuth.ts` — Re-export of `useAuth` for ergonomic imports
 
-# Another user's session → 404 (not 403 — no resource leakage)
-```
+- `components/ProtectedRoute.tsx` — Client component that redirects to /login
+  if unauthenticated; shows "LOADING" spinner during hydration
+
+- `app/globals.css` — Design tokens (CSS vars), Inter font, `cursor-blink`
+  keyframe (the signature element), `fade-up` animation
+
+- `app/layout.tsx` — Wraps app in `<AuthProvider>`
+
+- `app/page.tsx` — Redirects to /dashboard or /login depending on auth state
+
+- `app/login/page.tsx` — Login form (email + password), error display,
+  link to /register
+
+- `app/register/page.tsx` — Register form (email + username + password +
+  confirm), field-level error for password mismatch
+
+- `app/dashboard/page.tsx` — Protected; shows session history table (status
+  badge, per-skill scores, date), plan badge + monthly usage, empty state,
+  "Start interview" CTA → /companies
 
 ## Next
-Phase 5 — AI interview engine
+Phase 7 — Interview flow UI
+- `/companies` page: list companies → click to see roles → click role to see
+  rounds → "Start interview" button calls POST /api/interviews/start/
+- `/interview/[sessionId]` page: the chat interface (ChatView loop, End button)
+- Route both from dashboard "Start interview" CTA and from the company browser
 
 ## Decisions / deviations from spec
 - Next.js pinned to 14.2.35 (patched version for Dec 2025 RSC CVEs)
@@ -159,6 +124,10 @@ Phase 5 — AI interview engine
   default backend authenticates by username; no custom backend needed.
 - CompanyListView uses flat CompanyListSerializer (no nested roles) to keep list
   payloads small; full nesting only on /api/companies/<id>/ detail endpoint.
+- Token refresh uses a queue to prevent race conditions when multiple requests
+  fire simultaneously on a stale access token.
+- User snapshot stored in `ix_user` localStorage to avoid a round-trip on
+  every page load; cleared on logout.
 
 ## Known issues
 - None

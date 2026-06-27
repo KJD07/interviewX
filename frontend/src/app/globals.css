@@ -1,3 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --navy:       #0F172A;
+  --navy-light: #1E293B;
+  --navy-mid:   #334155;
+  --indigo:     #6366F1;
+  --indigo-dim: #4F46E5;
+  --indigo-glow: rgba(99, 102, 241, 0.15);
+  --slate:      #94A3B8;
+  --slate-dim:  #64748B;
+  --white:      #F8FAFC;
+  --danger:     #EF4444;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: var(--navy);
+  color: var(--white);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  min-height: 100vh;
+  background-color: var(--navy);
+}
+
+/* Cursor blink — the signature animation */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+.cursor-blink::after {
+  content: '|';
+  display: inline-block;
+  margin-left: 2px;
+  color: var(--indigo);
+  animation: blink 1s step-end infinite;
+}
+
+/* Input focus ring in indigo */
+input:focus {
+  outline: none;
+  border-color: var(--indigo) !important;
+  box-shadow: 0 0 0 3px var(--indigo-glow);
+}
+
+/* Subtle fade-up for page transitions */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up {
+  animation: fadeUp 0.35s ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-up { animation: none; }
+  .cursor-blink::after { animation: none; }
+}

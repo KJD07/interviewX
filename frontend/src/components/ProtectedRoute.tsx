@@ -3,13 +3,14 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
-export default function Home() {
+export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    router.replace(user ? "/dashboard" : "/login");
+    if (!user) router.replace("/login");
   }, [user, router]);
 
-  return null;
+  if (!user) return null;
+  return <>{children}</>;
 }
