@@ -21,6 +21,7 @@ interface AuthContextValue {
     password2: string
   ) => Promise<void>;
   logout: () => void;
+  refreshUser: () => Promise<void>;  // ← added
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -36,7 +37,6 @@ function readUserFromStorage(): User | null {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // Initialize synchronously — no useEffect, no loading state needed
   const [user, setUser] = useState<User | null>(readUserFromStorage);
 
   const persistUser = (u: User) => {
@@ -70,8 +70,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
+  const refreshUser = useCallback(async () => {  // ← added
+    const fresh = await auth.me();
+    persistUser(fresh);
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, loading: false, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading: false, login, register, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

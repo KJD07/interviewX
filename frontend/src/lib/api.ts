@@ -27,7 +27,8 @@ export interface User {
   id: number;
   email: string;
   username: string;
-  subscription_plan: "free" | "pro";
+  subscription_plan: "free" | "premium";
+  interviews_this_month?: number;
 }
 
 export interface AuthResponse {
@@ -184,6 +185,8 @@ export const auth = {
       method: "POST",
       body: JSON.stringify({ email, password }),
     }),
+
+  me: () => request<User>("/api/auth/me/"),
 };
 
 // ── Company endpoints ─────────────────────────────────────────────────────────
@@ -214,6 +217,40 @@ export const interviews = {
   end: (session_id: number) =>
     request<InterviewSession>(`/api/interviews/${session_id}/end/`, {
       method: "POST",
+    }),
+};
+
+// ── Subscription endpoints ────────────────────────────────────────────────────
+
+export interface CreateOrderResponse {
+  order_id: string;
+  amount: number;
+  currency: string;
+  key_id: string;
+  user_email: string;
+  user_name: string;
+}
+
+export interface VerifyPaymentResponse {
+  detail: string;
+  subscription_plan: string;
+  subscription_end_date: string;
+}
+
+export const subscriptions = {
+  createOrder: () =>
+    request<CreateOrderResponse>("/api/subscriptions/create-order/", {
+      method: "POST",
+    }),
+
+  verifyPayment: (
+    razorpay_order_id: string,
+    razorpay_payment_id: string,
+    razorpay_signature: string
+  ) =>
+    request<VerifyPaymentResponse>("/api/subscriptions/verify-payment/", {
+      method: "POST",
+      body: JSON.stringify({ razorpay_order_id, razorpay_payment_id, razorpay_signature }),
     }),
 };
 

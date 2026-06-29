@@ -124,3 +124,7 @@ CORS_ALLOWED_ORIGINS = [
 
 # --- OpenRouter (used starting Phase 4) ---
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+
+# --- Razorpay (Phase 8) ---
+RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "")
+RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")

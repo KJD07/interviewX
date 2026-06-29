@@ -9,8 +9,8 @@ import type { InterviewSession } from "@/lib/api";
 function StatusBadge({ status }: { status: InterviewSession["status"] }) {
   const map = {
     in_progress: { label: "In progress", bg: "rgba(99,102,241,0.15)", color: "var(--indigo)" },
-    completed:   { label: "Completed",   bg: "rgba(34,197,94,0.12)",  color: "#22c55e" },
-    abandoned:   { label: "Abandoned",   bg: "rgba(100,116,139,0.15)", color: "var(--slate)" },
+    completed: { label: "Completed", bg: "rgba(34,197,94,0.12)", color: "#22c55e" },
+    abandoned: { label: "Abandoned", bg: "rgba(100,116,139,0.15)", color: "var(--slate)" },
   };
   const s = map[status];
   return (
@@ -40,13 +40,14 @@ function formatDate(iso: string) {
 }
 
 export default function DashboardPage() {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const router = useRouter();
   const [sessions, setSessions] = useState<InterviewSession[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [fetchError, setFetchError] = useState("");
 
   useEffect(() => {
+    refreshUser().catch(() => { });
     interviews.list()
       .then(setSessions)
       .catch((err) => {
@@ -61,7 +62,7 @@ export default function DashboardPage() {
     router.replace("/login");
   };
 
-  const isPro = user?.subscription_plan === "pro";
+  const isPro = user?.subscription_plan === "premium";
   const monthlyUsed = (user as any)?.interviews_this_month ?? 0;
   const FREE_LIMIT = 2;
 
@@ -114,21 +115,36 @@ export default function DashboardPage() {
                 <p className="mt-1 text-sm" style={{ color: "var(--slate)" }}>
                   {monthlyUsed}/{FREE_LIMIT} free interviews used this month.{" "}
                   {monthlyUsed >= FREE_LIMIT && (
-                    <span style={{ color: "var(--indigo)" }}>
-                      Upgrade to continue.
-                    </span>
+                    <button
+                      onClick={() => router.push("/upgrade")}
+                      className="underline"
+                      style={{ color: "var(--indigo)" }}
+                    >
+                      Upgrade to continue →
+                    </button>
                   )}
                 </p>
               )}
             </div>
-            <button
-              onClick={() => router.push("/companies")}
-              disabled={!isPro && monthlyUsed >= FREE_LIMIT}
-              className="px-5 py-2.5 rounded text-sm font-semibold transition-opacity disabled:opacity-40"
-              style={{ background: "var(--indigo)", color: "var(--white)" }}
-            >
-              + Start interview
-            </button>
+            <div className="flex items-center gap-3">
+              {!isPro && monthlyUsed >= FREE_LIMIT && (
+                <button
+                  onClick={() => router.push("/upgrade")}
+                  className="px-5 py-2.5 rounded text-sm font-semibold"
+                  style={{ background: "var(--indigo-glow)", color: "var(--indigo)", border: "1px solid var(--indigo)" }}
+                >
+                  Upgrade ↗
+                </button>
+              )}
+              <button
+                onClick={() => router.push("/companies")}
+                disabled={!isPro && monthlyUsed >= FREE_LIMIT}
+                className="px-5 py-2.5 rounded text-sm font-semibold transition-opacity disabled:opacity-40"
+                style={{ background: "var(--indigo)", color: "var(--white)" }}
+              >
+                + Start interview
+              </button>
+            </div>
           </div>
 
           {/* Sessions table */}

@@ -1,6 +1,6 @@
 """
 Root URL conf.
-Phase 5: AI interview engine wired (/api/interviews/start/, /chat/, /end/).
+Phase 8: Subscriptions + Razorpay wired (/api/subscriptions/).
 """
 
 from django.contrib import admin
@@ -10,7 +10,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 
 
 def health_check(request):
-    return JsonResponse({"status": "ok", "phase": 5})
+    return JsonResponse({"status": "ok", "phase": 8})
 
 
 urlpatterns = [
@@ -20,4 +20,5 @@ urlpatterns = [
     path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
     path("api/companies/", include("apps.companies.urls")),
     path("api/interviews/", include("apps.interviews.urls")),
+    path("api/subscriptions/", include("apps.subscriptions.urls")),
 ]

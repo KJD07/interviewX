@@ -1,6 +1,6 @@
 from django.contrib.auth import authenticate, get_user_model
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -65,3 +65,21 @@ class LoginView(APIView):
             )
 
         return Response(_token_response(user), status=status.HTTP_200_OK)
+
+
+class MeView(APIView):
+    """GET /api/auth/me/ — return fresh user data (including interviews_this_month)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        return Response(
+            {
+                "id": user.id,
+                "email": user.email,
+                "username": user.username,
+                "subscription_plan": user.subscription_plan,
+                "interviews_this_month": user.interviews_this_month,
+            }
+        )
