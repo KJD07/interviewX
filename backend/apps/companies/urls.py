@@ -1,6 +1,13 @@
 from django.urls import path
 
-from .views import CompanyDetailView, CompanyListView, RoleListView, RoundDetailView, RoundListView
+from .views import (
+    CompanyDetailView,
+    CompanyListView,
+    GenerateRoundQuestionsView,
+    RoleListView,
+    RoundDetailView,
+    RoundListView,
+)
 
 urlpatterns = [
     path("", CompanyListView.as_view(), name="company-list"),
@@ -15,5 +22,10 @@ urlpatterns = [
         "<int:company_id>/roles/<int:role_id>/rounds/<int:round_id>/",
         RoundDetailView.as_view(),
         name="round-detail",
+    ),
+    path(
+        "<int:company_id>/roles/<int:role_id>/rounds/<int:round_id>/generate-questions/",
+        GenerateRoundQuestionsView.as_view(),
+        name="round-generate-questions",
     ),
 ]

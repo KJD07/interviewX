@@ -64,6 +64,10 @@ class InterviewQuestion(models.Model):
     question_type = models.CharField(max_length=20, choices=QUESTION_TYPES)
     ideal_answer = models.TextField(blank=True)
     source_url = models.CharField(max_length=255, blank=True)
+    generated_by_ai = models.BooleanField(
+        default=False,
+        help_text="True if sourced automatically from the web via AI, rather than entered by an admin.",
+    )
 
     class Meta:
         ordering = ["id"]

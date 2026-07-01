@@ -1,9 +1,11 @@
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Company, Role, Round
+from core.question_sourcing import QuestionSourcingError, source_questions_for_round
+
+from .models import Company, InterviewQuestion, Role, Round
 from .serializers import (
     CompanyListSerializer,
     CompanySerializer,
@@ -85,3 +87,52 @@ class RoundDetailView(APIView):
             return Response({"detail": "Round not found."}, status=status.HTTP_404_NOT_FOUND)
         serializer = RoundSerializer(round_)
         return Response(serializer.data)
+
+
+class GenerateRoundQuestionsView(APIView):
+    """
+    POST /api/companies/<company_id>/roles/<role_id>/rounds/<round_id>/generate-questions/
+
+    Uses the AI question-sourcing pipeline to find real, candidate-reported
+    interview questions instead of requiring an admin to type them by hand.
+    Replaces any previously AI-sourced questions for this round;
+    manually-entered questions (generated_by_ai=False) are left untouched.
+    """
+
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, company_id, role_id, round_id):
+        try:
+            round_obj = Round.objects.select_related("role__company").get(
+                pk=round_id, role_id=role_id, role__company_id=company_id
+            )
+        except Round.DoesNotExist:
+            return Response({"detail": "Round not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            sourced = source_questions_for_round(
+                company_name=round_obj.role.company.name,
+                role_title=round_obj.role.title,
+                round_title=round_obj.title,
+            )
+        except QuestionSourcingError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+
+        # Replace prior AI-sourced questions; keep manually-entered ones.
+        round_obj.questions.filter(generated_by_ai=True).delete()
+        InterviewQuestion.objects.bulk_create(
+            [
+                InterviewQuestion(
+                    round=round_obj,
+                    question_text=q.question_text,
+                    question_type=q.question_type,
+                    ideal_answer=q.ideal_answer,
+                    source_url=q.source_url,
+                    generated_by_ai=True,
+                )
+                for q in sourced
+            ]
+        )
+
+        serializer = RoundSerializer(round_obj)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

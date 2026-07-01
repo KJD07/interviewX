@@ -15,11 +15,20 @@ MODEL = "openai/gpt-4o-mini"
 TIMEOUT = 30  # seconds
 
 
-def chat_completion(messages: list[dict[str, str]]) -> str:
+def chat_completion(
+    messages: list[dict[str, str]],
+    model: str = MODEL,
+    max_tokens: int = 1024,
+    temperature: float = 0.7,
+) -> str:
     """
     Send a list of {"role": ..., "content": ...} messages to OpenRouter.
     Returns the assistant's reply text.
     Raises RuntimeError on API errors.
+
+    `model` defaults to the standard interview model, but callers (e.g. the
+    question-sourcing pipeline) can pass a web-search-enabled model such as
+    "openai/gpt-4o-mini:online".
     """
     api_key = os.environ.get("OPENROUTER_API_KEY", "")
     if not api_key:
@@ -33,10 +42,10 @@ def chat_completion(messages: list[dict[str, str]]) -> str:
     }
 
     payload = {
-        "model": MODEL,
+        "model": model,
         "messages": messages,
-        "max_tokens": 1024,
-        "temperature": 0.7,
+        "max_tokens": max_tokens,
+        "temperature": temperature,
     }
 
     try:
