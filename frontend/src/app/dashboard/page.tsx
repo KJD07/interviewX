@@ -114,26 +114,32 @@ export default function DashboardPage() {
               {!isPro && (
                 <p className="mt-1 text-sm" style={{ color: "var(--slate)" }}>
                   {monthlyUsed}/{FREE_LIMIT} free interviews used this month.{" "}
-                  {monthlyUsed >= FREE_LIMIT && (
-                    <button
-                      onClick={() => router.push("/upgrade")}
-                      className="underline"
-                      style={{ color: "var(--indigo)" }}
-                    >
-                      Upgrade to continue →
-                    </button>
-                  )}
+                  <button
+                    onClick={() => router.push("/upgrade")}
+                    className="underline"
+                    style={{ color: "var(--indigo)" }}
+                  >
+                    {monthlyUsed >= FREE_LIMIT ? "Upgrade to continue →" : "Upgrade for unlimited →"}
+                  </button>
                 </p>
               )}
             </div>
             <div className="flex items-center gap-3">
-              {!isPro && monthlyUsed >= FREE_LIMIT && (
+              {!isPro ? (
                 <button
                   onClick={() => router.push("/upgrade")}
                   className="px-5 py-2.5 rounded text-sm font-semibold"
                   style={{ background: "var(--indigo-glow)", color: "var(--indigo)", border: "1px solid var(--indigo)" }}
                 >
                   Upgrade ↗
+                </button>
+              ) : (
+                <button
+                  onClick={() => router.push("/upgrade")}
+                  className="px-5 py-2.5 rounded text-sm font-semibold"
+                  style={{ background: "transparent", color: "var(--slate)", border: "1px solid var(--slate-dim)" }}
+                >
+                  Manage subscription
                 </button>
               )}
               <button

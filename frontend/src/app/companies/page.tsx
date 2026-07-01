@@ -231,7 +231,7 @@ export default function CompaniesPage() {
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
-  const isPro = user?.subscription_plan === "pro";
+  const isPro = user?.subscription_plan === "premium";
   const monthlyUsed = (user as any)?.interviews_this_month ?? 0;
   const FREE_LIMIT = 2;
   const limitReached = !isPro && monthlyUsed >= FREE_LIMIT;
