@@ -24,6 +24,36 @@ function formatTime(iso: string) {
   });
 }
 
+function formatCountdown(totalSeconds: number) {
+  const s = Math.max(0, Math.floor(totalSeconds));
+  const mm = Math.floor(s / 60);
+  const ss = s % 60;
+  return `${mm}:${ss.toString().padStart(2, "0")}`;
+}
+
+// ── Countdown timer badge ────────────────────────────────────────────────────
+
+function TimerBadge({ secondsLeft }: { secondsLeft: number | null }) {
+  if (secondsLeft === null) return null;
+  const low = secondsLeft <= 5 * 60; // last 5 minutes
+  return (
+    <span
+      className="hidden sm:flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full tabular-nums"
+      style={{
+        background: low ? "rgba(239,68,68,0.12)" : "var(--indigo-glow)",
+        color: low ? "var(--danger)" : "var(--indigo)",
+      }}
+      title="Time remaining"
+    >
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.3" />
+        <path d="M8 4.5V8l2.5 1.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      </svg>
+      {formatCountdown(secondsLeft)}
+    </span>
+  );
+}
+
 // ── Typing indicator ──────────────────────────────────────────────────────────
 
 function TypingDots() {
@@ -169,9 +199,12 @@ export default function InterviewPage() {
   const [loadError, setLoadError] = useState("");
   const [showEndModal, setShowEndModal] = useState(false);
   const [ending, setEnding] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+  const [timeUp, setTimeUp] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const timeUpHandledRef = useRef(false);
 
   // ── Load session ────────────────────────────────────────────────────────────
 
@@ -195,6 +228,40 @@ export default function InterviewPage() {
       });
   }, [sessionId, router]);
 
+  // ── Countdown timer ──────────────────────────────────────────────────────────
+  // Each session has a randomized 45-60 min limit set by the backend. We
+  // recompute the deadline from started_at + duration_minutes so the timer
+  // survives page refreshes and stays in sync with the server's own cutoff.
+
+  useEffect(() => {
+    if (!session || session.status !== "in_progress") return;
+
+    const deadline =
+      new Date(session.started_at).getTime() +
+      session.duration_minutes * 60 * 1000;
+
+    const tick = () => {
+      const remaining = Math.round((deadline - Date.now()) / 1000);
+      setSecondsLeft(remaining);
+      if (remaining <= 0) setTimeUp(true);
+    };
+
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [session]);
+
+  // When time runs out, auto-submit the interview for scoring exactly once.
+  useEffect(() => {
+    if (!timeUp || timeUpHandledRef.current || !sessionId) return;
+    timeUpHandledRef.current = true;
+    setShowEndModal(false);
+    interviews
+      .end(sessionId)
+      .catch(() => {})
+      .finally(() => router.replace(`/interview/${sessionId}/results`));
+  }, [timeUp, sessionId, router]);
+
   // ── Auto-scroll ─────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -214,7 +281,7 @@ export default function InterviewPage() {
 
   const handleSend = useCallback(async () => {
     const text = input.trim();
-    if (!text || sending || aiTyping) return;
+    if (!text || sending || aiTyping || timeUp) return;
 
     const userMsg: Message = { role: "user", text, ts: new Date().toISOString() };
     setMessages((prev) => [...prev, userMsg]);
@@ -234,6 +301,10 @@ export default function InterviewPage() {
       };
       setMessages((prev) => [...prev, aiMsg]);
     } catch (err) {
+      if (err instanceof ApiError && err.code === "time_expired") {
+        setTimeUp(true);
+        return;
+      }
       const errMsg: Message = {
         role: "ai",
         text: err instanceof ApiError
@@ -247,7 +318,7 @@ export default function InterviewPage() {
       setAiTyping(false);
       textareaRef.current?.focus();
     }
-  }, [input, sending, aiTyping, sessionId]);
+  }, [input, sending, aiTyping, timeUp, sessionId]);
 
   // Keyboard: Enter to send (Shift+Enter for newline)
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -332,6 +403,7 @@ export default function InterviewPage() {
                 Live
               </span>
             </span>
+            <TimerBadge secondsLeft={secondsLeft} />
           </div>
 
           <button
@@ -406,8 +478,12 @@ export default function InterviewPage() {
                 autoResize();
               }}
               onKeyDown={handleKeyDown}
-              placeholder="Type your answer… (Enter to send, Shift+Enter for newline)"
-              disabled={sending || aiTyping}
+              placeholder={
+                timeUp
+                  ? "Time's up — wrapping up your interview…"
+                  : "Type your answer… (Enter to send, Shift+Enter for newline)"
+              }
+              disabled={sending || aiTyping || timeUp}
               className="flex-1 resize-none bg-transparent text-sm leading-relaxed disabled:opacity-50"
               style={{
                 color: "var(--white)",
@@ -419,7 +495,7 @@ export default function InterviewPage() {
             />
             <button
               onClick={handleSend}
-              disabled={!input.trim() || sending || aiTyping}
+              disabled={!input.trim() || sending || aiTyping || timeUp}
               className="shrink-0 rounded-lg px-3.5 py-2 text-sm font-semibold transition-opacity disabled:opacity-30"
               style={{ background: "var(--indigo)", color: "var(--white)" }}
             >
@@ -433,7 +509,11 @@ export default function InterviewPage() {
             </button>
           </div>
           <p className="text-center text-xs mt-2" style={{ color: "var(--slate-dim)" }}>
-            AI is evaluating your answers in real time · {user?.username}
+            {timeUp
+              ? "Time's up — your interview is being scored…"
+              : secondsLeft !== null
+              ? `${formatCountdown(secondsLeft)} left · AI is evaluating your answers in real time`
+              : `AI is evaluating your answers in real time · ${user?.username ?? ""}`}
           </p>
         </div>
       </div>

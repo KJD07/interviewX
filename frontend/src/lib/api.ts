@@ -49,8 +49,10 @@ export interface InterviewSession {
     overall?: number;
   };
   feedback: string;
+  duration_minutes: number;
   started_at: string;
   ended_at: string | null;
+  time_expired: boolean;
 }
 
 export interface Company {

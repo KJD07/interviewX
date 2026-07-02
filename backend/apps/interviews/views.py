@@ -1,5 +1,6 @@
 import json
-from datetime import datetime, timezone
+import random
+from datetime import datetime, timedelta, timezone
 
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -17,6 +18,16 @@ from .models import InterviewSession
 from .serializers import InterviewSessionListSerializer, InterviewSessionSerializer
 
 FREE_PLAN_MONTHLY_LIMIT = 2
+
+# Every interview session gets a randomized time limit in this range.
+MIN_INTERVIEW_MINUTES = 45
+MAX_INTERVIEW_MINUTES = 60
+
+
+def _seconds_remaining(session: InterviewSession) -> float:
+    """How many seconds are left before this session's time limit is hit."""
+    deadline = session.started_at + timedelta(minutes=session.duration_minutes)
+    return (deadline - datetime.now(timezone.utc)).total_seconds()
 
 
 # ── existing CRUD views (unchanged) ──────────────────────────────────────────
@@ -176,6 +187,9 @@ class StartInterviewView(APIView):
             round=round_obj,
             status=InterviewSession.Status.IN_PROGRESS,
             transcript=[{"role": "ai", "text": opening, "ts": _now_iso()}],
+            duration_minutes=random.randint(
+                MIN_INTERVIEW_MINUTES, MAX_INTERVIEW_MINUTES
+            ),
         )
 
         # Increment usage counter
@@ -215,6 +229,22 @@ class ChatView(APIView):
         if session.status != InterviewSession.Status.IN_PROGRESS:
             return Response(
                 {"detail": "Session is not in progress."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Time's up — auto-score and complete the session instead of
+        # accepting another answer.
+        if _seconds_remaining(session) <= 0:
+            result = _score_and_complete_session(session, time_expired=True)
+            if isinstance(result, Response):
+                return result
+            serializer = InterviewSessionSerializer(result)
+            return Response(
+                {
+                    "detail": "Time limit reached. Interview has ended.",
+                    "code": "time_expired",
+                    "session": serializer.data,
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -269,6 +299,60 @@ class ChatView(APIView):
         return Response({"ai_message": ai_reply})
 
 
+def _score_and_complete_session(session: InterviewSession, *, time_expired: bool = False):
+    """
+    Shared scoring/completion logic used by both the manual "End interview"
+    action and the automatic cutoff when a session's time limit is reached.
+
+    Returns either a Response (on error) or the completed InterviewSession.
+    """
+    try:
+        round_obj, questions = _get_round_with_context(session.round_id)
+    except Round.DoesNotExist:
+        return Response(
+            {"detail": "Round not found."}, status=status.HTTP_404_NOT_FOUND
+        )
+
+    feedback_messages = build_feedback_prompt(
+        transcript=session.transcript,
+        company_name=round_obj.role.company.name,
+        role_title=round_obj.role.title,
+        round_title=round_obj.title,
+        questions=questions,
+    )
+
+    try:
+        raw = chat_completion(feedback_messages)
+        # Strip markdown fences if model wraps JSON in ```json ... ```
+        clean = raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+        result = json.loads(clean)
+    except RuntimeError as exc:
+        return Response({"detail": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+    except json.JSONDecodeError:
+        return Response(
+            {"detail": f"AI returned non-JSON feedback: {raw[:200]}"},
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
+
+    scores = {
+        "communication": result.get("communication", 0),
+        "technical": result.get("technical", 0),
+        "problem_solving": result.get("problem_solving", 0),
+        "overall": result.get("overall", 0),
+    }
+    feedback_text = result.get("feedback", "")
+
+    session.scores = scores
+    session.feedback = feedback_text
+    session.status = InterviewSession.Status.COMPLETED
+    session.ended_at = datetime.now(timezone.utc)
+    session.time_expired = time_expired
+    session.save(
+        update_fields=["scores", "feedback", "status", "ended_at", "time_expired"]
+    )
+    return session
+
+
 class EndInterviewView(APIView):
     """
     POST /api/interviews/<session_id>/end/
@@ -295,49 +379,9 @@ class EndInterviewView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        try:
-            round_obj, questions = _get_round_with_context(session.round_id)
-        except Round.DoesNotExist:
-            return Response(
-                {"detail": "Round not found."}, status=status.HTTP_404_NOT_FOUND
-            )
+        result = _score_and_complete_session(session)
+        if isinstance(result, Response):
+            return result
 
-        feedback_messages = build_feedback_prompt(
-            transcript=session.transcript,
-            company_name=round_obj.role.company.name,
-            role_title=round_obj.role.title,
-            round_title=round_obj.title,
-            questions=questions,
-        )
-
-        try:
-            raw = chat_completion(feedback_messages)
-            # Strip markdown fences if model wraps JSON in ```json ... ```
-            clean = raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-            result = json.loads(clean)
-        except RuntimeError as exc:
-            return Response(
-                {"detail": str(exc)}, status=status.HTTP_502_BAD_GATEWAY
-            )
-        except json.JSONDecodeError:
-            return Response(
-                {"detail": f"AI returned non-JSON feedback: {raw[:200]}"},
-                status=status.HTTP_502_BAD_GATEWAY,
-            )
-
-        scores = {
-            "communication": result.get("communication", 0),
-            "technical": result.get("technical", 0),
-            "problem_solving": result.get("problem_solving", 0),
-            "overall": result.get("overall", 0),
-        }
-        feedback_text = result.get("feedback", "")
-
-        session.scores = scores
-        session.feedback = feedback_text
-        session.status = InterviewSession.Status.COMPLETED
-        session.ended_at = datetime.now(timezone.utc)
-        session.save(update_fields=["scores", "feedback", "status", "ended_at"])
-
-        serializer = InterviewSessionSerializer(session)
+        serializer = InterviewSessionSerializer(result)
         return Response(serializer.data)

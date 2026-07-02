@@ -242,6 +242,19 @@ export default function ResultsPage() {
             </div>
           </div>
 
+          {s.time_expired && (
+            <div
+              className="rounded-lg px-4 py-3 text-xs font-medium"
+              style={{
+                background: "rgba(239,68,68,0.1)",
+                border: "1px solid rgba(239,68,68,0.25)",
+                color: "var(--danger)",
+              }}
+            >
+              This interview was automatically ended after reaching its {s.duration_minutes}-minute time limit.
+            </div>
+          )}
+
           {/* Score breakdown */}
           <div
             className="rounded-xl px-6 py-6"

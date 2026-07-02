@@ -16,10 +16,12 @@ class InterviewSessionSerializer(serializers.ModelSerializer):
             "transcript",
             "scores",
             "feedback",
+            "duration_minutes",
             "started_at",
             "ended_at",
+            "time_expired",
         ]
-        read_only_fields = ["id", "user", "started_at"]
+        read_only_fields = ["id", "user", "started_at", "duration_minutes", "time_expired"]
 
     def create(self, validated_data):
         validated_data["user"] = self.context["request"].user
@@ -29,5 +31,5 @@ class InterviewSessionSerializer(serializers.ModelSerializer):
 class InterviewSessionListSerializer(serializers.ModelSerializer):
     class Meta:
         model = InterviewSession
-        fields = ["id", "round", "status", "started_at", "ended_at"]
+        fields = ["id", "round", "status", "duration_minutes", "started_at", "ended_at"]
         read_only_fields = fields
