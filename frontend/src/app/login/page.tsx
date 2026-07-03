@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { ApiError } from "@/lib/api";
+import GoogleSignInButton from "@/components/GoogleSignInButton";
 
 export default function LoginPage() {
   const { login, user } = useAuth();
@@ -28,6 +29,10 @@ export default function LoginPage() {
       router.push("/dashboard");
     } catch (err) {
       if (err instanceof ApiError) {
+        if (err.code === "EMAIL_NOT_VERIFIED") {
+          router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+          return;
+        }
         setError(err.detail);
       } else {
         setError("Something went wrong. Check your connection and try again.");
@@ -53,6 +58,16 @@ export default function LoginPage() {
           <p className="mt-2 text-sm" style={{ color: "var(--slate)" }}>
             Sign in to continue practising.
           </p>
+        </div>
+
+        <div className="mb-6">
+          <GoogleSignInButton onError={setError} onStart={() => setSubmitting(true)} />
+        </div>
+
+        <div className="flex items-center gap-3 mb-6">
+          <div className="h-px flex-1" style={{ background: "var(--navy-mid)" }} />
+          <span className="text-xs" style={{ color: "var(--slate-dim)" }}>or</span>
+          <div className="h-px flex-1" style={{ background: "var(--navy-mid)" }} />
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">

@@ -4,13 +4,15 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!user) router.replace("/login");
-  }, [user, router]);
+    if (!loading && !user) router.replace("/login");
+  }, [loading, user, router]);
 
-  if (!user) return null;
+  // While we're still checking localStorage for a session, render nothing
+  // rather than redirecting prematurely.
+  if (loading || !user) return null;
   return <>{children}</>;
 }

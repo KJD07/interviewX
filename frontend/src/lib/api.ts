@@ -29,12 +29,20 @@ export interface User {
   username: string;
   subscription_plan: "free" | "premium";
   interviews_this_month?: number;
+  is_email_verified?: boolean;
+  auth_provider?: "email" | "google";
 }
 
 export interface AuthResponse {
   access: string;
   refresh: string;
   user: User;
+}
+
+export interface RegisterResponse {
+  detail: string;
+  email: string;
+  requires_verification: true;
 }
 
 export interface InterviewSession {
@@ -177,15 +185,33 @@ async function request<T>(
 
 export const auth = {
   register: (email: string, username: string, password: string, password2: string) =>
-    request<AuthResponse>("/api/auth/register/", {
+    request<RegisterResponse>("/api/auth/register/", {
       method: "POST",
       body: JSON.stringify({ email, username, password, password2 }),
+    }),
+
+  verifyEmail: (email: string, code: string) =>
+    request<AuthResponse>("/api/auth/verify-email/", {
+      method: "POST",
+      body: JSON.stringify({ email, code }),
+    }),
+
+  resendOtp: (email: string) =>
+    request<{ detail: string }>("/api/auth/resend-otp/", {
+      method: "POST",
+      body: JSON.stringify({ email }),
     }),
 
   login: (email: string, password: string) =>
     request<AuthResponse>("/api/auth/login/", {
       method: "POST",
       body: JSON.stringify({ email, password }),
+    }),
+
+  google: (id_token: string) =>
+    request<AuthResponse>("/api/auth/google/", {
+      method: "POST",
+      body: JSON.stringify({ id_token }),
     }),
 
   me: () => request<User>("/api/auth/me/"),

@@ -5,6 +5,7 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useState,
 } from "react";
 import { auth, tokens } from "@/lib/api";
@@ -12,16 +13,19 @@ import type { User } from "@/lib/api";
 
 interface AuthContextValue {
   user: User | null;
-  loading: false;
+  loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (
     email: string,
     username: string,
     password: string,
     password2: string
-  ) => Promise<void>;
+  ) => Promise<{ email: string }>;
+  verifyEmail: (email: string, code: string) => Promise<void>;
+  resendOtp: (email: string) => Promise<void>;
+  loginWithGoogle: (idToken: string) => Promise<void>;
   logout: () => void;
-  refreshUser: () => Promise<void>;  // ← added
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -37,7 +41,17 @@ function readUserFromStorage(): User | null {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(readUserFromStorage);
+  // IMPORTANT: always start as null/true on both server and client so the
+  // very first client render matches the server-rendered HTML exactly.
+  // We only read localStorage AFTER mount (inside useEffect), which runs
+  // client-side only, after hydration has already reconciled successfully.
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setUser(readUserFromStorage());
+    setLoading(false);
+  }, []);
 
   const persistUser = (u: User) => {
     setUser(u);
@@ -57,12 +71,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password: string,
       password2: string
     ) => {
+      // No tokens yet — the account isn't usable until the OTP is verified.
       const data = await auth.register(email, username, password, password2);
-      tokens.set(data.access, data.refresh);
-      persistUser(data.user);
+      return { email: data.email };
     },
     []
   );
+
+  const verifyEmail = useCallback(async (email: string, code: string) => {
+    const data = await auth.verifyEmail(email, code);
+    tokens.set(data.access, data.refresh);
+    persistUser(data.user);
+  }, []);
+
+  const resendOtp = useCallback(async (email: string) => {
+    await auth.resendOtp(email);
+  }, []);
+
+  const loginWithGoogle = useCallback(async (idToken: string) => {
+    const data = await auth.google(idToken);
+    tokens.set(data.access, data.refresh);
+    persistUser(data.user);
+  }, []);
 
   const logout = useCallback(() => {
     tokens.clear();
@@ -70,13 +100,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
-  const refreshUser = useCallback(async () => {  // ← added
+  const refreshUser = useCallback(async () => {
     const fresh = await auth.me();
     persistUser(fresh);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading: false, login, register, logout, refreshUser }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        login,
+        register,
+        verifyEmail,
+        resendOtp,
+        loginWithGoogle,
+        logout,
+        refreshUser,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

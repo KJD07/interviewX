@@ -128,3 +128,26 @@ OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 # --- Razorpay (Phase 8) ---
 RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "")
 RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
+
+# --- Email (OTP verification) ---
+# Defaults to printing emails to the console so OTPs are visible in
+# `docker compose logs -f backend` during local dev with zero setup.
+# Set EMAIL_HOST/EMAIL_HOST_USER/EMAIL_HOST_PASSWORD in .env to send real
+# email (e.g. Gmail SMTP, SendGrid, Postmark, etc.) in production.
+if os.environ.get("EMAIL_HOST"):
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = os.environ.get("EMAIL_HOST")
+    EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+    EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True") == "True"
+    EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+    EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "InterviewX <no-reply@interviewx.local>")
+
+# --- Google Sign-In ---
+# The OAuth "Web application" client ID from Google Cloud Console. The
+# frontend uses this same ID to render the Google button; the backend uses
+# it to verify that ID tokens were actually issued for this app.
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")

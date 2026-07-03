@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { ApiError } from "@/lib/api";
+import GoogleSignInButton from "@/components/GoogleSignInButton";
 
 export default function RegisterPage() {
   const { register, user } = useAuth();
@@ -33,8 +34,8 @@ export default function RegisterPage() {
 
     setSubmitting(true);
     try {
-      await register(email, username, password, password2);
-      router.push("/dashboard");
+      const result = await register(email, username, password, password2);
+      router.push(`/verify-email?email=${encodeURIComponent(result.email)}`);
     } catch (err) {
       if (err instanceof ApiError) {
         // Django may return field-level errors as a JSON object
@@ -73,6 +74,16 @@ export default function RegisterPage() {
           <p className="mt-2 text-sm" style={{ color: "var(--slate)" }}>
             Create your account to start practising.
           </p>
+        </div>
+
+        <div className="mb-6">
+          <GoogleSignInButton onError={setError} onStart={() => setSubmitting(true)} />
+        </div>
+
+        <div className="flex items-center gap-3 mb-6">
+          <div className="h-px flex-1" style={{ background: "var(--navy-mid)" }} />
+          <span className="text-xs" style={{ color: "var(--slate-dim)" }}>or</span>
+          <div className="h-px flex-1" style={{ background: "var(--navy-mid)" }} />
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">

@@ -20,11 +20,19 @@ class UserAdmin(BaseUserAdmin):
             },
         ),
     )
+    fieldsets = fieldsets + (
+        (
+            "Verification",
+            {"fields": ("is_email_verified", "auth_provider", "google_sub")},
+        ),
+    )
     list_display = (
         "username",
         "email",
         "subscription_plan",
         "interviews_this_month",
+        "is_email_verified",
+        "auth_provider",
         "is_staff",
     )
-    list_filter = BaseUserAdmin.list_filter + ("subscription_plan",)  # type: ignore[operator]
+    list_filter = BaseUserAdmin.list_filter + ("subscription_plan", "is_email_verified", "auth_provider")  # type: ignore[operator]
