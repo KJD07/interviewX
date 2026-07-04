@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { subscriptions, ApiError } from "@/lib/api";
+import { PLANS, PAID_PLAN_IDS, type PlanId } from "@/lib/plans";
 
 declare global {
   interface Window {
@@ -12,18 +13,20 @@ declare global {
 }
 
 export default function UpgradePage() {
-  const { user, login } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const [loadingPlan, setLoadingPlan] = useState<PlanId | null>(null);
   const [error, setError] = useState("");
 
-  const handleUpgrade = async () => {
-    setLoading(true);
+  const currentPlan = (user?.subscription_plan as PlanId) || "free";
+
+  const handleUpgrade = async (plan: PlanId) => {
+    setLoadingPlan(plan);
     setError("");
 
     try {
-      // 1. Create order on backend
-      const order = await subscriptions.createOrder();
+      // 1. Create order on backend for the chosen plan
+      const order = await subscriptions.createOrder(plan as "pro" | "premium" | "max");
 
       // 2. Load Razorpay script if not already loaded
       if (!window.Razorpay) {
@@ -42,7 +45,7 @@ export default function UpgradePage() {
         amount: order.amount,
         currency: order.currency,
         name: "InterviewX",
-        description: "Premium Plan — 1 Month",
+        description: `${PLANS[plan].label} Plan — 1 Month`,
         order_id: order.order_id,
         prefill: {
           email: order.user_email,
@@ -60,16 +63,16 @@ export default function UpgradePage() {
               response.razorpay_payment_id,
               response.razorpay_signature
             );
-            // Redirect to dashboard — user will see Premium badge
+            // Redirect to dashboard — user will see their new plan badge
             router.replace("/dashboard?upgraded=1");
           } catch (err) {
             setError("Payment succeeded but verification failed. Contact support.");
           } finally {
-            setLoading(false);
+            setLoadingPlan(null);
           }
         },
         modal: {
-          ondismiss: () => setLoading(false),
+          ondismiss: () => setLoadingPlan(null),
         },
       });
 
@@ -77,78 +80,123 @@ export default function UpgradePage() {
     } catch (err) {
       if (err instanceof ApiError) setError(err.detail);
       else setError("Something went wrong. Please try again.");
-      setLoading(false);
+      setLoadingPlan(null);
     }
   };
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--navy)" }}>
-        <div
-          className="w-full max-w-md rounded-xl p-8 fade-up"
-          style={{ background: "var(--navy-light)", border: "1px solid var(--navy-mid)" }}
-        >
+      <div className="min-h-screen px-6 py-12" style={{ background: "var(--navy)" }}>
+        <div className="max-w-5xl mx-auto fade-up">
           {/* Header */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-10">
             <span
               className="inline-block text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-widest mb-4"
               style={{ background: "var(--indigo-glow)", color: "var(--indigo)" }}
             >
-              Premium
+              Plans
             </span>
             <h1 className="text-2xl font-bold mb-2" style={{ color: "var(--white)" }}>
-              Unlock unlimited interviews
+              Choose the plan that fits your prep
             </h1>
             <p className="text-sm" style={{ color: "var(--slate)" }}>
-              Free plan is limited to 2 interviews/month.
+              Free plan is limited to {PLANS.free.monthlyLimit} interviews/month.
             </p>
           </div>
 
-          {/* Price */}
-          <div className="text-center mb-8">
-            <span className="text-5xl font-bold" style={{ color: "var(--white)" }}>₹499</span>
-            <span className="text-sm ml-2" style={{ color: "var(--slate)" }}>/month</span>
-          </div>
-
-          {/* Features */}
-          <ul className="space-y-3 mb-8">
-            {[
-              "Unlimited AI mock interviews",
-              "All companies, roles & rounds",
-              "Detailed scores & feedback",
-              "Cancel anytime",
-            ].map((f) => (
-              <li key={f} className="flex items-center gap-3 text-sm" style={{ color: "var(--slate)" }}>
-                <span style={{ color: "#22c55e" }}>✓</span>
-                {f}
-              </li>
-            ))}
-          </ul>
-
-          {/* Error */}
           {error && (
-            <p className="text-sm mb-4 text-center" style={{ color: "var(--danger)" }}>
+            <p className="text-sm mb-6 text-center" style={{ color: "var(--danger)" }}>
               {error}
             </p>
           )}
 
-          {/* CTA */}
-          <button
-            onClick={handleUpgrade}
-            disabled={loading}
-            className="w-full py-3 rounded-lg font-semibold text-sm transition-opacity disabled:opacity-50"
-            style={{ background: "var(--indigo)", color: "var(--white)" }}
-          >
-            {loading ? "Opening checkout…" : "Upgrade to Premium — ₹499/mo"}
-          </button>
+          {/* Plan cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {PAID_PLAN_IDS.map((planId) => {
+              const plan = PLANS[planId];
+              const isCurrent = currentPlan === planId;
+              const isMax = planId === "max";
 
-          <button
-            onClick={() => router.back()}
-            className="w-full mt-3 py-2 text-sm hover:underline"
-            style={{ color: "var(--slate-dim)" }}
-          >
-            Go back
-          </button>
+              return (
+                <div
+                  key={planId}
+                  className="rounded-xl p-8 flex flex-col"
+                  style={{
+                    background: "var(--navy-light)",
+                    border: isMax
+                      ? "1px solid var(--indigo)"
+                      : "1px solid var(--navy-mid)",
+                  }}
+                >
+                  {isMax && (
+                    <span
+                      className="self-start text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider mb-4"
+                      style={{ background: "var(--indigo-glow)", color: "var(--indigo)" }}
+                    >
+                      Best value
+                    </span>
+                  )}
+
+                  <h2 className="text-lg font-bold mb-1" style={{ color: "var(--white)" }}>
+                    {plan.label}
+                  </h2>
+
+                  <div className="mb-6">
+                    <span className="text-4xl font-bold" style={{ color: "var(--white)" }}>
+                      ₹{plan.priceRupees}
+                    </span>
+                    <span className="text-sm ml-2" style={{ color: "var(--slate)" }}>
+                      /month
+                    </span>
+                  </div>
+
+                  <ul className="space-y-3 mb-8 flex-1">
+                    {plan.features.map((f) => (
+                      <li
+                        key={f}
+                        className="flex items-start gap-3 text-sm"
+                        style={{ color: "var(--slate)" }}
+                      >
+                        <span style={{ color: "#22c55e" }}>✓</span>
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <button
+                    onClick={() => handleUpgrade(planId)}
+                    disabled={loadingPlan !== null || isCurrent}
+                    className="w-full py-3 rounded-lg font-semibold text-sm transition-opacity disabled:opacity-50"
+                    style={
+                      isMax
+                        ? { background: "var(--indigo)", color: "var(--white)" }
+                        : {
+                            background: "transparent",
+                            color: "var(--indigo)",
+                            border: "1px solid var(--indigo)",
+                          }
+                    }
+                  >
+                    {isCurrent
+                      ? "Current plan"
+                      : loadingPlan === planId
+                      ? "Opening checkout…"
+                      : `Choose ${plan.label} — ₹${plan.priceRupees}/mo`}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="text-center mt-8">
+            <button
+              onClick={() => router.back()}
+              className="text-sm hover:underline"
+              style={{ color: "var(--slate-dim)" }}
+            >
+              Go back
+            </button>
+          </div>
         </div>
       </div>
     </ProtectedRoute>

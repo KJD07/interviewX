@@ -10,8 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import PaymentOrder
-
-PLAN_AMOUNT_PAISE = 49900  # ₹499
+from .plans import PAID_PLANS, amount_for
 
 
 def _razorpay_client():
@@ -23,16 +22,25 @@ def _razorpay_client():
 class CreateOrderView(APIView):
     """
     POST /api/subscriptions/create-order/
-    Creates a Razorpay order and returns order_id + key_id to the frontend.
+    Body: {"plan": "pro" | "premium" | "max"}
+    Creates a Razorpay order for the chosen plan and returns order_id + key_id.
     """
 
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        plan = request.data.get("plan", "")
+        if plan not in PAID_PLANS:
+            return Response(
+                {"detail": f"Invalid plan. Choose one of: {', '.join(PAID_PLANS)}."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        amount = amount_for(plan)
         client = _razorpay_client()
 
         order_data = {
-            "amount": PLAN_AMOUNT_PAISE,
+            "amount": amount,
             "currency": "INR",
             "receipt": f"ix_user_{request.user.pk}",
             "payment_capture": 1,
@@ -49,14 +57,16 @@ class CreateOrderView(APIView):
         PaymentOrder.objects.create(
             user=request.user,
             razorpay_order_id=rz_order["id"],
-            amount=PLAN_AMOUNT_PAISE,
+            amount=amount,
+            plan=plan,
         )
 
         return Response(
             {
                 "order_id": rz_order["id"],
-                "amount": PLAN_AMOUNT_PAISE,
+                "amount": amount,
                 "currency": "INR",
+                "plan": plan,
                 "key_id": settings.RAZORPAY_KEY_ID,
                 "user_email": request.user.email,
                 "user_name": request.user.username,
@@ -120,14 +130,24 @@ class VerifyPaymentView(APIView):
         order.save(update_fields=["razorpay_payment_id", "razorpay_signature", "status", "paid_at"])
 
         user = request.user
-        user.subscription_plan = "premium"
+        user.subscription_plan = order.plan
         user.subscription_end_date = now + timedelta(days=30)
-        user.save(update_fields=["subscription_plan", "subscription_end_date"])
+        # Fresh billing cycle: reset usage so the new plan's limit applies cleanly.
+        user.interviews_this_month = 0
+        user.save(
+            update_fields=[
+                "subscription_plan",
+                "subscription_end_date",
+                "interviews_this_month",
+            ]
+        )
+
+        plan_label = PAID_PLANS.get(order.plan, {}).get("label", order.plan.title())
 
         return Response(
             {
-                "detail": "Payment verified. You are now on the Premium plan.",
-                "subscription_plan": "premium",
+                "detail": f"Payment verified. You are now on the {plan_label} plan.",
+                "subscription_plan": order.plan,
                 "subscription_end_date": user.subscription_end_date.isoformat(),
             }
         )

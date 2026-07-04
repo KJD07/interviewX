@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { interviews, ApiError } from "@/lib/api";
 import type { InterviewSession } from "@/lib/api";
+import { planOf, isPaidPlan } from "@/lib/plans";
 
 function StatusBadge({ status }: { status: InterviewSession["status"] }) {
   const map = {
@@ -62,9 +63,13 @@ export default function DashboardPage() {
     router.replace("/login");
   };
 
-  const isPro = user?.subscription_plan === "premium";
+  const plan = planOf(user?.subscription_plan);
+  const isPro = isPaidPlan(user?.subscription_plan);
+  const hasInsights = plan.hasInsights;
   const monthlyUsed = (user as any)?.interviews_this_month ?? 0;
-  const FREE_LIMIT = 2;
+  const monthlyLimit = plan.monthlyLimit; // null = unlimited
+  const limitReached = monthlyLimit !== null && monthlyUsed >= monthlyLimit;
+  const lastCompleted = sessions.find((s) => s.status === "completed");
 
   return (
     <ProtectedRoute>
@@ -88,7 +93,7 @@ export default function DashboardPage() {
                   : { background: "var(--navy-light)", color: "var(--slate)" }
               }
             >
-              {isPro ? "Pro" : "Free"}
+              {plan.label}
             </span>
             <span className="text-sm" style={{ color: "var(--slate)" }}>
               {user?.username}
@@ -109,17 +114,17 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-8">
             <div>
               <h1 className="text-2xl font-bold" style={{ color: "var(--white)" }}>
-                Dashboard
+                {hasInsights ? "Dashboard" : "Home"}
               </h1>
-              {!isPro && (
+              {monthlyLimit !== null && (
                 <p className="mt-1 text-sm" style={{ color: "var(--slate)" }}>
-                  {monthlyUsed}/{FREE_LIMIT} free interviews used this month.{" "}
+                  {monthlyUsed}/{monthlyLimit} {plan.id === "free" ? "free " : ""}interviews used this month.{" "}
                   <button
                     onClick={() => router.push("/upgrade")}
                     className="underline"
                     style={{ color: "var(--indigo)" }}
                   >
-                    {monthlyUsed >= FREE_LIMIT ? "Upgrade to continue →" : "Upgrade for unlimited →"}
+                    {limitReached ? "Upgrade to continue →" : "Upgrade for more →"}
                   </button>
                 </p>
               )}
@@ -144,7 +149,7 @@ export default function DashboardPage() {
               )}
               <button
                 onClick={() => router.push("/companies")}
-                disabled={!isPro && monthlyUsed >= FREE_LIMIT}
+                disabled={limitReached}
                 className="px-5 py-2.5 rounded text-sm font-semibold transition-opacity disabled:opacity-40"
                 style={{ background: "var(--indigo)", color: "var(--white)" }}
               >
@@ -153,8 +158,74 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Sessions table */}
-          {loadingSessions ? (
+          {/* Free plan: no dashboard/history — just their most recent plain score */}
+          {!hasInsights ? (
+            loadingSessions ? (
+              <p className="text-sm" style={{ color: "var(--slate)" }}>
+                Loading…
+              </p>
+            ) : fetchError ? (
+              <p className="text-sm" style={{ color: "var(--danger)" }}>
+                {fetchError}
+              </p>
+            ) : lastCompleted ? (
+              <div
+                className="rounded-xl px-6 py-8 text-center"
+                style={{ background: "var(--navy-light)", border: "1px solid var(--navy-mid)" }}
+              >
+                <p className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: "var(--slate)" }}>
+                  Your last score
+                </p>
+                <div className="text-5xl font-black tabular-nums mb-2" style={{ color: "var(--white)" }}>
+                  {lastCompleted.scores?.overall ?? "—"}
+                  <span className="text-xl font-normal" style={{ color: "var(--slate-dim)" }}>/10</span>
+                </div>
+                <p className="text-sm mb-6" style={{ color: "var(--slate)" }}>
+                  Overall score from your most recent interview.
+                </p>
+                <div className="flex items-center justify-center gap-3">
+                  <button
+                    onClick={() => router.push(`/interview/${lastCompleted.id}/results`)}
+                    className="px-5 py-2.5 rounded text-sm font-semibold"
+                    style={{
+                      background: "transparent",
+                      color: "var(--white)",
+                      border: "1px solid var(--navy-mid)",
+                    }}
+                  >
+                    View result
+                  </button>
+                  <button
+                    onClick={() => router.push("/upgrade")}
+                    className="px-5 py-2.5 rounded text-sm font-semibold"
+                    style={{ background: "var(--indigo-glow)", color: "var(--indigo)", border: "1px solid var(--indigo)" }}
+                  >
+                    Unlock full insights →
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div
+                className="rounded-lg p-10 text-center"
+                style={{ background: "var(--navy-light)", border: "1px solid var(--navy-mid)" }}
+              >
+                <p className="text-sm font-medium" style={{ color: "var(--white)" }}>
+                  No interviews yet.
+                </p>
+                <p className="mt-1 text-sm" style={{ color: "var(--slate)" }}>
+                  Pick a company and role to run your first AI interview.
+                </p>
+                <button
+                  onClick={() => router.push("/companies")}
+                  className="mt-5 px-5 py-2 rounded text-sm font-semibold"
+                  style={{ background: "var(--indigo)", color: "var(--white)" }}
+                >
+                  Browse companies
+                </button>
+              </div>
+            )
+          ) : /* Paid plans: full history table with score columns */
+          loadingSessions ? (
             <p className="text-sm" style={{ color: "var(--slate)" }}>
               Loading sessions…
             </p>

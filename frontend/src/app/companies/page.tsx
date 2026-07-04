@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { companies, interviews, ApiError } from "@/lib/api";
 import type { Company, CompanyDetail, Role, Round } from "@/lib/api";
+import { planOf } from "@/lib/plans";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -231,10 +232,10 @@ export default function CompaniesPage() {
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
-  const isPro = user?.subscription_plan === "premium";
+  const plan = planOf(user?.subscription_plan);
   const monthlyUsed = (user as any)?.interviews_this_month ?? 0;
-  const FREE_LIMIT = 2;
-  const limitReached = !isPro && monthlyUsed >= FREE_LIMIT;
+  const monthlyLimit = plan.monthlyLimit; // null = unlimited
+  const limitReached = monthlyLimit !== null && monthlyUsed >= monthlyLimit;
 
   return (
     <ProtectedRoute>
@@ -304,10 +305,10 @@ export default function CompaniesPage() {
               }}
             >
               <p className="text-sm font-medium" style={{ color: "var(--indigo)" }}>
-                Free plan limit reached
+                {plan.label} plan limit reached
               </p>
               <p className="text-xs mt-1" style={{ color: "var(--slate)" }}>
-                You've used {monthlyUsed}/{FREE_LIMIT} free interviews this month. Upgrade to Pro to continue.
+                You've used {monthlyUsed}/{monthlyLimit} interviews this month. Upgrade to continue.
               </p>
             </div>
           )}

@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.companies.models import Round
+from apps.subscriptions.plans import has_insights, monthly_limit_for
 from core.openrouter_client import (
     build_feedback_prompt,
     build_interview_system_prompt,
@@ -17,6 +18,7 @@ from core.openrouter_client import (
 from .models import InterviewSession
 from .serializers import InterviewSessionListSerializer, InterviewSessionSerializer
 
+# Kept for backward-compat imports elsewhere (e.g. frontend limit displays via API).
 FREE_PLAN_MONTHLY_LIMIT = 2
 
 # Every interview session gets a randomized time limit in this range.
@@ -141,15 +143,16 @@ class StartInterviewView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Plan limit check (Phase 7 will move this to subscriptions app)
+        # Plan limit check — None means unlimited (Max plan).
         user = request.user
-        if (
-            user.subscription_plan == "free"
-            and user.interviews_this_month >= FREE_PLAN_MONTHLY_LIMIT
-        ):
+        limit = monthly_limit_for(user.subscription_plan)
+        if limit is not None and user.interviews_this_month >= limit:
             return Response(
                 {
-                    "detail": "Free plan limit reached (2 interviews/month). Upgrade to continue.",
+                    "detail": (
+                        f"You've reached your {user.subscription_plan} plan limit "
+                        f"({limit} interviews/month). Upgrade to continue."
+                    ),
                     "code": "plan_limit_reached",
                 },
                 status=status.HTTP_403_FORBIDDEN,
@@ -313,12 +316,15 @@ def _score_and_complete_session(session: InterviewSession, *, time_expired: bool
             {"detail": "Round not found."}, status=status.HTTP_404_NOT_FOUND
         )
 
+    detailed = has_insights(session.user.subscription_plan)
+
     feedback_messages = build_feedback_prompt(
         transcript=session.transcript,
         company_name=round_obj.role.company.name,
         role_title=round_obj.role.title,
         round_title=round_obj.title,
         questions=questions,
+        detailed=detailed,
     )
 
     try:
@@ -342,13 +348,21 @@ def _score_and_complete_session(session: InterviewSession, *, time_expired: bool
     }
     feedback_text = result.get("feedback", "")
 
+    insights = {}
+    if detailed:
+        insights = {
+            "topics": result.get("topics", []),
+            "improvement_areas": result.get("improvement_areas", []),
+        }
+
     session.scores = scores
     session.feedback = feedback_text
+    session.insights = insights
     session.status = InterviewSession.Status.COMPLETED
     session.ended_at = datetime.now(timezone.utc)
     session.time_expired = time_expired
     session.save(
-        update_fields=["scores", "feedback", "status", "ended_at", "time_expired"]
+        update_fields=["scores", "feedback", "insights", "status", "ended_at", "time_expired"]
     )
     return session
 

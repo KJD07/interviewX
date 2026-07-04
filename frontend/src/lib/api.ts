@@ -45,6 +45,11 @@ export interface RegisterResponse {
   requires_verification: true;
 }
 
+export interface InterviewInsights {
+  topics?: { name: string; score: number; note: string }[];
+  improvement_areas?: { area: string; suggestion: string }[];
+}
+
 export interface InterviewSession {
   id: number;
   round: number;
@@ -57,6 +62,7 @@ export interface InterviewSession {
     overall?: number;
   };
   feedback: string;
+  insights?: InterviewInsights;
   duration_minutes: number;
   started_at: string;
   ended_at: string | null;
@@ -254,6 +260,7 @@ export interface CreateOrderResponse {
   order_id: string;
   amount: number;
   currency: string;
+  plan: string;
   key_id: string;
   user_email: string;
   user_name: string;
@@ -266,9 +273,10 @@ export interface VerifyPaymentResponse {
 }
 
 export const subscriptions = {
-  createOrder: () =>
+  createOrder: (plan: "pro" | "premium" | "max") =>
     request<CreateOrderResponse>("/api/subscriptions/create-order/", {
       method: "POST",
+      body: JSON.stringify({ plan }),
     }),
 
   verifyPayment: (

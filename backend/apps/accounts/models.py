@@ -15,7 +15,7 @@ class User(AbstractUser):
     subscription_plan = models.CharField(
         max_length=20,
         default="free",
-        help_text="free | premium",
+        help_text="free | pro | premium | max",
     )
     interviews_this_month = models.IntegerField(default=0)
     subscription_end_date = models.DateTimeField(null=True, blank=True)
