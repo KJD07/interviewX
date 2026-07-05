@@ -97,6 +97,21 @@ export interface StartInterviewResponse {
   session: InterviewSession;
 }
 
+export interface RealInterviewRound {
+  round_name: string;
+  topics: string;
+}
+
+export interface RealInterviewReportPayload {
+  had_recent_interview: "yes" | "no";
+  name?: string;
+  email?: string;
+  company_name?: string;
+  role_title?: string;
+  rounds?: RealInterviewRound[];
+  can_provide_proof?: boolean;
+}
+
 // ── Core fetch wrapper ───────────────────────────────────────────────────────
 
 let isRefreshing = false;
@@ -252,6 +267,15 @@ export const interviews = {
     request<InterviewSession>(`/api/interviews/${session_id}/end/`, {
       method: "POST",
     }),
+
+  submitRealReport: (session_id: number, payload: RealInterviewReportPayload) =>
+    request<RealInterviewReportPayload & { id: number; created_at: string }>(
+      `/api/interviews/${session_id}/real-report/`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }
+    ),
 };
 
 // ── Subscription endpoints ────────────────────────────────────────────────────

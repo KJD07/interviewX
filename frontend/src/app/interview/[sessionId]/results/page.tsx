@@ -6,6 +6,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { interviews, ApiError } from "@/lib/api";
 import type { InterviewSession } from "@/lib/api";
 import { planOf } from "@/lib/plans";
+import RealInterviewReportModal from "@/components/RealInterviewReportModal";
 
 // ── Score ring ────────────────────────────────────────────────────────────────
 
@@ -93,6 +94,7 @@ export default function ResultsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showTranscript, setShowTranscript] = useState(false);
+  const [showRealReportModal, setShowRealReportModal] = useState(false);
 
   useEffect(() => {
     interviews.detail(sessionId)
@@ -101,6 +103,16 @@ export default function ResultsPage() {
         // If still in progress, redirect to chat
         if (s.status === "in_progress") {
           router.replace(`/interview/${sessionId}`);
+          return;
+        }
+        // Paid-plan users get a one-time, skippable form asking about any
+        // real interview they recently gave — feeds real interview data
+        // back into InterviewX. Only shown once per session.
+        if (s.status === "completed" && plan.hasInsights) {
+          const seenKey = `ix_rr_seen_${sessionId}`;
+          if (!localStorage.getItem(seenKey)) {
+            setShowRealReportModal(true);
+          }
         }
       })
       .catch((err) => {
@@ -108,7 +120,12 @@ export default function ResultsPage() {
         else setError("Could not load results.");
       })
       .finally(() => setLoading(false));
-  }, [sessionId, router]);
+  }, [sessionId, router, plan.hasInsights]);
+
+  const dismissRealReportModal = () => {
+    localStorage.setItem(`ix_rr_seen_${sessionId}`, "1");
+    setShowRealReportModal(false);
+  };
 
   if (loading) {
     return (
@@ -454,6 +471,14 @@ export default function ResultsPage() {
           </div>
 
         </main>
+
+        {showRealReportModal && (
+          <RealInterviewReportModal
+            sessionId={sessionId}
+            onClose={dismissRealReportModal}
+            onSubmitted={dismissRealReportModal}
+          />
+        )}
       </div>
     </ProtectedRoute>
   );

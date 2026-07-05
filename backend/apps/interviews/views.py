@@ -15,8 +15,12 @@ from core.openrouter_client import (
     chat_completion,
 )
 
-from .models import InterviewSession
-from .serializers import InterviewSessionListSerializer, InterviewSessionSerializer
+from .models import InterviewSession, RealInterviewReport
+from .serializers import (
+    InterviewSessionListSerializer,
+    InterviewSessionSerializer,
+    RealInterviewReportSerializer,
+)
 
 # Kept for backward-compat imports elsewhere (e.g. frontend limit displays via API).
 FREE_PLAN_MONTHLY_LIMIT = 2
@@ -510,3 +514,42 @@ class EndInterviewView(APIView):
 
         serializer = InterviewSessionSerializer(result)
         return Response(serializer.data)
+
+class RealInterviewReportView(APIView):
+    """
+    POST /api/interviews/<session_id>/real-report/
+
+    Optional post-interview form, shown only to paid-plan (pro/premium/max)
+    users right after a session completes. Captures a real interview the
+    candidate recently gave elsewhere — company, role, rounds, and topics —
+    to feed the question-sourcing pipeline. Fully skippable by the user;
+    this endpoint is only hit if they choose to submit.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, session_id):
+        try:
+            session = InterviewSession.objects.get(pk=session_id, user=request.user)
+        except InterviewSession.DoesNotExist:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if not has_insights(request.user.subscription_plan):
+            return Response(
+                {"detail": "This form is available on Pro, Premium, and Max plans."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if session.status != InterviewSession.Status.COMPLETED:
+            return Response(
+                {"detail": "Interview session is not completed yet."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = RealInterviewReportSerializer(
+            data=request.data,
+            context={"request": request, "session": session},
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
