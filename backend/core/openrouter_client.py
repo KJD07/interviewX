@@ -142,6 +142,7 @@ def build_feedback_prompt(
     round_title: str,
     questions: list[dict],
     detailed: bool = False,
+    engagement_summary: str = "",
 ) -> list[dict[str, str]]:
     """
     Build the messages list for a feedback/scoring pass after the interview ends.
@@ -151,9 +152,15 @@ def build_feedback_prompt(
     topic-level breakdown and improvement areas, which costs a few more
     output tokens. `detailed=False` (free plan) keeps the response lean —
     just the four scores and a short summary — to keep free interviews cheap.
+
+    `engagement_summary` (optional) is a short, deterministically-computed
+    string describing how much the candidate actually engaged (word counts,
+    number of blank/"I don't know" answers, etc.) so the model has hard
+    numbers to anchor against instead of guessing leniently from vibes.
     """
     transcript_text = "\n".join(
-        f"{turn['role'].upper()}: {turn['text']}" for turn in transcript
+        f"{turn['role'].upper()}: {turn['text'] if turn['text'].strip() else '[NO ANSWER GIVEN]'}"
+        for turn in transcript
     )
     q_block = "\n".join(
         f"{i+1}. [{q['question_type']}] {q['question_text']} | Ideal: {q.get('ideal_answer','N/A')}"
@@ -161,34 +168,53 @@ def build_feedback_prompt(
     )
 
     base_shape = """{
-  "communication": <integer 1-10>,
-  "technical": <integer 1-10>,
-  "problem_solving": <integer 1-10>,
-  "overall": <integer 1-10>,
-  "feedback": "<2-4 sentence plain-text summary of strengths and areas to improve>"
+  "communication": <integer 0-10>,
+  "technical": <integer 0-10>,
+  "problem_solving": <integer 0-10>,
+  "overall": <integer 0-10>,
+  "feedback": "<2-4 sentence plain-text summary of strengths and areas to improve, referencing specific moments from the transcript>"
 }"""
 
     detailed_shape = """{
-  "communication": <integer 1-10>,
-  "technical": <integer 1-10>,
-  "problem_solving": <integer 1-10>,
-  "overall": <integer 1-10>,
-  "feedback": "<2-4 sentence plain-text summary of strengths and areas to improve>",
+  "communication": <integer 0-10>,
+  "technical": <integer 0-10>,
+  "problem_solving": <integer 0-10>,
+  "overall": <integer 0-10>,
+  "feedback": "<2-4 sentence plain-text summary of strengths and areas to improve, referencing specific moments from the transcript>",
   "topics": [
-    {"name": "<short topic/skill name, e.g. 'System Design', 'SQL Joins', 'Communication clarity'>", "score": <integer 1-10>, "note": "<1 sentence on performance for this topic>"}
+    {"name": "<short topic/skill name, e.g. 'System Design', 'SQL Joins', 'Communication clarity'>", "score": <integer 0-10>, "note": "<1 sentence on performance for this topic, citing what was or wasn't said>"}
   ],
   "improvement_areas": [
     {"area": "<specific weak area>", "suggestion": "<1-2 sentence actionable suggestion to improve it>"}
   ]
 }"""
 
-    system = f"""You are an expert interview evaluator. You will receive an interview transcript and return ONLY a JSON object — no markdown, no preamble, no explanation outside the JSON.
+    system = f"""You are a strict, no-nonsense senior hiring panel evaluator for {company_name}. You will receive an interview transcript and return ONLY a JSON object — no markdown, no preamble, no explanation outside the JSON.
+
+## Your grading philosophy
+You are NOT a friendly coach trying to make the candidate feel good. You are a precise evaluator whose scores directly affect a hiring decision. Being generous or "rounding up out of politeness" is a failure on your part — it misleads the candidate about their real readiness. Score exactly what you observe, nothing more.
+
+## Hard anchoring rubric (apply this literally, per question and overall)
+- 0: No answer at all, a blank/empty response, or completely off-topic content with zero relevant substance.
+- 1-2: Candidate said something but it shows no real understanding — e.g. "I don't know", a one-word non-answer, or a guess with no reasoning that happens to be wrong.
+- 3-4: A weak attempt — some relevant words/concepts appear, but the answer is mostly incorrect, extremely shallow, or so vague it could apply to any question.
+- 5-6: A partial answer — gets some genuinely correct/relevant substance across, but has clear gaps, imprecision, or missing depth an average competent candidate would include.
+- 7-8: A solid, mostly correct and reasonably complete answer with only minor gaps or missed nuance.
+- 9-10: An excellent, precise, well-structured answer that a strong hire would give — correct, complete, and clearly communicated.
+
+## Critical rules — do not violate these
+- A blank answer, "[NO ANSWER GIVEN]", "I don't know" with no follow-up reasoning, "pass"/"skip", or one-line non-attempts MUST score 0-2 on every dimension that question touches. NEVER default to a "neutral" middle score like 5 or 6 just because you lack information — lack of information about a skill means the candidate did not demonstrate it, which scores low, not average.
+- The "overall" score must be consistent with the per-question performance across the WHOLE transcript. If the majority of questions received no real answer, overall must be in the 0-2 range even if one question was answered reasonably.
+- Do not give credit for confidence, politeness, or effort alone — only for actual demonstrated correctness/relevance.
+- Base every score strictly on what is literally present in the transcript below. Do not assume unstated competence.
 
 Required JSON shape:
 {detailed_shape if detailed else base_shape}"""
 
     if detailed:
-        system += "\n\nFor \"topics\", identify 3-6 distinct topics/skills actually covered in the transcript (draw from the questions asked) and score each. For \"improvement_areas\", give 2-4 concrete, specific areas the candidate should focus on next, based on where they were weakest."
+        system += "\n\nFor \"topics\", identify 3-6 distinct topics/skills actually covered in the transcript (draw from the questions asked) and score each using the same rubric above — a topic that was never actually answered scores 0-2, not a moderate score. For \"improvement_areas\", give 2-4 concrete, specific areas the candidate should focus on next, based on where they were weakest or silent."
+
+    engagement_block = f"\nCandidate engagement stats (computed, not opinion — use these to sanity-check your scores):\n{engagement_summary}\n" if engagement_summary else ""
 
     user = f"""Company: {company_name}
 Role: {role_title}
@@ -196,11 +222,11 @@ Round: {round_title}
 
 Questions asked (with ideal answers):
 {q_block}
-
+{engagement_block}
 Transcript:
 {transcript_text}
 
-Score and give feedback."""
+Score strictly according to the rubric and rules above, then give feedback."""
 
     return [
         {"role": "system", "content": system},

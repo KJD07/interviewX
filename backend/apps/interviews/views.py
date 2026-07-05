@@ -302,6 +302,89 @@ class ChatView(APIView):
         return Response({"ai_message": ai_reply})
 
 
+# Non-attempts that should never earn meaningful credit, regardless of what
+# the LLM grader decides. Matched case-insensitively against the full text
+# of a candidate turn (after stripping punctuation/whitespace).
+_NON_ANSWER_PHRASES = {
+    "", "i don't know", "i dont know", "idk", "no idea", "not sure",
+    "skip", "pass", "next", "i have no idea", "dont know", "don't know",
+    "no clue", "no comment", "n/a", "na",
+}
+
+
+def _normalize_for_check(text: str) -> str:
+    return "".join(ch for ch in text.strip().lower() if ch.isalnum() or ch.isspace()).strip()
+
+
+def _analyze_candidate_engagement(transcript: list[dict]) -> dict:
+    """
+    Deterministically measure how much the candidate actually engaged with
+    the interview, independent of the LLM grader. Used to (a) give the LLM
+    hard numbers to anchor its scoring against, and (b) clamp the final
+    scores as a hard guardrail so a blank/non-attempt interview can never
+    surface a misleadingly generous mid-range score.
+    """
+    candidate_turns = [t for t in transcript if t.get("role") == "user"]
+    total_turns = len(candidate_turns)
+
+    word_counts = [len(t.get("text", "").split()) for t in candidate_turns]
+    total_words = sum(word_counts)
+
+    non_answer_count = sum(
+        1 for t in candidate_turns
+        if _normalize_for_check(t.get("text", "")) in _NON_ANSWER_PHRASES
+    )
+    # Also count answers that are just a couple of throwaway words (e.g. "idk lol")
+    trivial_count = sum(1 for wc in word_counts if wc <= 2)
+
+    substantive_turns = max(total_turns - max(non_answer_count, trivial_count), 0)
+    substantive_ratio = (substantive_turns / total_turns) if total_turns else 0.0
+
+    summary_lines = [
+        f"- Candidate turns: {total_turns}",
+        f"- Total words typed/spoken by candidate across all answers: {total_words}",
+        f"- Non-answers (blank, 'I don't know', 'skip', etc.): {non_answer_count}/{total_turns}",
+        f"- Turns with 2 words or fewer: {trivial_count}/{total_turns}",
+        f"- Estimated substantive answers: {substantive_turns}/{total_turns}",
+    ]
+
+    return {
+        "total_turns": total_turns,
+        "total_words": total_words,
+        "non_answer_count": non_answer_count,
+        "trivial_count": trivial_count,
+        "substantive_ratio": substantive_ratio,
+        "summary_text": "\n".join(summary_lines),
+    }
+
+
+def _clamp_scores_to_engagement(scores: dict, engagement: dict) -> dict:
+    """
+    Hard guardrail: if the candidate barely engaged at all, cap every score
+    low regardless of what the LLM returned. This protects against LLM
+    leniency (e.g. defaulting to a "neutral" 5-6 out of politeness) when
+    there is nothing to actually evaluate.
+    """
+    total_turns = engagement["total_turns"]
+    if total_turns == 0:
+        return {k: 0 for k in scores}
+
+    # No real engagement at all -> hard clamp near zero.
+    if engagement["total_words"] == 0 or engagement["non_answer_count"] == total_turns:
+        cap = 1
+    # Almost everything was a non-answer or trivial throwaway -> very low cap.
+    elif engagement["substantive_ratio"] <= 0.2:
+        cap = 2
+    elif engagement["substantive_ratio"] <= 0.4:
+        cap = 4
+    else:
+        cap = 10  # no clamp needed
+
+    if cap == 10:
+        return scores
+    return {k: min(v, cap) if isinstance(v, (int, float)) else v for k, v in scores.items()}
+
+
 def _score_and_complete_session(session: InterviewSession, *, time_expired: bool = False):
     """
     Shared scoring/completion logic used by both the manual "End interview"
@@ -318,6 +401,8 @@ def _score_and_complete_session(session: InterviewSession, *, time_expired: bool
 
     detailed = has_insights(session.user.subscription_plan)
 
+    engagement = _analyze_candidate_engagement(session.transcript)
+
     feedback_messages = build_feedback_prompt(
         transcript=session.transcript,
         company_name=round_obj.role.company.name,
@@ -325,6 +410,7 @@ def _score_and_complete_session(session: InterviewSession, *, time_expired: bool
         round_title=round_obj.title,
         questions=questions,
         detailed=detailed,
+        engagement_summary=engagement["summary_text"],
     )
 
     try:
@@ -346,13 +432,38 @@ def _score_and_complete_session(session: InterviewSession, *, time_expired: bool
         "problem_solving": result.get("problem_solving", 0),
         "overall": result.get("overall", 0),
     }
+    scores_before_clamp = dict(scores)
+    scores = _clamp_scores_to_engagement(scores, engagement)
+    was_clamped = scores != scores_before_clamp
+
     feedback_text = result.get("feedback", "")
+    if was_clamped and engagement["total_words"] == 0:
+        feedback_text = (
+            "No answers were provided during this interview, so no real assessment "
+            "of your skills could be made. Try the interview again and answer each "
+            "question — even a partial or uncertain attempt is scored far better "
+            "than no answer at all."
+        )
+    elif was_clamped:
+        feedback_text = (
+            (feedback_text + " " if feedback_text else "")
+            + "Note: most questions received little to no substantive answer, "
+            "so scores reflect that limited engagement rather than technical ability alone."
+        )
 
     insights = {}
     if detailed:
+        topics = result.get("topics", [])
+        improvement_areas = result.get("improvement_areas", [])
+        if was_clamped:
+            cap = max(scores.values()) if scores else 2
+            topics = [
+                {**t, "score": min(t.get("score", 0), cap)} if isinstance(t, dict) else t
+                for t in topics
+            ]
         insights = {
-            "topics": result.get("topics", []),
-            "improvement_areas": result.get("improvement_areas", []),
+            "topics": topics,
+            "improvement_areas": improvement_areas,
         }
 
     session.scores = scores
