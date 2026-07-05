@@ -16,6 +16,7 @@ class InterviewSessionSerializer(serializers.ModelSerializer):
             "transcript",
             "scores",
             "feedback",
+            "insights",
             "duration_minutes",
             "started_at",
             "ended_at",
@@ -31,5 +32,5 @@ class InterviewSessionSerializer(serializers.ModelSerializer):
 class InterviewSessionListSerializer(serializers.ModelSerializer):
     class Meta:
         model = InterviewSession
-        fields = ["id", "round", "status", "duration_minutes", "started_at", "ended_at"]
+        fields = ["id", "round", "status", "scores", "duration_minutes", "started_at", "ended_at"]
         read_only_fields = fields

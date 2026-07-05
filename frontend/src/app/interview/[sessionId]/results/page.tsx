@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { interviews, ApiError } from "@/lib/api";
 import type { InterviewSession } from "@/lib/api";
+import { planOf } from "@/lib/plans";
 
 // ── Score ring ────────────────────────────────────────────────────────────────
 
@@ -84,7 +85,9 @@ function TranscriptBubble({ msg }: { msg: { role: "user" | "ai"; text: string; t
 export default function ResultsPage() {
   const router = useRouter();
   const params = useParams();
+  const { user } = useAuth();
   const sessionId = Number(params.sessionId);
+  const plan = planOf(user?.subscription_plan);
 
   const [session, setSession] = useState<InterviewSession | null>(null);
   const [loading, setLoading] = useState(true);
@@ -180,11 +183,11 @@ export default function ResultsPage() {
             InterviewX
           </span>
           <button
-            onClick={() => router.push("/dashboard")}
+            onClick={() => router.push(plan.hasInsights ? "/dashboard" : "/companies")}
             className="text-sm hover:underline"
             style={{ color: "var(--slate)" }}
           >
-            ← Dashboard
+            {plan.hasInsights ? "← Dashboard" : "← Companies"}
           </button>
         </nav>
 
@@ -255,20 +258,41 @@ export default function ResultsPage() {
             </div>
           )}
 
-          {/* Score breakdown */}
-          <div
-            className="rounded-xl px-6 py-6"
-            style={{ background: "var(--navy-light)", border: "1px solid var(--navy-mid)" }}
-          >
-            <h2 className="text-sm font-semibold uppercase tracking-wider mb-6" style={{ color: "var(--slate)" }}>
-              Score breakdown
-            </h2>
-            <div className="flex justify-around">
-              <ScoreRing value={scores.communication} label="Communication" />
-              <ScoreRing value={scores.technical} label="Technical" />
-              <ScoreRing value={scores.problem_solving} label="Problem solving" />
+          {/* Score breakdown — paid plans only */}
+          {plan.hasInsights ? (
+            <div
+              className="rounded-xl px-6 py-6"
+              style={{ background: "var(--navy-light)", border: "1px solid var(--navy-mid)" }}
+            >
+              <h2 className="text-sm font-semibold uppercase tracking-wider mb-6" style={{ color: "var(--slate)" }}>
+                Score breakdown
+              </h2>
+              <div className="flex justify-around">
+                <ScoreRing value={scores.communication} label="Communication" />
+                <ScoreRing value={scores.technical} label="Technical" />
+                <ScoreRing value={scores.problem_solving} label="Problem solving" />
+              </div>
             </div>
-          </div>
+          ) : (
+            <div
+              className="rounded-xl px-6 py-5 text-center"
+              style={{ background: "var(--navy-light)", border: "1px dashed var(--navy-mid)" }}
+            >
+              <p className="text-sm font-medium" style={{ color: "var(--white)" }}>
+                Want the full breakdown?
+              </p>
+              <p className="text-sm mt-1" style={{ color: "var(--slate)" }}>
+                Upgrade to see your Communication, Technical, and Problem-solving scores plus AI insights on exactly what to improve.
+              </p>
+              <button
+                onClick={() => router.push("/upgrade")}
+                className="mt-4 px-5 py-2 rounded text-sm font-semibold"
+                style={{ background: "var(--indigo)", color: "var(--white)" }}
+              >
+                See upgrade options →
+              </button>
+            </div>
+          )}
 
           {/* Feedback */}
           {s.feedback && (
@@ -284,6 +308,73 @@ export default function ResultsPage() {
               </p>
             </div>
           )}
+
+          {/* AI Insights — topic breakdown + improvement areas, paid plans only */}
+          {plan.hasInsights && s.insights && (s.insights.topics?.length || s.insights.improvement_areas?.length) ? (
+            <div
+              className="rounded-xl px-6 py-6"
+              style={{ background: "var(--navy-light)", border: "1px solid var(--navy-mid)" }}
+            >
+              <h2 className="text-sm font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--slate)" }}>
+                AI insights
+              </h2>
+
+              {s.insights.topics && s.insights.topics.length > 0 && (
+                <div className="mb-6">
+                  <p className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: "var(--slate-dim)" }}>
+                    Topic-by-topic
+                  </p>
+                  <div className="space-y-3">
+                    {s.insights.topics.map((t, i) => {
+                      const color = t.score >= 7 ? "#22c55e" : t.score >= 5 ? "#f59e0b" : "var(--danger)";
+                      return (
+                        <div key={i} className="flex items-start gap-3">
+                          <span
+                            className="shrink-0 text-xs font-bold tabular-nums rounded-full w-8 h-8 flex items-center justify-center"
+                            style={{ background: "var(--navy-mid)", color }}
+                          >
+                            {t.score}
+                          </span>
+                          <div>
+                            <p className="text-sm font-medium" style={{ color: "var(--white)" }}>
+                              {t.name}
+                            </p>
+                            <p className="text-xs mt-0.5" style={{ color: "var(--slate)" }}>
+                              {t.note}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {s.insights.improvement_areas && s.insights.improvement_areas.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: "var(--slate-dim)" }}>
+                    Focus on next
+                  </p>
+                  <div className="space-y-3">
+                    {s.insights.improvement_areas.map((a, i) => (
+                      <div
+                        key={i}
+                        className="rounded-lg px-4 py-3"
+                        style={{ background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.15)" }}
+                      >
+                        <p className="text-sm font-semibold" style={{ color: "var(--indigo)" }}>
+                          {a.area}
+                        </p>
+                        <p className="text-xs mt-1" style={{ color: "var(--slate)" }}>
+                          {a.suggestion}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : null}
 
           {/* Transcript toggle */}
           {s.transcript && s.transcript.length > 0 && (
@@ -347,17 +438,19 @@ export default function ResultsPage() {
             >
               Practice again
             </button>
-            <button
-              onClick={() => router.push("/dashboard")}
-              className="flex-1 py-3 rounded-lg text-sm font-semibold"
-              style={{
-                background: "var(--navy-light)",
-                color: "var(--white)",
-                border: "1px solid var(--navy-mid)",
-              }}
-            >
-              Dashboard
-            </button>
+            {plan.hasInsights && (
+              <button
+                onClick={() => router.push("/dashboard")}
+                className="flex-1 py-3 rounded-lg text-sm font-semibold"
+                style={{
+                  background: "var(--navy-light)",
+                  color: "var(--white)",
+                  border: "1px solid var(--navy-mid)",
+                }}
+              >
+                Dashboard
+              </button>
+            )}
           </div>
 
         </main>

@@ -141,10 +141,16 @@ def build_feedback_prompt(
     role_title: str,
     round_title: str,
     questions: list[dict],
+    detailed: bool = False,
 ) -> list[dict[str, str]]:
     """
     Build the messages list for a feedback/scoring pass after the interview ends.
     Returns messages ready to pass to chat_completion().
+
+    `detailed=True` (paid plans only) asks the model for an additional
+    topic-level breakdown and improvement areas, which costs a few more
+    output tokens. `detailed=False` (free plan) keeps the response lean —
+    just the four scores and a short summary — to keep free interviews cheap.
     """
     transcript_text = "\n".join(
         f"{turn['role'].upper()}: {turn['text']}" for turn in transcript
@@ -154,16 +160,35 @@ def build_feedback_prompt(
         for i, q in enumerate(questions)
     )
 
-    system = """You are an expert interview evaluator. You will receive an interview transcript and return ONLY a JSON object — no markdown, no preamble, no explanation outside the JSON.
-
-Required JSON shape:
-{
+    base_shape = """{
   "communication": <integer 1-10>,
   "technical": <integer 1-10>,
   "problem_solving": <integer 1-10>,
   "overall": <integer 1-10>,
   "feedback": "<2-4 sentence plain-text summary of strengths and areas to improve>"
 }"""
+
+    detailed_shape = """{
+  "communication": <integer 1-10>,
+  "technical": <integer 1-10>,
+  "problem_solving": <integer 1-10>,
+  "overall": <integer 1-10>,
+  "feedback": "<2-4 sentence plain-text summary of strengths and areas to improve>",
+  "topics": [
+    {"name": "<short topic/skill name, e.g. 'System Design', 'SQL Joins', 'Communication clarity'>", "score": <integer 1-10>, "note": "<1 sentence on performance for this topic>"}
+  ],
+  "improvement_areas": [
+    {"area": "<specific weak area>", "suggestion": "<1-2 sentence actionable suggestion to improve it>"}
+  ]
+}"""
+
+    system = f"""You are an expert interview evaluator. You will receive an interview transcript and return ONLY a JSON object — no markdown, no preamble, no explanation outside the JSON.
+
+Required JSON shape:
+{detailed_shape if detailed else base_shape}"""
+
+    if detailed:
+        system += "\n\nFor \"topics\", identify 3-6 distinct topics/skills actually covered in the transcript (draw from the questions asked) and score each. For \"improvement_areas\", give 2-4 concrete, specific areas the candidate should focus on next, based on where they were weakest."
 
     user = f"""Company: {company_name}
 Role: {role_title}

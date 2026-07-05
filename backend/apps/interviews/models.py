@@ -29,6 +29,12 @@ class InterviewSession(models.Model):
     # {"communication": 8, "technical": 7, "problem_solving": 9}
     scores = models.JSONField(default=dict)
     feedback = models.TextField(blank=True)
+    # Paid-plan-only AI insights: topic-level breakdown + improvement areas.
+    # {"topics": [{"name": "...", "score": 7, "note": "..."}],
+    #  "improvement_areas": [{"area": "...", "suggestion": "..."}]}
+    # Left as {} for free-plan users — we don't even ask the AI for this
+    # extra detail on their sessions, to keep their interviews cheap to run.
+    insights = models.JSONField(default=dict, blank=True)
     # Time limit for this session, in minutes. Randomized 45-60 at start.
     duration_minutes = models.PositiveIntegerField(default=45)
     started_at = models.DateTimeField(auto_now_add=True)
