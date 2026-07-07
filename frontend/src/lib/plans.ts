@@ -73,3 +73,10 @@ export function planOf(subscriptionPlan: string | undefined | null): PlanInfo {
 export function isPaidPlan(subscriptionPlan: string | undefined | null): boolean {
   return PAID_PLAN_IDS.includes((subscriptionPlan as PlanId) || "free");
 }
+
+// Skills section (skill-only practice interviews) is Premium & Max only.
+const SKILLS_PLAN_IDS: PlanId[] = ["premium", "max"];
+
+export function hasSkills(subscriptionPlan: string | undefined | null): boolean {
+  return SKILLS_PLAN_IDS.includes((subscriptionPlan as PlanId) || "free");
+}

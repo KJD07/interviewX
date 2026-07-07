@@ -1,7 +1,7 @@
 "use client";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { planOf } from "@/lib/plans";
+import { planOf, hasSkills } from "@/lib/plans";
 
 function GridIcon() {
   return (
@@ -24,6 +24,14 @@ function BuildingIcon() {
   );
 }
 
+function SparkleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M9 2l1.4 4.6L15 8l-4.6 1.4L9 14l-1.4-4.6L3 8l4.6-1.4L9 2z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function LogoutIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -32,16 +40,19 @@ function LogoutIcon() {
   );
 }
 
-const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard", icon: GridIcon },
-  { href: "/companies", label: "Companies", icon: BuildingIcon },
-];
-
 export default function Sidebar() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const plan = planOf(user?.subscription_plan);
+
+  const NAV_ITEMS = [
+    { href: "/dashboard", label: "Dashboard", icon: GridIcon },
+    { href: "/companies", label: "Companies", icon: BuildingIcon },
+    ...(hasSkills(user?.subscription_plan)
+      ? [{ href: "/skills", label: "Skills", icon: SparkleIcon }]
+      : []),
+  ];
 
   const handleLogout = () => {
     logout();

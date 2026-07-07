@@ -74,6 +74,8 @@ export interface Company {
   name: string;
   tone_style: string;
   is_free?: boolean;
+  kind?: "company" | "skill";
+  category?: string;
 }
 
 export interface Round {
@@ -242,7 +244,14 @@ export const auth = {
 // ── Company endpoints ─────────────────────────────────────────────────────────
 
 export const companies = {
-  list: () => request<Company[]>("/api/companies/"),
+  list: (kind?: "company" | "skill") =>
+    request<Company[]>(`/api/companies/${kind ? `?kind=${kind}` : ""}`),
+  detail: (id: number) => request<CompanyDetail>(`/api/companies/${id}/`),
+};
+
+// Skills are Company rows with kind="skill" — same detail/roles/rounds shape.
+export const skills = {
+  list: () => request<Company[]>("/api/companies/?kind=skill"),
   detail: (id: number) => request<CompanyDetail>(`/api/companies/${id}/`),
 };
 

@@ -30,7 +30,7 @@ class CompanySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Company
-        fields = ["id", "name", "tone_style", "description", "is_free", "roles"]
+        fields = ["id", "name", "tone_style", "description", "is_free", "kind", "category", "roles"]
 
 
 class CompanyListSerializer(serializers.ModelSerializer):
@@ -38,4 +38,4 @@ class CompanyListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Company
-        fields = ["id", "name", "tone_style", "description", "is_free"]
+        fields = ["id", "name", "tone_style", "description", "is_free", "kind", "category"]

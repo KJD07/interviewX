@@ -25,7 +25,8 @@ class InterviewQuestionInline(admin.TabularInline):
 
 @admin.register(Company)
 class CompanyAdmin(admin.ModelAdmin):
-    list_display = ("name", "tone_style")
+    list_display = ("name", "kind", "category", "tone_style", "is_free")
+    list_filter = ("kind", "category")
     search_fields = ("name",)
     inlines = [RoleInline]
 

@@ -46,3 +46,12 @@ def has_insights(plan: str) -> bool:
     """Only paid plans (Pro/Premium/Max) get topic-level AI insights &
     a full history dashboard. Free plan gets a plain overall score."""
     return PLANS.get(plan, PLANS["free"])["has_insights"]
+
+
+# Plans that unlock the Skills section (practice interviews scoped to a
+# single skill rather than a real company). Premium and Max only.
+SKILLS_PLANS = {"premium", "max"}
+
+
+def has_skills(plan: str) -> bool:
+    return plan in SKILLS_PLANS

@@ -2,6 +2,10 @@ from django.db import models
 
 
 class Company(models.Model):
+    class Kind(models.TextChoices):
+        COMPANY = "company", "Company"
+        SKILL = "skill", "Skill"
+
     name = models.CharField(max_length=100)
     tone_style = models.CharField(
         max_length=50,
@@ -12,6 +16,17 @@ class Company(models.Model):
         default=False,
         help_text="If true, free-plan users can access this company. Paid plans always see all companies.",
     )
+    kind = models.CharField(
+        max_length=10,
+        choices=Kind.choices,
+        default=Kind.COMPANY,
+        help_text="'company' = a real company interview. 'skill' = a skill-based practice interview.",
+    )
+    category = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Grouping label for skills (e.g. 'Frontend', 'Backend', 'DevOps'). Unused for companies.",
+    )
 
     class Meta:
         verbose_name_plural = "Companies"
@@ -19,6 +34,14 @@ class Company(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+    def is_accessible_by(self, plan: str) -> bool:
+        """Whether a user on the given subscription plan can access this entry."""
+        from apps.subscriptions.plans import has_skills
+
+        if self.kind == self.Kind.SKILL:
+            return has_skills(plan)
+        return plan != "free" or self.is_free
 
 
 class Role(models.Model):

@@ -14,14 +14,29 @@ from .serializers import (
 )
 
 
+def _access_denied_detail(company) -> str:
+    if company.kind == Company.Kind.SKILL:
+        return "Skill-based interviews are available on Premium and Max plans."
+    return "This company is only available on a paid plan."
+
+
 class CompanyListView(APIView):
-    """GET /api/companies/ — list all companies (flat, no nested roles)."""
+    """
+    GET /api/companies/ — list all companies (flat, no nested roles).
+    GET /api/companies/?kind=skill — list skill-based practice entries instead.
+    """
 
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        companies = Company.objects.all()
-        if request.user.subscription_plan == "free":
+        kind = request.query_params.get("kind", Company.Kind.COMPANY)
+        companies = Company.objects.filter(kind=kind)
+        plan = request.user.subscription_plan
+        if kind == Company.Kind.SKILL:
+            # Skills are all-or-nothing: not entitled -> nothing shown.
+            if not Company(kind=Company.Kind.SKILL).is_accessible_by(plan):
+                companies = Company.objects.none()
+        elif plan == "free":
             companies = companies.filter(is_free=True)
         serializer = CompanyListSerializer(companies, many=True)
         return Response(serializer.data)
@@ -39,9 +54,9 @@ class CompanyDetailView(APIView):
             ).get(pk=company_id)
         except Company.DoesNotExist:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
-        if request.user.subscription_plan == "free" and not company.is_free:
+        if not company.is_accessible_by(request.user.subscription_plan):
             return Response(
-                {"detail": "This company is only available on a paid plan."},
+                {"detail": _access_denied_detail(company)},
                 status=status.HTTP_403_FORBIDDEN,
             )
         serializer = CompanySerializer(company)
@@ -58,9 +73,9 @@ class RoleListView(APIView):
             company = Company.objects.get(pk=company_id)
         except Company.DoesNotExist:
             return Response({"detail": "Company not found."}, status=status.HTTP_404_NOT_FOUND)
-        if request.user.subscription_plan == "free" and not company.is_free:
+        if not company.is_accessible_by(request.user.subscription_plan):
             return Response(
-                {"detail": "This company is only available on a paid plan."},
+                {"detail": _access_denied_detail(company)},
                 status=status.HTTP_403_FORBIDDEN,
             )
         roles = Role.objects.filter(company_id=company_id).prefetch_related(
@@ -80,9 +95,9 @@ class RoundListView(APIView):
             role = Role.objects.select_related("company").get(pk=role_id, company_id=company_id)
         except Role.DoesNotExist:
             return Response({"detail": "Role not found."}, status=status.HTTP_404_NOT_FOUND)
-        if request.user.subscription_plan == "free" and not role.company.is_free:
+        if not role.company.is_accessible_by(request.user.subscription_plan):
             return Response(
-                {"detail": "This company is only available on a paid plan."},
+                {"detail": _access_denied_detail(role.company)},
                 status=status.HTTP_403_FORBIDDEN,
             )
         rounds = Round.objects.filter(role=role).prefetch_related("questions")

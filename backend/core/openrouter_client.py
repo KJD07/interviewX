@@ -11,7 +11,7 @@ from typing import Any
 import httpx
 
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
-MODEL = "openai/gpt-4o-mini"
+MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"
 TIMEOUT = 30  # seconds
 
 
@@ -76,6 +76,7 @@ def build_interview_system_prompt(
     role_title: str,
     round_title: str,
     questions: list[dict],
+    is_skill: bool = False,
 ) -> str:
     q_block = "\n".join(
         f"{i+1}. [{q['question_type']}] {q['question_text']}"
@@ -104,7 +105,14 @@ def build_interview_system_prompt(
         f"Your tone is {company_tone}. Stay consistent with it throughout."
     )
 
-    return f"""You are a real human interviewer named Alex at {company_name}, conducting a {round_title} interview for the {role_title} role.
+    intro = (
+        f"You are a real human interviewer named Alex, conducting a focused skill-assessment "
+        f"interview on {company_name} ({round_title} — {role_title} track)."
+        if is_skill
+        else f"You are a real human interviewer named Alex at {company_name}, conducting a {round_title} interview for the {role_title} role."
+    )
+
+    return f"""{intro}
 
 ## Your personality
 {tone_desc}

@@ -169,9 +169,15 @@ class StartInterviewView(APIView):
                 {"detail": "Round not found."}, status=status.HTTP_404_NOT_FOUND
             )
 
-        if user.subscription_plan == "free" and not round_obj.role.company.is_free:
+        if not round_obj.role.company.is_accessible_by(user.subscription_plan):
+            company = round_obj.role.company
+            detail = (
+                "Skill-based interviews are available on Premium and Max plans."
+                if company.kind == company.Kind.SKILL
+                else "This company is only available on a paid plan."
+            )
             return Response(
-                {"detail": "This company is only available on a paid plan."},
+                {"detail": detail},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -182,6 +188,7 @@ class StartInterviewView(APIView):
             role_title=round_obj.role.title,
             round_title=round_obj.title,
             questions=questions,
+            is_skill=round_obj.role.company.kind == round_obj.role.company.Kind.SKILL,
         )
 
         # Get opening message from AI (no user turn yet)
@@ -282,6 +289,7 @@ class ChatView(APIView):
             role_title=round_obj.role.title,
             round_title=round_obj.title,
             questions=questions,
+            is_skill=round_obj.role.company.kind == round_obj.role.company.Kind.SKILL,
         )
 
         # Append user turn to transcript
