@@ -8,6 +8,10 @@ class Company(models.Model):
         help_text='e.g. "formal_strict", "casual_friendly"',
     )
     description = models.TextField(blank=True)
+    is_free = models.BooleanField(
+        default=False,
+        help_text="If true, free-plan users can access this company. Paid plans always see all companies.",
+    )
 
     class Meta:
         verbose_name_plural = "Companies"

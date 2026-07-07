@@ -73,6 +73,7 @@ export interface Company {
   id: number;
   name: string;
   tone_style: string;
+  is_free?: boolean;
 }
 
 export interface Round {

@@ -60,6 +60,7 @@ DATA = [
         "name": "Amazon",
         "tone_style": "formal_strict",
         "description": "Leadership Principles are central to every round, including technical ones.",
+        "is_free": True,
         "roles": [
             {
                 "title": "SDE-1",
@@ -82,6 +83,7 @@ DATA = [
         "name": "TCS",
         "tone_style": "casual_friendly",
         "description": "Service-based, focuses on fundamentals, aptitude, and communication.",
+        "is_free": True,
         "roles": [
             {
                 "title": "Ninja / Digital",
@@ -93,6 +95,7 @@ DATA = [
         "name": "Infosys",
         "tone_style": "casual_friendly",
         "description": "Service-based, focuses on fundamentals, aptitude, and communication.",
+        "is_free": True,
         "roles": [
             {
                 "title": "Systems Engineer",
@@ -164,6 +167,7 @@ class Command(BaseCommand):
                 defaults={
                     "tone_style": company_data["tone_style"],
                     "description": company_data["description"],
+                    "is_free": company_data.get("is_free", False),
                 },
             )
             self.stdout.write(

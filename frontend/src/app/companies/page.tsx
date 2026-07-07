@@ -5,7 +5,8 @@ import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { companies, interviews, ApiError } from "@/lib/api";
 import type { Company, CompanyDetail, Role, Round } from "@/lib/api";
-import { planOf } from "@/lib/plans";
+import { planOf, isPaidPlan } from "@/lib/plans";
+import AppShell from "@/components/AppShell";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -233,35 +234,39 @@ export default function CompaniesPage() {
   // ── Render ──────────────────────────────────────────────────────────────────
 
   const plan = planOf(user?.subscription_plan);
+  const isPro = isPaidPlan(user?.subscription_plan);
   const monthlyUsed = (user as any)?.interviews_this_month ?? 0;
   const monthlyLimit = plan.monthlyLimit; // null = unlimited
   const limitReached = monthlyLimit !== null && monthlyUsed >= monthlyLimit;
 
   return (
     <ProtectedRoute>
+      <AppShell>
       <div className="min-h-screen" style={{ background: "var(--navy)" }}>
 
-        {/* Nav */}
-        <nav
-          className="flex items-center justify-between px-6 py-4 border-b"
-          style={{ borderColor: "var(--navy-light)" }}
-        >
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="text-lg font-bold tracking-tight"
-            style={{ color: "var(--white)" }}
+        {/* Nav — only shown for free plan; paid plans use the sidebar instead */}
+        {!isPro && (
+          <nav
+            className="flex items-center justify-between px-6 py-4 border-b"
+            style={{ borderColor: "var(--navy-light)" }}
           >
-            InterviewX
-          </button>
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="flex items-center gap-1.5 text-sm hover:underline"
-            style={{ color: "var(--slate)" }}
-          >
-            <ArrowLeft />
-            Dashboard
-          </button>
-        </nav>
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="text-lg font-bold tracking-tight"
+              style={{ color: "var(--white)" }}
+            >
+              InterviewX
+            </button>
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="flex items-center gap-1.5 text-sm hover:underline"
+              style={{ color: "var(--slate)" }}
+            >
+              <ArrowLeft />
+              Dashboard
+            </button>
+          </nav>
+        )}
 
         <main className="max-w-2xl mx-auto px-6 py-10 fade-up">
 
@@ -341,7 +346,19 @@ export default function CompaniesPage() {
                       title={c.name}
                       subtitle={`Tone: ${c.tone_style}`}
                       onClick={() => handleSelectCompany(c.id)}
-                      right={<TonePill tone={c.tone_style} />}
+                      right={
+                        <div className="flex items-center gap-2">
+                          {c.is_free && (
+                            <span
+                              className="text-xs font-medium px-2 py-0.5 rounded-full"
+                              style={{ background: "rgba(34,197,94,0.10)", color: "#22c55e" }}
+                            >
+                              Free tier
+                            </span>
+                          )}
+                          <TonePill tone={c.tone_style} />
+                        </div>
+                      }
                     />
                   ))}
                 </div>
@@ -435,6 +452,7 @@ export default function CompaniesPage() {
 
         </main>
       </div>
+      </AppShell>
     </ProtectedRoute>
   );
 }

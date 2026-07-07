@@ -169,6 +169,12 @@ class StartInterviewView(APIView):
                 {"detail": "Round not found."}, status=status.HTTP_404_NOT_FOUND
             )
 
+        if user.subscription_plan == "free" and not round_obj.role.company.is_free:
+            return Response(
+                {"detail": "This company is only available on a paid plan."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         # Build system prompt
         system_prompt = build_interview_system_prompt(
             company_name=round_obj.role.company.name,

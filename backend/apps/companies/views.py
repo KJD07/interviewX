@@ -21,6 +21,8 @@ class CompanyListView(APIView):
 
     def get(self, request):
         companies = Company.objects.all()
+        if request.user.subscription_plan == "free":
+            companies = companies.filter(is_free=True)
         serializer = CompanyListSerializer(companies, many=True)
         return Response(serializer.data)
 
@@ -37,6 +39,11 @@ class CompanyDetailView(APIView):
             ).get(pk=company_id)
         except Company.DoesNotExist:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        if request.user.subscription_plan == "free" and not company.is_free:
+            return Response(
+                {"detail": "This company is only available on a paid plan."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         serializer = CompanySerializer(company)
         return Response(serializer.data)
 
@@ -47,8 +54,15 @@ class RoleListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, company_id):
-        if not Company.objects.filter(pk=company_id).exists():
+        try:
+            company = Company.objects.get(pk=company_id)
+        except Company.DoesNotExist:
             return Response({"detail": "Company not found."}, status=status.HTTP_404_NOT_FOUND)
+        if request.user.subscription_plan == "free" and not company.is_free:
+            return Response(
+                {"detail": "This company is only available on a paid plan."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         roles = Role.objects.filter(company_id=company_id).prefetch_related(
             "rounds__questions"
         )
@@ -63,9 +77,14 @@ class RoundListView(APIView):
 
     def get(self, request, company_id, role_id):
         try:
-            role = Role.objects.get(pk=role_id, company_id=company_id)
+            role = Role.objects.select_related("company").get(pk=role_id, company_id=company_id)
         except Role.DoesNotExist:
             return Response({"detail": "Role not found."}, status=status.HTTP_404_NOT_FOUND)
+        if request.user.subscription_plan == "free" and not role.company.is_free:
+            return Response(
+                {"detail": "This company is only available on a paid plan."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         rounds = Round.objects.filter(role=role).prefetch_related("questions")
         serializer = RoundSerializer(rounds, many=True)
         return Response(serializer.data)

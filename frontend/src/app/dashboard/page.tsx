@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import AppShell from "@/components/AppShell";
 import { interviews, ApiError } from "@/lib/api";
 import type { InterviewSession } from "@/lib/api";
 import { planOf, isPaidPlan } from "@/lib/plans";
@@ -71,42 +72,52 @@ export default function DashboardPage() {
   const limitReached = monthlyLimit !== null && monthlyUsed >= monthlyLimit;
   const lastCompleted = sessions.find((s) => s.status === "completed");
 
+  // Analytics computed from history (paid plans only)
+  const completedSessions = sessions.filter((s) => s.status === "completed");
+  const avg = (nums: number[]) =>
+    nums.length ? Math.round((nums.reduce((a, b) => a + b, 0) / nums.length) * 10) / 10 : undefined;
+  const avgOverall = avg(completedSessions.map((s) => s.scores?.overall).filter((v): v is number => v !== undefined));
+  const avgComm = avg(completedSessions.map((s) => s.scores?.communication).filter((v): v is number => v !== undefined));
+  const avgTech = avg(completedSessions.map((s) => s.scores?.technical).filter((v): v is number => v !== undefined));
+  const bestOverall = completedSessions.reduce<number | undefined>((best, s) => {
+    const v = s.scores?.overall;
+    return v !== undefined && (best === undefined || v > best) ? v : best;
+  }, undefined);
+
   return (
     <ProtectedRoute>
+      <AppShell>
       <div className="min-h-screen" style={{ background: "var(--navy)" }}>
 
-        {/* Nav */}
-        <nav
-          className="flex items-center justify-between px-6 py-4 border-b"
-          style={{ borderColor: "var(--navy-light)" }}
-        >
-          <span className="text-lg font-bold tracking-tight" style={{ color: "var(--white)" }}>
-            InterviewX
-          </span>
-          <div className="flex items-center gap-4">
-            {/* Plan badge */}
-            <span
-              className="text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider"
-              style={
-                isPro
-                  ? { background: "var(--indigo-glow)", color: "var(--indigo)" }
-                  : { background: "var(--navy-light)", color: "var(--slate)" }
-              }
-            >
-              {plan.label}
+        {/* Nav — only shown for free plan; paid plans use the sidebar instead */}
+        {!isPro && (
+          <nav
+            className="flex items-center justify-between px-6 py-4 border-b"
+            style={{ borderColor: "var(--navy-light)" }}
+          >
+            <span className="text-lg font-bold tracking-tight" style={{ color: "var(--white)" }}>
+              InterviewX
             </span>
-            <span className="text-sm" style={{ color: "var(--slate)" }}>
-              {user?.username}
-            </span>
-            <button
-              onClick={handleLogout}
-              className="text-sm hover:underline"
-              style={{ color: "var(--slate-dim)" }}
-            >
-              Sign out
-            </button>
-          </div>
-        </nav>
+            <div className="flex items-center gap-4">
+              <span
+                className="text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider"
+                style={{ background: "var(--navy-light)", color: "var(--slate)" }}
+              >
+                {plan.label}
+              </span>
+              <span className="text-sm" style={{ color: "var(--slate)" }}>
+                {user?.username}
+              </span>
+              <button
+                onClick={handleLogout}
+                className="text-sm hover:underline"
+                style={{ color: "var(--slate-dim)" }}
+              >
+                Sign out
+              </button>
+            </div>
+          </nav>
+        )}
 
         <main className="max-w-4xl mx-auto px-6 py-10 fade-up">
 
@@ -157,6 +168,44 @@ export default function DashboardPage() {
               </button>
             </div>
           </div>
+
+          {/* Paid plans: detailed analytics summary */}
+          {hasInsights && !loadingSessions && !fetchError && completedSessions.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+              {[
+                { label: "Interviews completed", value: completedSessions.length },
+                { label: "Avg. overall", value: avgOverall !== undefined ? `${avgOverall}/10` : "—" },
+                { label: "Avg. communication", value: avgComm !== undefined ? `${avgComm}/10` : "—" },
+                { label: "Best score", value: bestOverall !== undefined ? `${bestOverall}/10` : "—" },
+              ].map((stat) => (
+                <div
+                  key={stat.label}
+                  className="rounded-lg px-4 py-4"
+                  style={{ background: "var(--navy-light)", border: "1px solid var(--navy-mid)" }}
+                >
+                  <p className="text-2xl font-bold tabular-nums" style={{ color: "var(--white)" }}>
+                    {stat.value}
+                  </p>
+                  <p className="text-xs mt-1" style={{ color: "var(--slate)" }}>
+                    {stat.label}
+                  </p>
+                </div>
+              ))}
+              {avgTech !== undefined && (
+                <div
+                  className="rounded-lg px-4 py-4 col-span-2 sm:col-span-1"
+                  style={{ background: "var(--navy-light)", border: "1px solid var(--navy-mid)" }}
+                >
+                  <p className="text-2xl font-bold tabular-nums" style={{ color: "var(--white)" }}>
+                    {avgTech}/10
+                  </p>
+                  <p className="text-xs mt-1" style={{ color: "var(--slate)" }}>
+                    Avg. technical
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Free plan: no dashboard/history — just their most recent plain score */}
           {!hasInsights ? (
@@ -314,6 +363,7 @@ export default function DashboardPage() {
           )}
         </main>
       </div>
+      </AppShell>
     </ProtectedRoute>
   );
 }
