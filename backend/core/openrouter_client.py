@@ -11,7 +11,7 @@ from typing import Any
 import httpx
 
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
-MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"
+MODEL = "openai/gpt-4o-mini"
 TIMEOUT = 30  # seconds
 
 
