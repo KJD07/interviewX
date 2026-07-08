@@ -32,6 +32,15 @@ function SparkleIcon() {
   );
 }
 
+function TrendIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M2 13l4.5-5 3 3L16 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 4h4v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function LogoutIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -52,6 +61,7 @@ export default function Sidebar() {
     ...(hasSkills(user?.subscription_plan)
       ? [{ href: "/skills", label: "Skills", icon: SparkleIcon }]
       : []),
+    { href: "/progress", label: "Progress", icon: TrendIcon },
   ];
 
   const handleLogout = () => {

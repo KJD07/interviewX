@@ -529,6 +529,158 @@ class EndInterviewView(APIView):
         serializer = InterviewSessionSerializer(result)
         return Response(serializer.data)
 
+class ProgressView(APIView):
+    """
+    GET /api/interviews/progress/
+
+    Aggregates a user's completed sessions into a progress-over-time view:
+    score trendlines, momentum (recent rate of change), consistency
+    (variance-based label), topic-level rollups, and per-company readiness.
+
+    Free plan gets a minimal locked payload (just the raw overall-score
+    history — capped at 2/month anyway) with `locked: true`, nudging
+    upgrade. Paid plans (has_insights) get the full breakdown.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        detailed = has_insights(user.subscription_plan)
+
+        sessions = list(
+            InterviewSession.objects.filter(
+                user=user, status=InterviewSession.Status.COMPLETED
+            )
+            .select_related("round__role__company")
+            .order_by("started_at")
+        )
+
+        history = [
+            {
+                "id": s.pk,
+                "date": s.started_at.isoformat(),
+                "company": s.round.role.company.name,
+                "role": s.round.role.title,
+                "round": s.round.title,
+                "scores": s.scores or {},
+                "time_expired": s.time_expired,
+            }
+            for s in sessions
+        ]
+
+        overall_series = [
+            h["scores"].get("overall")
+            for h in history
+            if isinstance(h["scores"].get("overall"), (int, float))
+        ]
+
+        result = {
+            "total_completed": len(history),
+            "overall_trend": overall_series,
+            "momentum": _momentum(overall_series),
+            "consistency": _consistency_label(overall_series),
+            "locked": not detailed,
+        }
+
+        if not detailed:
+            result["history"] = [
+                {
+                    "date": h["date"],
+                    "company": h["company"],
+                    "overall": h["scores"].get("overall"),
+                }
+                for h in history
+            ]
+            return Response(result)
+
+        dims = ["communication", "technical", "problem_solving", "overall"]
+        result["dimension_trends"] = {
+            d: [h["scores"].get(d) for h in history] for d in dims
+        }
+        result["history"] = history
+        result["topics"] = _topic_rollups(sessions)
+        result["companies"] = _company_rollups(history)
+
+        return Response(result)
+
+
+def _momentum(series, window=3):
+    """Average change per session across the last `window` scores."""
+    recent = series[-window:]
+    if len(recent) < 2:
+        return None
+    diffs = [recent[i + 1] - recent[i] for i in range(len(recent) - 1)]
+    return round(sum(diffs) / len(diffs), 2)
+
+
+def _consistency_label(series, window=5):
+    """Low variance across recent sessions = 'high' consistency, etc."""
+    recent = series[-window:]
+    if len(recent) < 2:
+        return None
+    mean = sum(recent) / len(recent)
+    variance = sum((x - mean) ** 2 for x in recent) / len(recent)
+    stdev = variance ** 0.5
+    if stdev <= 0.75:
+        return "high"
+    if stdev <= 1.75:
+        return "medium"
+    return "low"
+
+
+def _topic_rollups(sessions):
+    """Average + recent trend per topic name, across all sessions that had
+    detailed insights. Sorted weakest-first so it doubles as a
+    'what to practice next' list."""
+    topic_map = {}
+    for s in sessions:
+        for t in (s.insights or {}).get("topics", []):
+            name = (t or {}).get("name")
+            score = (t or {}).get("score")
+            if not name or not isinstance(score, (int, float)):
+                continue
+            topic_map.setdefault(name, []).append(score)
+
+    topics = [
+        {
+            "name": name,
+            "average": round(sum(vals) / len(vals), 1),
+            "attempts": len(vals),
+            "trend": vals[-3:],
+        }
+        for name, vals in topic_map.items()
+    ]
+    topics.sort(key=lambda t: t["average"])
+    return topics
+
+
+def _company_rollups(history):
+    """Average overall score per company + a simple 'ready' flag (avg of
+    last 3 attempts at that company is >= 7)."""
+    company_map = {}
+    for h in history:
+        v = h["scores"].get("overall")
+        if isinstance(v, (int, float)):
+            company_map.setdefault(h["company"], []).append(v)
+
+    companies = []
+    for name, vals in company_map.items():
+        avg = sum(vals) / len(vals)
+        recent = vals[-3:]
+        ready = len(recent) >= 3 and (sum(recent) / len(recent)) >= 7
+        companies.append(
+            {
+                "company": name,
+                "average": round(avg, 1),
+                "attempts": len(vals),
+                "ready": ready,
+            }
+        )
+    companies.sort(key=lambda c: -c["average"])
+    return companies
+
+
 class RealInterviewReportView(APIView):
     """
     POST /api/interviews/<session_id>/real-report/

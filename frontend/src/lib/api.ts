@@ -255,6 +255,66 @@ export const skills = {
   detail: (id: number) => request<CompanyDetail>(`/api/companies/${id}/`),
 };
 
+// ── Progress dashboard types ────────────────────────────────────────────────────
+
+export interface ProgressHistoryEntryFree {
+  date: string;
+  company: string;
+  overall: number | null;
+}
+
+export interface ProgressHistoryEntryDetailed {
+  id: number;
+  date: string;
+  company: string;
+  role: string;
+  round: string;
+  scores: InterviewSession["scores"];
+  time_expired: boolean;
+}
+
+export interface ProgressTopic {
+  name: string;
+  average: number;
+  attempts: number;
+  trend: number[];
+}
+
+export interface ProgressCompany {
+  company: string;
+  average: number;
+  attempts: number;
+  ready: boolean;
+}
+
+export interface ProgressResponseFree {
+  locked: true;
+  total_completed: number;
+  overall_trend: number[];
+  momentum: number | null;
+  consistency: "high" | "medium" | "low" | null;
+  history: ProgressHistoryEntryFree[];
+}
+
+export interface ProgressResponseDetailed {
+  locked: false;
+  total_completed: number;
+  overall_trend: number[];
+  momentum: number | null;
+  consistency: "high" | "medium" | "low" | null;
+  dimension_trends: {
+    communication: (number | null)[];
+    technical: (number | null)[];
+    problem_solving: (number | null)[];
+    overall: (number | null)[];
+  };
+  history: ProgressHistoryEntryDetailed[];
+  topics: ProgressTopic[];
+  companies: ProgressCompany[];
+}
+
+export type ProgressResponse = ProgressResponseFree | ProgressResponseDetailed;
+
 // ── Interview endpoints ───────────────────────────────────────────────────────
 
 export const interviews = {
@@ -277,6 +337,8 @@ export const interviews = {
     request<InterviewSession>(`/api/interviews/${session_id}/end/`, {
       method: "POST",
     }),
+
+  progress: () => request<ProgressResponse>("/api/interviews/progress/"),
 
   submitRealReport: (session_id: number, payload: RealInterviewReportPayload) =>
     request<RealInterviewReportPayload & { id: number; created_at: string }>(

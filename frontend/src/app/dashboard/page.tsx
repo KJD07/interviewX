@@ -171,6 +171,20 @@ export default function DashboardPage() {
 
           {/* Paid plans: detailed analytics summary */}
           {hasInsights && !loadingSessions && !fetchError && completedSessions.length > 0 && (
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--slate)" }}>
+                Performance snapshot
+              </p>
+              <button
+                onClick={() => router.push("/progress")}
+                className="text-xs font-medium underline"
+                style={{ color: "var(--indigo)" }}
+              >
+                View full progress →
+              </button>
+            </div>
+          )}
+          {hasInsights && !loadingSessions && !fetchError && completedSessions.length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
               {[
                 { label: "Interviews completed", value: completedSessions.length },
@@ -252,6 +266,13 @@ export default function DashboardPage() {
                     Unlock full insights →
                   </button>
                 </div>
+                <button
+                  onClick={() => router.push("/progress")}
+                  className="mt-4 text-xs underline"
+                  style={{ color: "var(--slate)" }}
+                >
+                  See your score trend so far →
+                </button>
               </div>
             ) : (
               <div
