@@ -49,29 +49,29 @@ export default function RegisterPage() {
   };
 
   const inputStyle = {
-    background: "var(--navy-light)",
-    border: "1px solid var(--navy-mid)",
-    color: "var(--white)",
+    background: "var(--surface)",
+    border: "1px solid var(--border-mid)",
+    color: "var(--ink)",
   };
 
   const labelStyle = {
-    color: "var(--slate)",
+    color: "var(--ink-dim)",
   };
 
   return (
     <main
       className="min-h-screen flex items-center justify-center px-4 py-12"
-      style={{ background: "var(--navy)" }}
+      style={{ background: "var(--page)" }}
     >
       <div className="w-full max-w-sm fade-up">
         <div className="mb-10">
           <span
             className="text-2xl font-bold tracking-tight cursor-blink"
-            style={{ color: "var(--white)" }}
+            style={{ color: "var(--ink)" }}
           >
             InterviewX
           </span>
-          <p className="mt-2 text-sm" style={{ color: "var(--slate)" }}>
+          <p className="mt-2 text-sm" style={{ color: "var(--ink-dim)" }}>
             Create your account to start practising.
           </p>
         </div>
@@ -81,9 +81,9 @@ export default function RegisterPage() {
         </div>
 
         <div className="flex items-center gap-3 mb-6">
-          <div className="h-px flex-1" style={{ background: "var(--navy-mid)" }} />
-          <span className="text-xs" style={{ color: "var(--slate-dim)" }}>or</span>
-          <div className="h-px flex-1" style={{ background: "var(--navy-mid)" }} />
+          <div className="h-px flex-1" style={{ background: "var(--border-mid)" }} />
+          <span className="text-xs" style={{ color: "var(--ink-faint)" }}>or</span>
+          <div className="h-px flex-1" style={{ background: "var(--border-mid)" }} />
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -170,7 +170,7 @@ export default function RegisterPage() {
                 ...inputStyle,
                 borderColor: fieldErrors.password2
                   ? "var(--danger)"
-                  : "var(--navy-mid)",
+                  : "var(--border-mid)",
               }}
               placeholder="Repeat password"
             />
@@ -198,18 +198,18 @@ export default function RegisterPage() {
             type="submit"
             disabled={submitting}
             className="w-full rounded py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
-            style={{ background: "var(--indigo)", color: "var(--white)" }}
+            style={{ background: "var(--accent)", color: "var(--ink)" }}
           >
             {submitting ? "Creating account…" : "Create account"}
           </button>
         </form>
 
-        <p className="mt-6 text-sm text-center" style={{ color: "var(--slate-dim)" }}>
+        <p className="mt-6 text-sm text-center" style={{ color: "var(--ink-faint)" }}>
           Already have an account?{" "}
           <Link
             href="/login"
             className="font-medium hover:underline"
-            style={{ color: "var(--indigo)" }}
+            style={{ color: "var(--accent)" }}
           >
             Sign in
           </Link>

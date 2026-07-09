@@ -10,9 +10,9 @@ interface Props {
 }
 
 const inputStyle = {
-  background: "var(--navy)",
-  border: "1px solid var(--navy-mid)",
-  color: "var(--white)",
+  background: "var(--page)",
+  border: "1px solid var(--border-mid)",
+  color: "var(--ink)",
 };
 
 function Field({
@@ -26,7 +26,7 @@ function Field({
 }) {
   return (
     <div>
-      <label className="block text-xs font-medium uppercase tracking-wider mb-1.5" style={{ color: "var(--slate)" }}>
+      <label className="block text-xs font-medium uppercase tracking-wider mb-1.5" style={{ color: "var(--ink-dim)" }}>
         {label}
       </label>
       {children}
@@ -123,22 +123,22 @@ export default function RealInterviewReportModal({ sessionId, onClose, onSubmitt
     >
       <div
         className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl px-6 py-6 fade-up"
-        style={{ background: "var(--navy-light)", border: "1px solid var(--navy-mid)" }}
+        style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
       >
         <div className="flex items-start justify-between mb-1">
-          <h2 className="text-lg font-bold" style={{ color: "var(--white)" }}>
+          <h2 className="text-lg font-bold" style={{ color: "var(--ink)" }}>
             Help us with real interview data
           </h2>
           <button
             onClick={onClose}
             className="text-sm shrink-0 ml-3"
-            style={{ color: "var(--slate)" }}
+            style={{ color: "var(--ink-dim)" }}
             aria-label="Skip"
           >
             Skip ✕
           </button>
         </div>
-        <p className="text-sm mb-6" style={{ color: "var(--slate)" }}>
+        <p className="text-sm mb-6" style={{ color: "var(--ink-dim)" }}>
           If you&apos;ve recently interviewed elsewhere, sharing what was asked helps us make
           InterviewX questions more realistic. Totally optional.
         </p>
@@ -217,12 +217,12 @@ export default function RealInterviewReportModal({ sessionId, onClose, onSubmitt
                 <div
                   key={i}
                   className="rounded-lg p-3 space-y-2"
-                  style={{ background: "var(--navy)", border: "1px solid var(--navy-mid)" }}
+                  style={{ background: "var(--page)", border: "1px solid var(--border-mid)" }}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium" style={{ color: "var(--slate)" }}>
+                    <span className="text-xs font-medium" style={{ color: "var(--ink-dim)" }}>
                       Round {i + 1} {i === 0 && <span style={{ color: "var(--danger)" }}>*</span>}
-                      {i > 0 && <span className="ml-1" style={{ color: "var(--slate-dim)" }}>(optional)</span>}
+                      {i > 0 && <span className="ml-1" style={{ color: "var(--ink-faint)" }}>(optional)</span>}
                     </span>
                     {rounds.length > 1 && (
                       <button
@@ -261,7 +261,7 @@ export default function RealInterviewReportModal({ sessionId, onClose, onSubmitt
                 onClick={addRound}
                 disabled={locked}
                 className="text-sm font-medium disabled:opacity-40"
-                style={{ color: "var(--indigo)" }}
+                style={{ color: "var(--accent)" }}
               >
                 + Add another round
               </button>
@@ -295,7 +295,7 @@ export default function RealInterviewReportModal({ sessionId, onClose, onSubmitt
             onClick={handleSubmit}
             disabled={submitting}
             className="flex-1 py-3 rounded-lg text-sm font-semibold disabled:opacity-60"
-            style={{ background: "var(--indigo)", color: "var(--white)" }}
+            style={{ background: "var(--accent)", color: "var(--ink)" }}
           >
             {submitting ? "Submitting…" : "Submit"}
           </button>
@@ -303,7 +303,7 @@ export default function RealInterviewReportModal({ sessionId, onClose, onSubmitt
             onClick={onClose}
             disabled={submitting}
             className="px-5 py-3 rounded-lg text-sm font-semibold"
-            style={{ background: "var(--navy)", color: "var(--slate)", border: "1px solid var(--navy-mid)" }}
+            style={{ background: "var(--page)", color: "var(--ink-dim)", border: "1px solid var(--border-mid)" }}
           >
             Skip
           </button>

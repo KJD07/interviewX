@@ -24,10 +24,10 @@ function SkeletonCard() {
   return (
     <div
       className="rounded-lg px-5 py-4 animate-pulse"
-      style={{ background: "var(--navy-light)", border: "1px solid var(--navy-mid)" }}
+      style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
     >
-      <div className="h-4 w-32 rounded" style={{ background: "var(--navy-mid)" }} />
-      <div className="mt-2 h-3 w-20 rounded" style={{ background: "var(--navy-mid)" }} />
+      <div className="h-4 w-32 rounded" style={{ background: "var(--border-mid)" }} />
+      <div className="mt-2 h-3 w-20 rounded" style={{ background: "var(--border-mid)" }} />
     </div>
   );
 }
@@ -41,11 +41,11 @@ function Breadcrumbs({ crumbs }: { crumbs: Crumb[] }) {
     <nav className="flex items-center gap-1.5 text-sm mb-8">
       {crumbs.map((c, i) => (
         <span key={i} className="flex items-center gap-1.5">
-          {i > 0 && <span style={{ color: "var(--navy-mid)" }}>/</span>}
+          {i > 0 && <span style={{ color: "var(--border-mid)" }}>/</span>}
           <button
             onClick={c.onClick}
             className="hover:underline transition-colors"
-            style={{ color: i === crumbs.length - 1 ? "var(--white)" : "var(--slate)" }}
+            style={{ color: i === crumbs.length - 1 ? "var(--ink)" : "var(--ink-dim)" }}
           >
             {c.label}
           </button>
@@ -75,21 +75,21 @@ function ListCard({
       onClick={onClick}
       disabled={disabled}
       className="w-full text-left rounded-lg px-5 py-4 flex items-center justify-between gap-4 transition-colors disabled:opacity-40"
-      style={{ background: "var(--navy-light)", border: "1px solid var(--navy-mid)" }}
+      style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
     >
       <div className="min-w-0">
-        <p className="text-sm font-medium truncate" style={{ color: "var(--white)" }}>
+        <p className="text-sm font-medium truncate" style={{ color: "var(--ink)" }}>
           {title}
         </p>
         {subtitle && (
-          <p className="text-xs mt-0.5 truncate" style={{ color: "var(--slate)" }}>
+          <p className="text-xs mt-0.5 truncate" style={{ color: "var(--ink-dim)" }}>
             {subtitle}
           </p>
         )}
       </div>
       <div className="flex items-center gap-3 shrink-0">
         {right}
-        <span style={{ color: "var(--slate-dim)" }}>
+        <span style={{ color: "var(--ink-faint)" }}>
           <ChevronRight />
         </span>
       </div>
@@ -101,7 +101,7 @@ function TonePill({ tone }: { tone: string }) {
   return (
     <span
       className="text-xs px-2 py-0.5 rounded-full font-medium capitalize"
-      style={{ background: "var(--navy-mid)", color: "var(--slate)" }}
+      style={{ background: "var(--border-mid)", color: "var(--ink-dim)" }}
     >
       {tone}
     </span>
@@ -204,26 +204,26 @@ export default function SkillsPage() {
   return (
     <ProtectedRoute>
       <AppShell>
-        <div className="min-h-screen" style={{ background: "var(--navy)" }}>
+        <div className="min-h-screen" style={{ background: "var(--page)" }}>
           <main className="max-w-2xl mx-auto px-6 py-10 fade-up">
             <Breadcrumbs crumbs={crumbs} />
 
             {!entitled ? (
               <div
                 className="rounded-lg px-6 py-8 text-center"
-                style={{ background: "var(--navy-light)", border: "1px solid var(--navy-mid)" }}
+                style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
               >
-                <h1 className="text-xl font-bold mb-2" style={{ color: "var(--white)" }}>
+                <h1 className="text-xl font-bold mb-2" style={{ color: "var(--ink)" }}>
                   Skills is a Premium & Max feature
                 </h1>
-                <p className="text-sm mb-5" style={{ color: "var(--slate)" }}>
+                <p className="text-sm mb-5" style={{ color: "var(--ink-dim)" }}>
                   Practice a single skill — like React, SQL, or System Design — instead of a
                   full company loop. Upgrade to Premium or Max to unlock it.
                 </p>
                 <button
                   onClick={() => router.push("/upgrade")}
                   className="px-4 py-2 rounded text-sm font-semibold"
-                  style={{ background: "var(--indigo)", color: "var(--white)" }}
+                  style={{ background: "var(--accent)", color: "var(--ink)" }}
                 >
                   Upgrade plan
                 </button>
@@ -253,10 +253,10 @@ export default function SkillsPage() {
                     className="mb-6 rounded-lg px-5 py-4"
                     style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.25)" }}
                   >
-                    <p className="text-sm font-medium" style={{ color: "var(--indigo)" }}>
+                    <p className="text-sm font-medium" style={{ color: "var(--accent)" }}>
                       {plan.label} plan limit reached
                     </p>
-                    <p className="text-xs mt-1" style={{ color: "var(--slate)" }}>
+                    <p className="text-xs mt-1" style={{ color: "var(--ink-dim)" }}>
                       You've used {monthlyUsed}/{monthlyLimit} interviews this month. Upgrade to continue.
                     </p>
                   </div>
@@ -266,10 +266,10 @@ export default function SkillsPage() {
                 {view.step === "skills" && (
                   <>
                     <div className="mb-6">
-                      <h1 className="text-2xl font-bold" style={{ color: "var(--white)" }}>
+                      <h1 className="text-2xl font-bold" style={{ color: "var(--ink)" }}>
                         Practice by skill
                       </h1>
-                      <p className="mt-1 text-sm" style={{ color: "var(--slate)" }}>
+                      <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
                         Skip the company loop — drill a single skill directly.
                       </p>
                     </div>
@@ -279,7 +279,7 @@ export default function SkillsPage() {
                         {[1, 2, 3].map((n) => <SkeletonCard key={n} />)}
                       </div>
                     ) : skillList.length === 0 ? (
-                      <p className="text-sm" style={{ color: "var(--slate)" }}>
+                      <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
                         No skills available yet.
                       </p>
                     ) : (
@@ -288,7 +288,7 @@ export default function SkillsPage() {
                           <div key={category}>
                             <h2
                               className="text-xs font-semibold uppercase tracking-wider mb-3"
-                              style={{ color: "var(--slate-dim)" }}
+                              style={{ color: "var(--ink-faint)" }}
                             >
                               {category}
                             </h2>
@@ -314,16 +314,16 @@ export default function SkillsPage() {
                 {view.step === "roles" && (
                   <>
                     <div className="mb-6">
-                      <h1 className="text-2xl font-bold" style={{ color: "var(--white)" }}>
+                      <h1 className="text-2xl font-bold" style={{ color: "var(--ink)" }}>
                         {view.skill.name}
                       </h1>
-                      <p className="mt-1 text-sm" style={{ color: "var(--slate)" }}>
+                      <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
                         Pick a difficulty track to see available rounds.
                       </p>
                     </div>
 
                     {view.skill.roles.length === 0 ? (
-                      <p className="text-sm" style={{ color: "var(--slate)" }}>
+                      <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
                         No tracks available for this skill yet.
                       </p>
                     ) : (
@@ -347,16 +347,16 @@ export default function SkillsPage() {
                   return (
                     <>
                       <div className="mb-6">
-                        <h1 className="text-2xl font-bold" style={{ color: "var(--white)" }}>
+                        <h1 className="text-2xl font-bold" style={{ color: "var(--ink)" }}>
                           {v.role.title}
                         </h1>
-                        <p className="mt-1 text-sm" style={{ color: "var(--slate)" }}>
+                        <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
                           Select a round to start your skill interview.
                         </p>
                       </div>
 
                       {v.role.rounds.length === 0 ? (
-                        <p className="text-sm" style={{ color: "var(--slate)" }}>
+                        <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
                           No rounds configured yet.
                         </p>
                       ) : (
@@ -365,16 +365,16 @@ export default function SkillsPage() {
                             <div
                               key={round.id}
                               className="rounded-lg px-5 py-4 flex items-center justify-between gap-4"
-                              style={{ background: "var(--navy-light)", border: "1px solid var(--navy-mid)" }}
+                              style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
                             >
-                              <p className="text-sm font-medium" style={{ color: "var(--white)" }}>
+                              <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>
                                 {round.title}
                               </p>
                               <button
                                 onClick={() => handleStartInterview(round.id)}
                                 disabled={limitReached || starting === round.id}
                                 className="shrink-0 px-4 py-2 rounded text-sm font-semibold transition-opacity disabled:opacity-40"
-                                style={{ background: "var(--indigo)", color: "var(--white)" }}
+                                style={{ background: "var(--accent)", color: "var(--ink)" }}
                               >
                                 {starting === round.id ? "Starting…" : "Start interview"}
                               </button>

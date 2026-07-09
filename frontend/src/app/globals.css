@@ -1,20 +1,52 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --navy:       #0F172A;
-  --navy-light: #1E293B;
-  --navy-mid:   #334155;
-  --indigo:     #6366F1;
-  --indigo-dim: #4F46E5;
-  --indigo-glow: rgba(99, 102, 241, 0.15);
-  --slate:      #94A3B8;
-  --slate-dim:  #64748B;
-  --white:      #F8FAFC;
-  --danger:     #EF4444;
+  /* Neutral shell — same for every plan */
+  --page:        #FAFAF8;
+  --surface:     #FFFFFF;
+  --surface-2:   #F1EFEA;
+  --border:      #E4E1D8;
+  --border-mid:  #D6D2C6;
+  --ink:         #1C1A16;
+  --ink-dim:     #6B6858;
+  --ink-faint:   #9C9683;
+  --danger:      #C0392B;
+  --success:     #3F6B4F;
+  --success-bg:  #EEF1E9;
+
+  /* Default accent (used pre-login / free) — overridden per-plan below */
+  --accent:      #1E1E1C;
+  --accent-dim:  #5F5F58;
+  --accent-glow: rgba(30, 30, 28, 0.08);
+  --hero-bg:     #EFEFEC;
+  --hero-text:   #1E1E1C;
+}
+
+/* ── Tier accents — set data-plan="free|pro|premium|max" on <body> ── */
+[data-plan="pro"] {
+  --accent:      #1B3A44;
+  --accent-dim:  #2A5964;
+  --accent-glow: rgba(27, 58, 68, 0.10);
+  --hero-bg:     #1B3A44;
+  --hero-text:   #EAF4F6;
+}
+[data-plan="premium"] {
+  --accent:      #1C1A16;
+  --accent-dim:  #A9812F;
+  --accent-glow: rgba(169, 129, 47, 0.12);
+  --hero-bg:     #1C1A16;
+  --hero-text:   #F4EFE4;
+}
+[data-plan="max"] {
+  --accent:      #D4AF37;
+  --accent-dim:  #B8952C;
+  --accent-glow: rgba(212, 175, 55, 0.14);
+  --hero-bg:     #1C1A16;
+  --hero-text:   #F4EFE4;
 }
 
 * {
@@ -23,14 +55,19 @@
 
 html {
   font-family: 'Inter', system-ui, sans-serif;
-  background-color: var(--navy);
-  color: var(--white);
+  background-color: var(--page);
+  color: var(--ink);
   -webkit-font-smoothing: antialiased;
 }
 
 body {
   min-height: 100vh;
-  background-color: var(--navy);
+  background-color: var(--page);
+}
+
+.font-display {
+  font-family: 'Fraunces', serif;
+  font-optical-sizing: auto;
 }
 
 /* Cursor blink — the signature animation */

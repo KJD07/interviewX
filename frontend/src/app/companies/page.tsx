@@ -29,14 +29,14 @@ function ArrowLeft() {
 // ── Round type badge ──────────────────────────────────────────────────────────
 
 const ROUND_COLORS: Record<string, { bg: string; color: string; label: string }> = {
-  technical:    { bg: "rgba(99,102,241,0.12)",  color: "var(--indigo)",   label: "Technical"    },
+  technical:    { bg: "rgba(99,102,241,0.12)",  color: "var(--accent)",   label: "Technical"    },
   behavioral:   { bg: "rgba(34,197,94,0.10)",   color: "#22c55e",         label: "Behavioral"   },
   system_design:{ bg: "rgba(245,158,11,0.12)",  color: "#f59e0b",         label: "System Design"},
-  hr:           { bg: "rgba(100,116,139,0.15)", color: "var(--slate)",    label: "HR"           },
+  hr:           { bg: "rgba(100,116,139,0.15)", color: "var(--ink-dim)",    label: "HR"           },
 };
 
 function RoundTypeBadge({ type }: { type: string }) {
-  const c = ROUND_COLORS[type] ?? { bg: "rgba(100,116,139,0.15)", color: "var(--slate)", label: type };
+  const c = ROUND_COLORS[type] ?? { bg: "rgba(100,116,139,0.15)", color: "var(--ink-dim)", label: type };
   return (
     <span
       className="text-xs font-medium px-2 py-0.5 rounded-full"
@@ -53,10 +53,10 @@ function SkeletonCard() {
   return (
     <div
       className="rounded-lg px-5 py-4 animate-pulse"
-      style={{ background: "var(--navy-light)", border: "1px solid var(--navy-mid)" }}
+      style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
     >
-      <div className="h-4 w-32 rounded" style={{ background: "var(--navy-mid)" }} />
-      <div className="mt-2 h-3 w-20 rounded" style={{ background: "var(--navy-mid)" }} />
+      <div className="h-4 w-32 rounded" style={{ background: "var(--border-mid)" }} />
+      <div className="mt-2 h-3 w-20 rounded" style={{ background: "var(--border-mid)" }} />
     </div>
   );
 }
@@ -70,11 +70,11 @@ function Breadcrumbs({ crumbs }: { crumbs: Crumb[] }) {
     <nav className="flex items-center gap-1.5 text-sm mb-8">
       {crumbs.map((c, i) => (
         <span key={i} className="flex items-center gap-1.5">
-          {i > 0 && <span style={{ color: "var(--navy-mid)" }}>/</span>}
+          {i > 0 && <span style={{ color: "var(--border-mid)" }}>/</span>}
           <button
             onClick={c.onClick}
             className="hover:underline transition-colors"
-            style={{ color: i === crumbs.length - 1 ? "var(--white)" : "var(--slate)" }}
+            style={{ color: i === crumbs.length - 1 ? "var(--ink)" : "var(--ink-dim)" }}
           >
             {c.label}
           </button>
@@ -105,26 +105,26 @@ function ListCard({
       disabled={disabled}
       className="w-full text-left rounded-lg px-5 py-4 flex items-center justify-between gap-4 transition-colors disabled:opacity-40"
       style={{
-        background: "var(--navy-light)",
-        border: "1px solid var(--navy-mid)",
+        background: "var(--surface)",
+        border: "1px solid var(--border-mid)",
       }}
       onMouseEnter={(e) =>
-        !disabled && ((e.currentTarget as HTMLElement).style.borderColor = "var(--navy-mid)")
+        !disabled && ((e.currentTarget as HTMLElement).style.borderColor = "var(--border-mid)")
       }
     >
       <div className="min-w-0">
-        <p className="text-sm font-medium truncate" style={{ color: "var(--white)" }}>
+        <p className="text-sm font-medium truncate" style={{ color: "var(--ink)" }}>
           {title}
         </p>
         {subtitle && (
-          <p className="text-xs mt-0.5 truncate" style={{ color: "var(--slate)" }}>
+          <p className="text-xs mt-0.5 truncate" style={{ color: "var(--ink-dim)" }}>
             {subtitle}
           </p>
         )}
       </div>
       <div className="flex items-center gap-3 shrink-0">
         {right}
-        <span style={{ color: "var(--slate-dim)" }}>
+        <span style={{ color: "var(--ink-faint)" }}>
           <ChevronRight />
         </span>
       </div>
@@ -138,7 +138,7 @@ function TonePill({ tone }: { tone: string }) {
   return (
     <span
       className="text-xs px-2 py-0.5 rounded-full font-medium capitalize"
-      style={{ background: "var(--navy-mid)", color: "var(--slate)" }}
+      style={{ background: "var(--border-mid)", color: "var(--ink-dim)" }}
     >
       {tone}
     </span>
@@ -242,25 +242,25 @@ export default function CompaniesPage() {
   return (
     <ProtectedRoute>
       <AppShell>
-      <div className="min-h-screen" style={{ background: "var(--navy)" }}>
+      <div className="min-h-screen" style={{ background: "var(--page)" }}>
 
         {/* Nav — only shown for free plan; paid plans use the sidebar instead */}
         {!isPro && (
           <nav
             className="flex items-center justify-between px-6 py-4 border-b"
-            style={{ borderColor: "var(--navy-light)" }}
+            style={{ borderColor: "var(--surface)" }}
           >
             <button
               onClick={() => router.push("/dashboard")}
               className="text-lg font-bold tracking-tight"
-              style={{ color: "var(--white)" }}
+              style={{ color: "var(--ink)" }}
             >
               InterviewX
             </button>
             <button
               onClick={() => router.push("/dashboard")}
               className="flex items-center gap-1.5 text-sm hover:underline"
-              style={{ color: "var(--slate)" }}
+              style={{ color: "var(--ink-dim)" }}
             >
               <ArrowLeft />
               Dashboard
@@ -309,10 +309,10 @@ export default function CompaniesPage() {
                 border: "1px solid rgba(99,102,241,0.25)",
               }}
             >
-              <p className="text-sm font-medium" style={{ color: "var(--indigo)" }}>
+              <p className="text-sm font-medium" style={{ color: "var(--accent)" }}>
                 {plan.label} plan limit reached
               </p>
-              <p className="text-xs mt-1" style={{ color: "var(--slate)" }}>
+              <p className="text-xs mt-1" style={{ color: "var(--ink-dim)" }}>
                 You've used {monthlyUsed}/{monthlyLimit} interviews this month. Upgrade to continue.
               </p>
             </div>
@@ -322,10 +322,10 @@ export default function CompaniesPage() {
           {view.step === "companies" && (
             <>
               <div className="mb-6">
-                <h1 className="text-2xl font-bold" style={{ color: "var(--white)" }}>
+                <h1 className="text-2xl font-bold" style={{ color: "var(--ink)" }}>
                   Choose a company
                 </h1>
-                <p className="mt-1 text-sm" style={{ color: "var(--slate)" }}>
+                <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
                   Select a company to browse roles and interview rounds.
                 </p>
               </div>
@@ -335,7 +335,7 @@ export default function CompaniesPage() {
                   {[1, 2, 3].map((n) => <SkeletonCard key={n} />)}
                 </div>
               ) : companyList.length === 0 ? (
-                <p className="text-sm" style={{ color: "var(--slate)" }}>
+                <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
                   No companies available yet.
                 </p>
               ) : (
@@ -370,16 +370,16 @@ export default function CompaniesPage() {
           {view.step === "roles" && (
             <>
               <div className="mb-6">
-                <h1 className="text-2xl font-bold" style={{ color: "var(--white)" }}>
+                <h1 className="text-2xl font-bold" style={{ color: "var(--ink)" }}>
                   {view.company.name}
                 </h1>
-                <p className="mt-1 text-sm" style={{ color: "var(--slate)" }}>
+                <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
                   Pick a role to see available interview rounds.
                 </p>
               </div>
 
               {view.company.roles.length === 0 ? (
-                <p className="text-sm" style={{ color: "var(--slate)" }}>
+                <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
                   No roles available for this company yet.
                 </p>
               ) : (
@@ -403,16 +403,16 @@ export default function CompaniesPage() {
             return (
               <>
                 <div className="mb-6">
-                  <h1 className="text-2xl font-bold" style={{ color: "var(--white)" }}>
+                  <h1 className="text-2xl font-bold" style={{ color: "var(--ink)" }}>
                     {v.role.title}
                   </h1>
-                  <p className="mt-1 text-sm" style={{ color: "var(--slate)" }}>
+                  <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
                     Select a round to start your AI interview.
                   </p>
                 </div>
 
                 {v.role.rounds.length === 0 ? (
-                  <p className="text-sm" style={{ color: "var(--slate)" }}>
+                  <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
                     No rounds configured for this role yet.
                   </p>
                 ) : (
@@ -422,12 +422,12 @@ export default function CompaniesPage() {
                         key={round.id}
                         className="rounded-lg px-5 py-4 flex items-center justify-between gap-4"
                         style={{
-                          background: "var(--navy-light)",
-                          border: "1px solid var(--navy-mid)",
+                          background: "var(--surface)",
+                          border: "1px solid var(--border-mid)",
                         }}
                       >
                         <div className="min-w-0">
-                          <p className="text-sm font-medium" style={{ color: "var(--white)" }}>
+                          <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>
                             {round.title}
                           </p>
                           <div className="mt-1.5">
@@ -438,7 +438,7 @@ export default function CompaniesPage() {
                           onClick={() => handleStartInterview(round.id)}
                           disabled={limitReached || starting === round.id}
                           className="shrink-0 px-4 py-2 rounded text-sm font-semibold transition-opacity disabled:opacity-40"
-                          style={{ background: "var(--indigo)", color: "var(--white)" }}
+                          style={{ background: "var(--accent)", color: "var(--ink)" }}
                         >
                           {starting === round.id ? "Starting…" : "Start interview"}
                         </button>

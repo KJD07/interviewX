@@ -17,7 +17,7 @@ import { isPaidPlan } from "@/lib/plans";
 
 function LineChart({
   data,
-  color = "var(--indigo)",
+  color = "var(--accent)",
   height = 72,
   max = 10,
 }: {
@@ -35,7 +35,7 @@ function LineChart({
     return (
       <div
         className="flex items-center justify-center text-xs"
-        style={{ height, color: "var(--slate-dim)" }}
+        style={{ height, color: "var(--ink-faint)" }}
       >
         No data yet
       </div>
@@ -63,7 +63,7 @@ function LineChart({
         y1={yFor(5)}
         x2={width}
         y2={yFor(5)}
-        stroke="var(--navy-mid)"
+        stroke="var(--border-mid)"
         strokeWidth={0.5}
         strokeDasharray="2,2"
       />
@@ -79,7 +79,7 @@ function MomentumBadge({ momentum }: { momentum: number | null }) {
   if (momentum === null || momentum === undefined) return null;
   const up = momentum > 0.05;
   const down = momentum < -0.05;
-  const color = up ? "#22c55e" : down ? "var(--danger)" : "var(--slate)";
+  const color = up ? "#22c55e" : down ? "var(--danger)" : "var(--ink-dim)";
   const arrow = up ? "↑" : down ? "↓" : "→";
   return (
     <span
@@ -114,7 +114,7 @@ function Card({ children, className = "" }: { children: React.ReactNode; classNa
   return (
     <div
       className={`rounded-xl px-5 py-5 ${className}`}
-      style={{ background: "var(--navy-light)", border: "1px solid var(--navy-mid)" }}
+      style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
     >
       {children}
     </div>
@@ -151,23 +151,23 @@ export default function ProgressPage() {
   return (
     <ProtectedRoute>
       <AppShell>
-        <div className="min-h-screen" style={{ background: "var(--navy)" }}>
+        <div className="min-h-screen" style={{ background: "var(--page)" }}>
           {!isPro && (
             <nav
               className="flex items-center justify-between px-6 py-4 border-b"
-              style={{ borderColor: "var(--navy-light)" }}
+              style={{ borderColor: "var(--surface)" }}
             >
               <button
                 onClick={() => router.push("/dashboard")}
                 className="text-lg font-bold tracking-tight"
-                style={{ color: "var(--white)" }}
+                style={{ color: "var(--ink)" }}
               >
                 InterviewX
               </button>
               <button
                 onClick={() => router.push("/dashboard")}
                 className="text-sm hover:underline"
-                style={{ color: "var(--slate)" }}
+                style={{ color: "var(--ink-dim)" }}
               >
                 ← Back to dashboard
               </button>
@@ -176,16 +176,16 @@ export default function ProgressPage() {
 
           <main className="max-w-4xl mx-auto px-6 py-10 fade-up">
             <div className="mb-8">
-              <h1 className="text-2xl font-bold" style={{ color: "var(--white)" }}>
+              <h1 className="text-2xl font-bold" style={{ color: "var(--ink)" }}>
                 Your progress
               </h1>
-              <p className="mt-1 text-sm" style={{ color: "var(--slate)" }}>
+              <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
                 How you're trending across every mock interview you've completed.
               </p>
             </div>
 
             {loading ? (
-              <p className="text-sm" style={{ color: "var(--slate)" }}>
+              <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
                 Loading…
               </p>
             ) : error ? (
@@ -194,16 +194,16 @@ export default function ProgressPage() {
               </p>
             ) : !data || data.total_completed === 0 ? (
               <Card className="text-center py-10">
-                <p className="text-sm font-medium" style={{ color: "var(--white)" }}>
+                <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>
                   No completed interviews yet.
                 </p>
-                <p className="mt-1 text-sm" style={{ color: "var(--slate)" }}>
+                <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
                   Finish your first mock interview to start seeing your progress here.
                 </p>
                 <button
                   onClick={() => router.push("/companies")}
                   className="mt-5 px-5 py-2 rounded text-sm font-semibold"
-                  style={{ background: "var(--indigo)", color: "var(--white)" }}
+                  style={{ background: "var(--accent)", color: "var(--ink)" }}
                 >
                   Browse companies
                 </button>
@@ -216,14 +216,14 @@ export default function ProgressPage() {
                     <div>
                       <p
                         className="text-xs font-semibold uppercase tracking-wider mb-2"
-                        style={{ color: "var(--slate)" }}
+                        style={{ color: "var(--ink-dim)" }}
                       >
                         Overall readiness (last 3 avg)
                       </p>
                       <div className="flex items-baseline gap-3">
-                        <span className="text-5xl font-black tabular-nums" style={{ color: "var(--white)" }}>
+                        <span className="text-5xl font-black tabular-nums" style={{ color: "var(--ink)" }}>
                           {heroScore ?? "—"}
-                          <span className="text-xl font-normal" style={{ color: "var(--slate-dim)" }}>
+                          <span className="text-xl font-normal" style={{ color: "var(--ink-faint)" }}>
                             /10
                           </span>
                         </span>
@@ -232,7 +232,7 @@ export default function ProgressPage() {
                           <ConsistencyBadge consistency={data.consistency} />
                         </div>
                       </div>
-                      <p className="text-xs mt-2" style={{ color: "var(--slate)" }}>
+                      <p className="text-xs mt-2" style={{ color: "var(--ink-dim)" }}>
                         Based on {data.total_completed} completed interview
                         {data.total_completed === 1 ? "" : "s"}
                         {data.momentum !== null &&
@@ -240,7 +240,7 @@ export default function ProgressPage() {
                       </p>
                     </div>
                     <div className="w-full sm:w-64">
-                      <LineChart data={data.overall_trend} color="var(--indigo)" />
+                      <LineChart data={data.overall_trend} color="var(--accent)" />
                     </div>
                   </div>
                 </Card>
@@ -265,34 +265,34 @@ function LockedTeaser({ router }: { router: ReturnType<typeof useRouter> }) {
   return (
     <Card className="relative overflow-hidden">
       <div className="blur-sm pointer-events-none select-none opacity-60">
-        <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--slate)" }}>
+        <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--ink-dim)" }}>
           Topic breakdown
         </p>
         <div className="space-y-3">
           {["System Design", "SQL Joins", "Communication clarity"].map((t) => (
             <div key={t} className="flex items-center gap-3">
-              <span className="text-sm w-40 shrink-0" style={{ color: "var(--white)" }}>
+              <span className="text-sm w-40 shrink-0" style={{ color: "var(--ink)" }}>
                 {t}
               </span>
-              <div className="flex-1 h-2 rounded-full" style={{ background: "var(--navy-mid)" }}>
-                <div className="h-2 rounded-full" style={{ width: "55%", background: "var(--indigo)" }} />
+              <div className="flex-1 h-2 rounded-full" style={{ background: "var(--border-mid)" }}>
+                <div className="h-2 rounded-full" style={{ width: "55%", background: "var(--accent)" }} />
               </div>
             </div>
           ))}
         </div>
       </div>
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
-        <p className="text-sm font-semibold" style={{ color: "var(--white)" }}>
+        <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>
           Unlock topic-by-topic tracking
         </p>
-        <p className="text-xs mt-1 max-w-xs" style={{ color: "var(--slate)" }}>
+        <p className="text-xs mt-1 max-w-xs" style={{ color: "var(--ink-dim)" }}>
           See exactly which skills are improving, per-company readiness, and a
           consistency score — available on Pro, Premium, and Max.
         </p>
         <button
           onClick={() => router.push("/upgrade")}
           className="mt-4 px-5 py-2 rounded text-sm font-semibold"
-          style={{ background: "var(--indigo)", color: "var(--white)" }}
+          style={{ background: "var(--accent)", color: "var(--ink)" }}
         >
           Upgrade to unlock →
         </button>
@@ -312,7 +312,7 @@ function DetailedView({
 }) {
   const dims: { key: keyof ProgressResponseDetailed["dimension_trends"]; label: string; color: string }[] = [
     { key: "communication", label: "Communication", color: "#22c55e" },
-    { key: "technical", label: "Technical", color: "var(--indigo)" },
+    { key: "technical", label: "Technical", color: "var(--accent)" },
     { key: "problem_solving", label: "Problem Solving", color: "#f59e0b" },
   ];
 
@@ -320,7 +320,7 @@ function DetailedView({
     <div className="space-y-6">
       {/* Per-dimension trendlines */}
       <Card>
-        <p className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--slate)" }}>
+        <p className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--ink-dim)" }}>
           Score breakdown over time
         </p>
         <div className="grid sm:grid-cols-3 gap-6">
@@ -331,7 +331,7 @@ function DetailedView({
             return (
               <div key={d.key}>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-medium" style={{ color: "var(--white)" }}>
+                  <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>
                     {d.label}
                   </span>
                   <span className="text-sm font-semibold tabular-nums" style={{ color: d.color }}>
@@ -349,20 +349,20 @@ function DetailedView({
       {data.topics.length > 0 && (
         <Card>
           <div className="flex items-center justify-between mb-4">
-            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--slate)" }}>
+            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--ink-dim)" }}>
               What to practice next
             </p>
-            <span className="text-xs" style={{ color: "var(--slate-dim)" }}>
+            <span className="text-xs" style={{ color: "var(--ink-faint)" }}>
               Weakest first
             </span>
           </div>
           <div className="space-y-3">
             {data.topics.map((t: ProgressTopic) => (
               <div key={t.name} className="flex items-center gap-3">
-                <span className="text-sm w-40 shrink-0 truncate" style={{ color: "var(--white)" }} title={t.name}>
+                <span className="text-sm w-40 shrink-0 truncate" style={{ color: "var(--ink)" }} title={t.name}>
                   {t.name}
                 </span>
-                <div className="flex-1 h-2 rounded-full" style={{ background: "var(--navy-mid)" }}>
+                <div className="flex-1 h-2 rounded-full" style={{ background: "var(--border-mid)" }}>
                   <div
                     className="h-2 rounded-full"
                     style={{
@@ -373,11 +373,11 @@ function DetailedView({
                 </div>
                 <span
                   className="text-sm font-semibold tabular-nums w-10 text-right"
-                  style={{ color: "var(--white)" }}
+                  style={{ color: "var(--ink)" }}
                 >
                   {t.average}
                 </span>
-                <span className="text-xs w-16 text-right" style={{ color: "var(--slate-dim)" }}>
+                <span className="text-xs w-16 text-right" style={{ color: "var(--ink-faint)" }}>
                   {t.attempts}x
                 </span>
               </div>
@@ -386,7 +386,7 @@ function DetailedView({
           <button
             onClick={() => router.push("/companies")}
             className="mt-4 text-xs font-medium underline"
-            style={{ color: "var(--indigo)" }}
+            style={{ color: "var(--accent)" }}
           >
             Practice your weakest topic →
           </button>
@@ -396,7 +396,7 @@ function DetailedView({
       {/* Company comparison + readiness */}
       {data.companies.length > 0 && (
         <Card>
-          <p className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--slate)" }}>
+          <p className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--ink-dim)" }}>
             Performance by company
           </p>
           <div className="space-y-2">
@@ -404,10 +404,10 @@ function DetailedView({
               <div
                 key={c.company}
                 className="flex items-center justify-between px-3 py-2.5 rounded-lg"
-                style={{ background: "var(--navy)" }}
+                style={{ background: "var(--page)" }}
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-sm font-medium truncate" style={{ color: "var(--white)" }}>
+                  <span className="text-sm font-medium truncate" style={{ color: "var(--ink)" }}>
                     {c.company}
                   </span>
                   {c.ready && (
@@ -420,7 +420,7 @@ function DetailedView({
                   )}
                 </div>
                 <div className="flex items-center gap-4 shrink-0">
-                  <span className="text-xs" style={{ color: "var(--slate-dim)" }}>
+                  <span className="text-xs" style={{ color: "var(--ink-faint)" }}>
                     {c.attempts} attempt{c.attempts === 1 ? "" : "s"}
                   </span>
                   <span

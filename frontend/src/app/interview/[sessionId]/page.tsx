@@ -77,8 +77,8 @@ function TimerBadge({ secondsLeft }: { secondsLeft: number | null }) {
     <span
       className="hidden sm:flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full tabular-nums"
       style={{
-        background: low ? "rgba(239,68,68,0.12)" : "var(--indigo-glow)",
-        color: low ? "var(--danger)" : "var(--indigo)",
+        background: low ? "rgba(239,68,68,0.12)" : "var(--accent-glow)",
+        color: low ? "var(--danger)" : "var(--accent)",
       }}
       title="Time remaining"
     >
@@ -103,7 +103,7 @@ function TypingDots() {
           style={{
             width: 6,
             height: 6,
-            background: "var(--slate-dim)",
+            background: "var(--ink-faint)",
             animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite`,
           }}
         />
@@ -129,7 +129,7 @@ function SpeakingWave() {
           style={{
             width: 3,
             height: 12,
-            background: "var(--indigo)",
+            background: "var(--accent)",
             animation: `wave 0.9s ease-in-out ${i * 0.1}s infinite`,
           }}
         />
@@ -154,8 +154,8 @@ function Bubble({ msg, speaking }: { msg: Message; speaking?: boolean }) {
         <div
           className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-1 mr-2.5"
           style={{
-            background: "var(--indigo-glow)",
-            color: "var(--indigo)",
+            background: "var(--accent-glow)",
+            color: "var(--accent)",
             boxShadow: speaking ? "0 0 0 3px rgba(99,102,241,0.25)" : undefined,
           }}
         >
@@ -168,14 +168,14 @@ function Bubble({ msg, speaking }: { msg: Message; speaking?: boolean }) {
           style={
             isUser
               ? {
-                  background: "var(--indigo)",
-                  color: "var(--white)",
+                  background: "var(--accent)",
+                  color: "var(--ink)",
                   borderBottomRightRadius: 4,
                 }
               : {
-                  background: "var(--navy-light)",
-                  border: speaking ? "1px solid var(--indigo)" : "1px solid var(--navy-mid)",
-                  color: "var(--white)",
+                  background: "var(--surface)",
+                  border: speaking ? "1px solid var(--accent)" : "1px solid var(--border-mid)",
+                  color: "var(--ink)",
                   borderBottomLeftRadius: 4,
                 }
           }
@@ -184,11 +184,11 @@ function Bubble({ msg, speaking }: { msg: Message; speaking?: boolean }) {
         </div>
         <p
           className={`text-xs mt-1 flex items-center gap-1 ${isUser ? "justify-end" : "justify-start"}`}
-          style={{ color: "var(--slate-dim)" }}
+          style={{ color: "var(--ink-faint)" }}
         >
           {formatTime(msg.ts)}
           {speaking && (
-            <span style={{ color: "var(--indigo)" }} className="inline-flex items-center gap-0.5">
+            <span style={{ color: "var(--accent)" }} className="inline-flex items-center gap-0.5">
               · <span>🔊 speaking…</span>
             </span>
           )}
@@ -197,7 +197,7 @@ function Bubble({ msg, speaking }: { msg: Message; speaking?: boolean }) {
       {isUser && (
         <div
           className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-1 ml-2.5"
-          style={{ background: "var(--navy-light)", color: "var(--slate)", border: "1px solid var(--navy-mid)" }}
+          style={{ background: "var(--surface)", color: "var(--ink-dim)", border: "1px solid var(--border-mid)" }}
         >
           You
         </div>
@@ -216,7 +216,7 @@ function InterimBubble({ text }: { text: string }) {
           className="rounded-2xl px-4 py-3 text-sm leading-relaxed italic"
           style={{
             background: "rgba(99,102,241,0.35)",
-            color: "var(--white)",
+            color: "var(--ink)",
             borderBottomRightRadius: 4,
             border: "1px dashed rgba(255,255,255,0.35)",
           }}
@@ -255,12 +255,12 @@ function EndModal({
     >
       <div
         className="w-full max-w-sm rounded-xl p-6 fade-up"
-        style={{ background: "var(--navy-light)", border: "1px solid var(--navy-mid)" }}
+        style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
       >
-        <h2 className="text-base font-bold mb-2" style={{ color: "var(--white)" }}>
+        <h2 className="text-base font-bold mb-2" style={{ color: "var(--ink)" }}>
           End interview?
         </h2>
-        <p className="text-sm mb-6" style={{ color: "var(--slate)" }}>
+        <p className="text-sm mb-6" style={{ color: "var(--ink-dim)" }}>
           The AI will score your performance and generate feedback. You won't be able to continue after this.
         </p>
         <div className="flex gap-3">
@@ -268,7 +268,7 @@ function EndModal({
             onClick={onCancel}
             disabled={loading}
             className="flex-1 py-2.5 rounded text-sm font-semibold transition-opacity disabled:opacity-40"
-            style={{ background: "var(--navy-mid)", color: "var(--white)" }}
+            style={{ background: "var(--border-mid)", color: "var(--ink)" }}
           >
             Keep going
           </button>
@@ -276,7 +276,7 @@ function EndModal({
             onClick={onConfirm}
             disabled={loading}
             className="flex-1 py-2.5 rounded text-sm font-semibold transition-opacity disabled:opacity-40"
-            style={{ background: "var(--danger)", color: "var(--white)" }}
+            style={{ background: "var(--danger)", color: "var(--ink)" }}
           >
             {loading ? "Ending…" : "End interview"}
           </button>
@@ -683,7 +683,7 @@ export default function InterviewPage() {
       <ProtectedRoute>
         <div
           className="min-h-screen flex items-center justify-center"
-          style={{ background: "var(--navy)" }}
+          style={{ background: "var(--page)" }}
         >
           <div className="text-center">
             <p className="text-sm mb-4" style={{ color: "var(--danger)" }}>
@@ -692,7 +692,7 @@ export default function InterviewPage() {
             <button
               onClick={() => router.push("/dashboard")}
               className="text-sm hover:underline"
-              style={{ color: "var(--indigo)" }}
+              style={{ color: "var(--accent)" }}
             >
               ← Back to dashboard
             </button>
@@ -706,20 +706,20 @@ export default function InterviewPage() {
     <ProtectedRoute>
       <div
         className="flex flex-col"
-        style={{ height: "100dvh", background: "var(--navy)" }}
+        style={{ height: "100dvh", background: "var(--page)" }}
       >
         {/* ── Header ── */}
         <header
           className="flex items-center justify-between px-5 py-3.5 shrink-0 border-b gap-2"
-          style={{ borderColor: "var(--navy-light)" }}
+          style={{ borderColor: "var(--surface)" }}
         >
           <div className="flex items-center gap-3 flex-wrap">
-            <span className="text-base font-bold tracking-tight" style={{ color: "var(--white)" }}>
+            <span className="text-base font-bold tracking-tight" style={{ color: "var(--ink)" }}>
               InterviewX
             </span>
             <span
               className="hidden sm:block text-xs font-medium px-2 py-0.5 rounded-full"
-              style={{ background: "var(--indigo-glow)", color: "var(--indigo)" }}
+              style={{ background: "var(--accent-glow)", color: "var(--accent)" }}
             >
               Session #{sessionId}
             </span>
@@ -756,8 +756,8 @@ export default function InterviewPage() {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold transition-opacity disabled:opacity-30"
               style={
                 voiceMode
-                  ? { background: "var(--indigo)", color: "var(--white)" }
-                  : { background: "var(--navy-light)", color: "var(--slate)", border: "1px solid var(--navy-mid)" }
+                  ? { background: "var(--accent)", color: "var(--ink)" }
+                  : { background: "var(--surface)", color: "var(--ink-dim)", border: "1px solid var(--border-mid)" }
               }
             >
               <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
@@ -803,7 +803,7 @@ export default function InterviewPage() {
         <div className="flex-1 overflow-y-auto px-4 py-6 space-y-5">
           {messages.length === 0 && !session && (
             <div className="flex justify-center mt-12">
-              <p className="text-sm" style={{ color: "var(--slate-dim)" }}>
+              <p className="text-sm" style={{ color: "var(--ink-faint)" }}>
                 Loading interview…
               </p>
             </div>
@@ -818,15 +818,15 @@ export default function InterviewPage() {
             <div className="flex justify-start">
               <div
                 className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-1 mr-2.5"
-                style={{ background: "var(--indigo-glow)", color: "var(--indigo)" }}
+                style={{ background: "var(--accent-glow)", color: "var(--accent)" }}
               >
                 AI
               </div>
               <div
                 className="rounded-2xl"
                 style={{
-                  background: "var(--navy-light)",
-                  border: "1px solid var(--navy-mid)",
+                  background: "var(--surface)",
+                  border: "1px solid var(--border-mid)",
                   borderBottomLeftRadius: 4,
                 }}
               >
@@ -846,7 +846,7 @@ export default function InterviewPage() {
         {/* ── Input bar ── */}
         <div
           className="px-4 py-3 shrink-0 border-t"
-          style={{ borderColor: "var(--navy-light)" }}
+          style={{ borderColor: "var(--surface)" }}
         >
           {voiceMode ? (
             <div className="flex flex-col items-center gap-2 py-2">
@@ -867,7 +867,7 @@ export default function InterviewPage() {
                 disabled={sending || aiTyping || isAiSpeaking || timeUp}
                 className="w-16 h-16 rounded-full flex items-center justify-center transition-transform disabled:opacity-40"
                 style={{
-                  background: isListening ? "var(--danger)" : "var(--indigo)",
+                  background: isListening ? "var(--danger)" : "var(--accent)",
                   boxShadow: isListening
                     ? "0 0 0 8px rgba(239,68,68,0.15)"
                     : "0 0 0 8px rgba(99,102,241,0.15)",
@@ -876,18 +876,18 @@ export default function InterviewPage() {
                 <svg width="24" height="24" viewBox="0 0 16 16" fill="none">
                   <path
                     d="M8 1.5a2 2 0 0 0-2 2v5a2 2 0 0 0 4 0v-5a2 2 0 0 0-2-2Z"
-                    stroke="var(--white)"
+                    stroke="var(--ink)"
                     strokeWidth="1.4"
                   />
                   <path
                     d="M4 7.5v1a4 4 0 0 0 8 0v-1M8 12.5v2M6 14.5h4"
-                    stroke="var(--white)"
+                    stroke="var(--ink)"
                     strokeWidth="1.4"
                     strokeLinecap="round"
                   />
                 </svg>
               </button>
-              <p className="text-xs text-center" style={{ color: "var(--slate-dim)" }}>
+              <p className="text-xs text-center" style={{ color: "var(--ink-faint)" }}>
                 {isAiSpeaking
                   ? "AI is speaking…"
                   : isListening
@@ -902,8 +902,8 @@ export default function InterviewPage() {
               <div
                 className="flex items-end gap-3 rounded-xl px-4 py-3"
                 style={{
-                  background: "var(--navy-light)",
-                  border: "1px solid var(--navy-mid)",
+                  background: "var(--surface)",
+                  border: "1px solid var(--border-mid)",
                 }}
               >
                 <textarea
@@ -923,18 +923,18 @@ export default function InterviewPage() {
                   disabled={sending || aiTyping || timeUp}
                   className="flex-1 resize-none bg-transparent text-sm leading-relaxed disabled:opacity-50"
                   style={{
-                    color: "var(--white)",
+                    color: "var(--ink)",
                     outline: "none",
                     boxShadow: "none",
                     border: "none",
-                    caretColor: "var(--indigo)",
+                    caretColor: "var(--accent)",
                   }}
                 />
                 <button
                   onClick={() => handleSend()}
                   disabled={!input.trim() || sending || aiTyping || timeUp}
                   className="shrink-0 rounded-lg px-3.5 py-2 text-sm font-semibold transition-opacity disabled:opacity-30"
-                  style={{ background: "var(--indigo)", color: "var(--white)" }}
+                  style={{ background: "var(--accent)", color: "var(--ink)" }}
                 >
                   {sending ? (
                     <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -947,7 +947,7 @@ export default function InterviewPage() {
               </div>
             </>
           )}
-          <p className="text-center text-xs mt-2" style={{ color: "var(--slate-dim)" }}>
+          <p className="text-center text-xs mt-2" style={{ color: "var(--ink-faint)" }}>
             {timeUp
               ? "Time's up — your interview is being scored…"
               : secondsLeft !== null

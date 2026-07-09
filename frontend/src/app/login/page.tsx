@@ -44,18 +44,18 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen flex items-center justify-center px-4"
-      style={{ background: "var(--navy)" }}>
+      style={{ background: "var(--page)" }}>
       <div className="w-full max-w-sm fade-up">
 
         {/* Logo mark */}
         <div className="mb-10">
           <span
             className="text-2xl font-bold tracking-tight cursor-blink"
-            style={{ color: "var(--white)" }}
+            style={{ color: "var(--ink)" }}
           >
             InterviewX
           </span>
-          <p className="mt-2 text-sm" style={{ color: "var(--slate)" }}>
+          <p className="mt-2 text-sm" style={{ color: "var(--ink-dim)" }}>
             Sign in to continue practising.
           </p>
         </div>
@@ -65,9 +65,9 @@ export default function LoginPage() {
         </div>
 
         <div className="flex items-center gap-3 mb-6">
-          <div className="h-px flex-1" style={{ background: "var(--navy-mid)" }} />
-          <span className="text-xs" style={{ color: "var(--slate-dim)" }}>or</span>
-          <div className="h-px flex-1" style={{ background: "var(--navy-mid)" }} />
+          <div className="h-px flex-1" style={{ background: "var(--border-mid)" }} />
+          <span className="text-xs" style={{ color: "var(--ink-faint)" }}>or</span>
+          <div className="h-px flex-1" style={{ background: "var(--border-mid)" }} />
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -75,7 +75,7 @@ export default function LoginPage() {
             <label
               htmlFor="email"
               className="block text-xs font-medium mb-1.5 tracking-wider uppercase"
-              style={{ color: "var(--slate)" }}
+              style={{ color: "var(--ink-dim)" }}
             >
               Email
             </label>
@@ -88,9 +88,9 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               className="w-full rounded px-3.5 py-2.5 text-sm"
               style={{
-                background: "var(--navy-light)",
-                border: "1px solid var(--navy-mid)",
-                color: "var(--white)",
+                background: "var(--surface)",
+                border: "1px solid var(--border-mid)",
+                color: "var(--ink)",
               }}
               placeholder="you@example.com"
             />
@@ -100,7 +100,7 @@ export default function LoginPage() {
             <label
               htmlFor="password"
               className="block text-xs font-medium mb-1.5 tracking-wider uppercase"
-              style={{ color: "var(--slate)" }}
+              style={{ color: "var(--ink-dim)" }}
             >
               Password
             </label>
@@ -113,9 +113,9 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               className="w-full rounded px-3.5 py-2.5 text-sm"
               style={{
-                background: "var(--navy-light)",
-                border: "1px solid var(--navy-mid)",
-                color: "var(--white)",
+                background: "var(--surface)",
+                border: "1px solid var(--border-mid)",
+                color: "var(--ink)",
               }}
               placeholder="••••••••"
             />
@@ -138,18 +138,18 @@ export default function LoginPage() {
             type="submit"
             disabled={submitting}
             className="w-full rounded py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
-            style={{ background: "var(--indigo)", color: "var(--white)" }}
+            style={{ background: "var(--accent)", color: "var(--ink)" }}
           >
             {submitting ? "Signing in…" : "Sign in"}
           </button>
         </form>
 
-        <p className="mt-6 text-sm text-center" style={{ color: "var(--slate-dim)" }}>
+        <p className="mt-6 text-sm text-center" style={{ color: "var(--ink-faint)" }}>
           No account?{" "}
           <Link
             href="/register"
             className="font-medium hover:underline"
-            style={{ color: "var(--indigo)" }}
+            style={{ color: "var(--accent)" }}
           >
             Create one
           </Link>

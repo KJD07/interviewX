@@ -77,13 +77,13 @@ export default function Sidebar() {
   return (
     <aside
       className="w-56 shrink-0 min-h-screen flex flex-col justify-between px-4 py-6 border-r"
-      style={{ background: "var(--navy-light)", borderColor: "var(--navy-mid)" }}
+      style={{ background: "var(--surface)", borderColor: "var(--border)" }}
     >
       <div>
         <button
           onClick={() => router.push("/dashboard")}
-          className="text-lg font-bold tracking-tight px-2 mb-8 block"
-          style={{ color: "var(--white)" }}
+          className="font-display text-lg font-semibold tracking-tight px-2 mb-8 block"
+          style={{ color: "var(--ink)" }}
         >
           InterviewX
         </button>
@@ -97,8 +97,8 @@ export default function Sidebar() {
                 onClick={() => router.push(href)}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
                 style={{
-                  background: active ? "var(--indigo-glow)" : "transparent",
-                  color: active ? "var(--indigo)" : "var(--slate)",
+                  background: active ? "var(--accent-glow)" : "transparent",
+                  color: active ? "var(--accent-dim)" : "var(--ink-dim)",
                 }}
               >
                 <Icon />
@@ -112,26 +112,26 @@ export default function Sidebar() {
       <div className="px-2 space-y-4">
         <div
           className="rounded-lg px-3 py-2.5"
-          style={{ background: "var(--navy-mid)" }}
+          style={{ background: "var(--hero-bg)" }}
         >
-          <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--slate-dim)" }}>
+          <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--hero-text)", opacity: 0.65 }}>
             Plan
           </p>
           <div className="flex items-center justify-between mt-1">
-            <span className="text-sm font-semibold" style={{ color: "var(--indigo)" }}>
+            <span className="font-display text-sm font-semibold" style={{ color: "var(--hero-text)" }}>
               {plan.label}
             </span>
             <button
               onClick={() => router.push("/upgrade")}
               className="text-xs underline"
-              style={{ color: "var(--slate)" }}
+              style={{ color: "var(--hero-text)", opacity: 0.75 }}
             >
               Manage
             </button>
           </div>
 
           {bonusInterviews > 0 && (
-            <p className="text-xs mt-1.5" style={{ color: "var(--slate)" }}>
+            <p className="text-xs mt-1.5" style={{ color: "var(--hero-text)", opacity: 0.75 }}>
               +{bonusInterviews} bonus {bonusInterviews === 1 ? "interview" : "interviews"}
             </p>
           )}
@@ -140,7 +140,7 @@ export default function Sidebar() {
             <button
               onClick={() => setShowTopup(true)}
               className="text-xs mt-1.5 underline block"
-              style={{ color: "var(--slate)" }}
+              style={{ color: "var(--hero-text)", opacity: 0.75 }}
             >
               + Buy more interviews
             </button>
@@ -148,13 +148,13 @@ export default function Sidebar() {
         </div>
 
         <div className="flex items-center justify-between px-1">
-          <span className="text-sm truncate" style={{ color: "var(--slate)" }}>
+          <span className="text-sm truncate" style={{ color: "var(--ink-dim)" }}>
             {user?.username}
           </span>
           <button
             onClick={handleLogout}
             className="shrink-0 hover:opacity-80"
-            style={{ color: "var(--slate-dim)" }}
+            style={{ color: "var(--ink-faint)" }}
             title="Sign out"
           >
             <LogoutIcon />

@@ -24,7 +24,7 @@ function ScoreRing({ value, label }: { value: number | undefined; label: string 
           <circle
             cx="36" cy="36" r={radius}
             fill="none"
-            stroke="var(--navy-mid)"
+            stroke="var(--border-mid)"
             strokeWidth="6"
           />
           <circle
@@ -39,12 +39,12 @@ function ScoreRing({ value, label }: { value: number | undefined; label: string 
         </svg>
         <div
           className="absolute inset-0 flex items-center justify-center text-lg font-bold"
-          style={{ color: value !== undefined ? color : "var(--slate-dim)" }}
+          style={{ color: value !== undefined ? color : "var(--ink-faint)" }}
         >
           {value !== undefined ? value : "—"}
         </div>
       </div>
-      <span className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--slate)" }}>
+      <span className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--ink-dim)" }}>
         {label}
       </span>
     </div>
@@ -61,8 +61,8 @@ function TranscriptBubble({ msg }: { msg: { role: "user" | "ai"; text: string; t
         className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-1"
         style={
           isUser
-            ? { background: "var(--navy-mid)", color: "var(--slate)" }
-            : { background: "var(--indigo-glow)", color: "var(--indigo)" }
+            ? { background: "var(--border-mid)", color: "var(--ink-dim)" }
+            : { background: "var(--accent-glow)", color: "var(--accent)" }
         }
       >
         {isUser ? "Y" : "AI"}
@@ -71,8 +71,8 @@ function TranscriptBubble({ msg }: { msg: { role: "user" | "ai"; text: string; t
         className="max-w-[78%] rounded-xl px-4 py-2.5 text-sm leading-relaxed"
         style={
           isUser
-            ? { background: "rgba(99,102,241,0.1)", color: "var(--white)", border: "1px solid rgba(99,102,241,0.2)" }
-            : { background: "var(--navy-light)", color: "var(--white)", border: "1px solid var(--navy-mid)" }
+            ? { background: "rgba(99,102,241,0.1)", color: "var(--ink)", border: "1px solid rgba(99,102,241,0.2)" }
+            : { background: "var(--surface)", color: "var(--ink)", border: "1px solid var(--border-mid)" }
         }
       >
         {msg.text}
@@ -132,9 +132,9 @@ export default function ResultsPage() {
       <ProtectedRoute>
         <div
           className="min-h-screen flex items-center justify-center"
-          style={{ background: "var(--navy)" }}
+          style={{ background: "var(--page)" }}
         >
-          <p className="text-sm" style={{ color: "var(--slate)" }}>
+          <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
             Loading results…
           </p>
         </div>
@@ -147,7 +147,7 @@ export default function ResultsPage() {
       <ProtectedRoute>
         <div
           className="min-h-screen flex items-center justify-center"
-          style={{ background: "var(--navy)" }}
+          style={{ background: "var(--page)" }}
         >
           <div className="text-center">
             <p className="text-sm mb-4" style={{ color: "var(--danger)" }}>
@@ -156,7 +156,7 @@ export default function ResultsPage() {
             <button
               onClick={() => router.push("/dashboard")}
               className="text-sm hover:underline"
-              style={{ color: "var(--indigo)" }}
+              style={{ color: "var(--accent)" }}
             >
               ← Dashboard
             </button>
@@ -176,7 +176,7 @@ export default function ResultsPage() {
         : overall >= 5
         ? "#f59e0b"
         : "var(--danger)"
-      : "var(--slate)";
+      : "var(--ink-dim)";
 
   const formatDate = (iso: string) =>
     new Date(iso).toLocaleDateString("en-IN", {
@@ -189,20 +189,20 @@ export default function ResultsPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen" style={{ background: "var(--navy)" }}>
+      <div className="min-h-screen" style={{ background: "var(--page)" }}>
 
         {/* Nav */}
         <nav
           className="flex items-center justify-between px-6 py-4 border-b"
-          style={{ borderColor: "var(--navy-light)" }}
+          style={{ borderColor: "var(--surface)" }}
         >
-          <span className="text-base font-bold tracking-tight" style={{ color: "var(--white)" }}>
+          <span className="text-base font-bold tracking-tight" style={{ color: "var(--ink)" }}>
             InterviewX
           </span>
           <button
             onClick={() => router.push(plan.hasInsights ? "/dashboard" : "/companies")}
             className="text-sm hover:underline"
-            style={{ color: "var(--slate)" }}
+            style={{ color: "var(--ink-dim)" }}
           >
             {plan.hasInsights ? "← Dashboard" : "← Companies"}
           </button>
@@ -213,7 +213,7 @@ export default function ResultsPage() {
           {/* Header */}
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-2xl font-bold" style={{ color: "var(--white)" }}>
+              <h1 className="text-2xl font-bold" style={{ color: "var(--ink)" }}>
                 Interview Results
               </h1>
               <span
@@ -223,7 +223,7 @@ export default function ResultsPage() {
                 Completed
               </span>
             </div>
-            <p className="text-sm" style={{ color: "var(--slate)" }}>
+            <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
               Session #{s.id} · {formatDate(s.started_at)}
               {s.ended_at && ` → ${formatDate(s.ended_at)}`}
             </p>
@@ -233,24 +233,24 @@ export default function ResultsPage() {
           <div
             className="rounded-xl px-6 py-5 flex items-center gap-5"
             style={{
-              background: "var(--navy-light)",
-              border: `1px solid ${overall !== undefined ? overallColor + "40" : "var(--navy-mid)"}`,
+              background: "var(--surface)",
+              border: `1px solid ${overall !== undefined ? overallColor + "40" : "var(--border-mid)"}`,
             }}
           >
             <div
               className="text-5xl font-black tabular-nums"
-              style={{ color: overall !== undefined ? overallColor : "var(--slate-dim)" }}
+              style={{ color: overall !== undefined ? overallColor : "var(--ink-faint)" }}
             >
               {overall !== undefined ? overall : "—"}
-              <span className="text-xl font-normal" style={{ color: "var(--slate-dim)" }}>
+              <span className="text-xl font-normal" style={{ color: "var(--ink-faint)" }}>
                 /10
               </span>
             </div>
             <div>
-              <p className="text-base font-semibold" style={{ color: "var(--white)" }}>
+              <p className="text-base font-semibold" style={{ color: "var(--ink)" }}>
                 Overall Score
               </p>
-              <p className="text-sm mt-0.5" style={{ color: "var(--slate)" }}>
+              <p className="text-sm mt-0.5" style={{ color: "var(--ink-dim)" }}>
                 {overall === undefined
                   ? "Scoring unavailable"
                   : overall >= 7
@@ -279,9 +279,9 @@ export default function ResultsPage() {
           {plan.hasInsights ? (
             <div
               className="rounded-xl px-6 py-6"
-              style={{ background: "var(--navy-light)", border: "1px solid var(--navy-mid)" }}
+              style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
             >
-              <h2 className="text-sm font-semibold uppercase tracking-wider mb-6" style={{ color: "var(--slate)" }}>
+              <h2 className="text-sm font-semibold uppercase tracking-wider mb-6" style={{ color: "var(--ink-dim)" }}>
                 Score breakdown
               </h2>
               <div className="flex justify-around">
@@ -293,18 +293,18 @@ export default function ResultsPage() {
           ) : (
             <div
               className="rounded-xl px-6 py-5 text-center"
-              style={{ background: "var(--navy-light)", border: "1px dashed var(--navy-mid)" }}
+              style={{ background: "var(--surface)", border: "1px dashed var(--border-mid)" }}
             >
-              <p className="text-sm font-medium" style={{ color: "var(--white)" }}>
+              <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>
                 Want the full breakdown?
               </p>
-              <p className="text-sm mt-1" style={{ color: "var(--slate)" }}>
+              <p className="text-sm mt-1" style={{ color: "var(--ink-dim)" }}>
                 Upgrade to see your Communication, Technical, and Problem-solving scores plus AI insights on exactly what to improve.
               </p>
               <button
                 onClick={() => router.push("/upgrade")}
                 className="mt-4 px-5 py-2 rounded text-sm font-semibold"
-                style={{ background: "var(--indigo)", color: "var(--white)" }}
+                style={{ background: "var(--accent)", color: "var(--ink)" }}
               >
                 See upgrade options →
               </button>
@@ -315,12 +315,12 @@ export default function ResultsPage() {
           {s.feedback && (
             <div
               className="rounded-xl px-6 py-5"
-              style={{ background: "var(--navy-light)", border: "1px solid var(--navy-mid)" }}
+              style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
             >
-              <h2 className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--slate)" }}>
+              <h2 className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--ink-dim)" }}>
                 AI feedback
               </h2>
-              <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: "var(--white)" }}>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: "var(--ink)" }}>
                 {s.feedback}
               </p>
             </div>
@@ -330,15 +330,15 @@ export default function ResultsPage() {
           {plan.hasInsights && s.insights && (s.insights.topics?.length || s.insights.improvement_areas?.length) ? (
             <div
               className="rounded-xl px-6 py-6"
-              style={{ background: "var(--navy-light)", border: "1px solid var(--navy-mid)" }}
+              style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
             >
-              <h2 className="text-sm font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--slate)" }}>
+              <h2 className="text-sm font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--ink-dim)" }}>
                 AI insights
               </h2>
 
               {s.insights.topics && s.insights.topics.length > 0 && (
                 <div className="mb-6">
-                  <p className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: "var(--slate-dim)" }}>
+                  <p className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: "var(--ink-faint)" }}>
                     Topic-by-topic
                   </p>
                   <div className="space-y-3">
@@ -348,15 +348,15 @@ export default function ResultsPage() {
                         <div key={i} className="flex items-start gap-3">
                           <span
                             className="shrink-0 text-xs font-bold tabular-nums rounded-full w-8 h-8 flex items-center justify-center"
-                            style={{ background: "var(--navy-mid)", color }}
+                            style={{ background: "var(--border-mid)", color }}
                           >
                             {t.score}
                           </span>
                           <div>
-                            <p className="text-sm font-medium" style={{ color: "var(--white)" }}>
+                            <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>
                               {t.name}
                             </p>
-                            <p className="text-xs mt-0.5" style={{ color: "var(--slate)" }}>
+                            <p className="text-xs mt-0.5" style={{ color: "var(--ink-dim)" }}>
                               {t.note}
                             </p>
                           </div>
@@ -369,7 +369,7 @@ export default function ResultsPage() {
 
               {s.insights.improvement_areas && s.insights.improvement_areas.length > 0 && (
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: "var(--slate-dim)" }}>
+                  <p className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: "var(--ink-faint)" }}>
                     Focus on next
                   </p>
                   <div className="space-y-3">
@@ -379,10 +379,10 @@ export default function ResultsPage() {
                         className="rounded-lg px-4 py-3"
                         style={{ background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.15)" }}
                       >
-                        <p className="text-sm font-semibold" style={{ color: "var(--indigo)" }}>
+                        <p className="text-sm font-semibold" style={{ color: "var(--accent)" }}>
                           {a.area}
                         </p>
-                        <p className="text-xs mt-1" style={{ color: "var(--slate)" }}>
+                        <p className="text-xs mt-1" style={{ color: "var(--ink-dim)" }}>
                           {a.suggestion}
                         </p>
                       </div>
@@ -397,16 +397,16 @@ export default function ResultsPage() {
           {s.transcript && s.transcript.length > 0 && (
             <div
               className="rounded-xl overflow-hidden"
-              style={{ border: "1px solid var(--navy-mid)" }}
+              style={{ border: "1px solid var(--border-mid)" }}
             >
               <button
                 onClick={() => setShowTranscript((v) => !v)}
                 className="w-full flex items-center justify-between px-6 py-4"
-                style={{ background: "var(--navy-light)" }}
+                style={{ background: "var(--surface)" }}
               >
                 <h2
                   className="text-sm font-semibold uppercase tracking-wider"
-                  style={{ color: "var(--slate)" }}
+                  style={{ color: "var(--ink-dim)" }}
                 >
                   Transcript ({s.transcript.length} messages)
                 </h2>
@@ -416,7 +416,7 @@ export default function ResultsPage() {
                   viewBox="0 0 16 16"
                   fill="none"
                   style={{
-                    color: "var(--slate-dim)",
+                    color: "var(--ink-faint)",
                     transform: showTranscript ? "rotate(180deg)" : "none",
                     transition: "transform 0.2s",
                   }}
@@ -434,7 +434,7 @@ export default function ResultsPage() {
               {showTranscript && (
                 <div
                   className="px-5 py-5 space-y-4 max-h-96 overflow-y-auto"
-                  style={{ background: "var(--navy)" }}
+                  style={{ background: "var(--page)" }}
                 >
                   {(s.transcript as { role: "user" | "ai"; text: string; ts: string }[]).map(
                     (msg, i) => (
@@ -451,7 +451,7 @@ export default function ResultsPage() {
             <button
               onClick={() => router.push("/companies")}
               className="flex-1 py-3 rounded-lg text-sm font-semibold"
-              style={{ background: "var(--indigo)", color: "var(--white)" }}
+              style={{ background: "var(--accent)", color: "var(--ink)" }}
             >
               Practice again
             </button>
@@ -460,9 +460,9 @@ export default function ResultsPage() {
                 onClick={() => router.push("/dashboard")}
                 className="flex-1 py-3 rounded-lg text-sm font-semibold"
                 style={{
-                  background: "var(--navy-light)",
-                  color: "var(--white)",
-                  border: "1px solid var(--navy-mid)",
+                  background: "var(--surface)",
+                  color: "var(--ink)",
+                  border: "1px solid var(--border-mid)",
                 }}
               >
                 Dashboard

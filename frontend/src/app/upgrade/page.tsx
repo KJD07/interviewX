@@ -86,20 +86,20 @@ export default function UpgradePage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen px-6 py-12" style={{ background: "var(--navy)" }}>
+      <div className="min-h-screen px-6 py-12" style={{ background: "var(--page)" }}>
         <div className="max-w-5xl mx-auto fade-up">
           {/* Header */}
           <div className="text-center mb-10">
             <span
               className="inline-block text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-widest mb-4"
-              style={{ background: "var(--indigo-glow)", color: "var(--indigo)" }}
+              style={{ background: "var(--accent-glow)", color: "var(--accent)" }}
             >
               Plans
             </span>
-            <h1 className="text-2xl font-bold mb-2" style={{ color: "var(--white)" }}>
+            <h1 className="text-2xl font-bold mb-2" style={{ color: "var(--ink)" }}>
               Choose the plan that fits your prep
             </h1>
-            <p className="text-sm" style={{ color: "var(--slate)" }}>
+            <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
               Free plan is limited to {PLANS.free.monthlyLimit} interviews/month.
             </p>
           </div>
@@ -122,30 +122,30 @@ export default function UpgradePage() {
                   key={planId}
                   className="rounded-xl p-8 flex flex-col"
                   style={{
-                    background: "var(--navy-light)",
+                    background: "var(--surface)",
                     border: isMax
-                      ? "1px solid var(--indigo)"
-                      : "1px solid var(--navy-mid)",
+                      ? "1px solid var(--accent)"
+                      : "1px solid var(--border-mid)",
                   }}
                 >
                   {isMax && (
                     <span
                       className="self-start text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider mb-4"
-                      style={{ background: "var(--indigo-glow)", color: "var(--indigo)" }}
+                      style={{ background: "var(--accent-glow)", color: "var(--accent)" }}
                     >
                       Best value
                     </span>
                   )}
 
-                  <h2 className="text-lg font-bold mb-1" style={{ color: "var(--white)" }}>
+                  <h2 className="text-lg font-bold mb-1" style={{ color: "var(--ink)" }}>
                     {plan.label}
                   </h2>
 
                   <div className="mb-6">
-                    <span className="text-4xl font-bold" style={{ color: "var(--white)" }}>
+                    <span className="text-4xl font-bold" style={{ color: "var(--ink)" }}>
                       ₹{plan.priceRupees}
                     </span>
-                    <span className="text-sm ml-2" style={{ color: "var(--slate)" }}>
+                    <span className="text-sm ml-2" style={{ color: "var(--ink-dim)" }}>
                       /month
                     </span>
                   </div>
@@ -155,7 +155,7 @@ export default function UpgradePage() {
                       <li
                         key={f}
                         className="flex items-start gap-3 text-sm"
-                        style={{ color: "var(--slate)" }}
+                        style={{ color: "var(--ink-dim)" }}
                       >
                         <span style={{ color: "#22c55e" }}>✓</span>
                         {f}
@@ -169,11 +169,11 @@ export default function UpgradePage() {
                     className="w-full py-3 rounded-lg font-semibold text-sm transition-opacity disabled:opacity-50"
                     style={
                       isMax
-                        ? { background: "var(--indigo)", color: "var(--white)" }
+                        ? { background: "var(--accent)", color: "var(--ink)" }
                         : {
                             background: "transparent",
-                            color: "var(--indigo)",
-                            border: "1px solid var(--indigo)",
+                            color: "var(--accent)",
+                            border: "1px solid var(--accent)",
                           }
                     }
                   >
@@ -192,7 +192,7 @@ export default function UpgradePage() {
             <button
               onClick={() => router.back()}
               className="text-sm hover:underline"
-              style={{ color: "var(--slate-dim)" }}
+              style={{ color: "var(--ink-faint)" }}
             >
               Go back
             </button>

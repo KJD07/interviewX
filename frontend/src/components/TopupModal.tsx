@@ -87,32 +87,32 @@ export default function TopupModal({ onClose }: { onClose: () => void }) {
     >
       <div
         className="w-full max-w-md rounded-xl p-6"
-        style={{ background: "var(--navy-light)", border: "1px solid var(--navy-mid)" }}
+        style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between mb-1">
-          <h2 className="text-lg font-bold" style={{ color: "var(--white)" }}>
+          <h2 className="text-lg font-bold" style={{ color: "var(--ink)" }}>
             Buy more interviews
           </h2>
-          <button onClick={onClose} className="text-sm" style={{ color: "var(--slate-dim)" }}>
+          <button onClick={onClose} className="text-sm" style={{ color: "var(--ink-faint)" }}>
             ✕
           </button>
         </div>
-        <p className="text-sm mb-5" style={{ color: "var(--slate)" }}>
+        <p className="text-sm mb-5" style={{ color: "var(--ink-dim)" }}>
           Top up any time this month. Credits roll over and never expire.
         </p>
 
         {isMax ? (
-          <p className="text-sm py-4 text-center" style={{ color: "var(--slate)" }}>
+          <p className="text-sm py-4 text-center" style={{ color: "var(--ink-dim)" }}>
             You're on Max — interviews are already unlimited.
           </p>
         ) : success ? (
           <div className="py-4 text-center">
-            <p className="text-sm mb-4" style={{ color: "var(--white)" }}>{success}</p>
+            <p className="text-sm mb-4" style={{ color: "var(--ink)" }}>{success}</p>
             <button
               onClick={onClose}
               className="w-full py-2.5 rounded-lg font-semibold text-sm"
-              style={{ background: "var(--indigo)", color: "var(--white)" }}
+              style={{ background: "var(--accent)", color: "var(--ink)" }}
             >
               Done
             </button>
@@ -134,17 +134,17 @@ export default function TopupModal({ onClose }: { onClose: () => void }) {
                     onClick={() => handleBuy(packId)}
                     disabled={loadingPack !== null}
                     className="w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-opacity disabled:opacity-50"
-                    style={{ background: "var(--navy-mid)", border: "1px solid var(--navy-mid)" }}
+                    style={{ background: "var(--border-mid)", border: "1px solid var(--border-mid)" }}
                   >
                     <div>
-                      <p className="text-sm font-semibold" style={{ color: "var(--white)" }}>
+                      <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>
                         {pack.label} — {pack.credits} interviews
                       </p>
-                      <p className="text-xs" style={{ color: "var(--slate-dim)" }}>
+                      <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
                         {pack.perInterview}
                       </p>
                     </div>
-                    <span className="text-sm font-bold shrink-0 ml-3" style={{ color: "var(--indigo)" }}>
+                    <span className="text-sm font-bold shrink-0 ml-3" style={{ color: "var(--accent)" }}>
                       {loadingPack === packId ? "Opening…" : `₹${pack.priceRupees}`}
                     </span>
                   </button>

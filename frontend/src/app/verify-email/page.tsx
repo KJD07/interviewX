@@ -61,25 +61,25 @@ function VerifyEmailForm() {
   };
 
   const inputStyle = {
-    background: "var(--navy-light)",
-    border: "1px solid var(--navy-mid)",
-    color: "var(--white)",
+    background: "var(--surface)",
+    border: "1px solid var(--border-mid)",
+    color: "var(--ink)",
   };
 
   return (
     <main
       className="min-h-screen flex items-center justify-center px-4 py-12"
-      style={{ background: "var(--navy)" }}
+      style={{ background: "var(--page)" }}
     >
       <div className="w-full max-w-sm fade-up">
         <div className="mb-10">
           <span
             className="text-2xl font-bold tracking-tight cursor-blink"
-            style={{ color: "var(--white)" }}
+            style={{ color: "var(--ink)" }}
           >
             InterviewX
           </span>
-          <p className="mt-2 text-sm" style={{ color: "var(--slate)" }}>
+          <p className="mt-2 text-sm" style={{ color: "var(--ink-dim)" }}>
             Enter the 6-digit code we emailed you to verify your account.
           </p>
         </div>
@@ -89,7 +89,7 @@ function VerifyEmailForm() {
             <label
               htmlFor="email"
               className="block text-xs font-medium mb-1.5 tracking-wider uppercase"
-              style={{ color: "var(--slate)" }}
+              style={{ color: "var(--ink-dim)" }}
             >
               Email
             </label>
@@ -110,7 +110,7 @@ function VerifyEmailForm() {
             <label
               htmlFor="code"
               className="block text-xs font-medium mb-1.5 tracking-wider uppercase"
-              style={{ color: "var(--slate)" }}
+              style={{ color: "var(--ink-dim)" }}
             >
               Verification code
             </label>
@@ -160,27 +160,27 @@ function VerifyEmailForm() {
             type="submit"
             disabled={submitting || code.length !== 6}
             className="w-full rounded py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
-            style={{ background: "var(--indigo)", color: "var(--white)" }}
+            style={{ background: "var(--accent)", color: "var(--ink)" }}
           >
             {submitting ? "Verifying…" : "Verify email"}
           </button>
         </form>
 
-        <p className="mt-6 text-sm text-center" style={{ color: "var(--slate-dim)" }}>
+        <p className="mt-6 text-sm text-center" style={{ color: "var(--ink-faint)" }}>
           Didn't get a code?{" "}
           <button
             type="button"
             onClick={handleResend}
             disabled={resending || cooldown > 0 || !email}
             className="font-medium hover:underline disabled:opacity-50 disabled:no-underline"
-            style={{ color: "var(--indigo)" }}
+            style={{ color: "var(--accent)" }}
           >
             {cooldown > 0 ? `Resend in ${cooldown}s` : resending ? "Sending…" : "Resend code"}
           </button>
         </p>
 
-        <p className="mt-2 text-sm text-center" style={{ color: "var(--slate-dim)" }}>
-          <Link href="/login" className="hover:underline" style={{ color: "var(--indigo)" }}>
+        <p className="mt-2 text-sm text-center" style={{ color: "var(--ink-faint)" }}>
+          <Link href="/login" className="hover:underline" style={{ color: "var(--accent)" }}>
             Back to sign in
           </Link>
         </p>
