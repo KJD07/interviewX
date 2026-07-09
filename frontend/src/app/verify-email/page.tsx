@@ -20,7 +20,7 @@ function VerifyEmailForm() {
   const [cooldown, setCooldown] = useState(0);
 
   useEffect(() => {
-    if (user) router.replace("/dashboard");
+    if (user) router.replace("/");
   }, [user, router]);
 
   useEffect(() => {
@@ -36,7 +36,7 @@ function VerifyEmailForm() {
     setSubmitting(true);
     try {
       await verifyEmail(email, code);
-      router.push("/dashboard");
+      router.push("/");
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : "Something went wrong. Please try again.");
     } finally {
@@ -160,7 +160,7 @@ function VerifyEmailForm() {
             type="submit"
             disabled={submitting || code.length !== 6}
             className="w-full rounded py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
-            style={{ background: "var(--accent)", color: "var(--ink)" }}
+            style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
           >
             {submitting ? "Verifying…" : "Verify email"}
           </button>

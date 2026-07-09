@@ -203,7 +203,7 @@ export default function ProgressPage() {
                 <button
                   onClick={() => router.push("/companies")}
                   className="mt-5 px-5 py-2 rounded text-sm font-semibold"
-                  style={{ background: "var(--accent)", color: "var(--ink)" }}
+                  style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
                 >
                   Browse companies
                 </button>
@@ -292,7 +292,7 @@ function LockedTeaser({ router }: { router: ReturnType<typeof useRouter> }) {
         <button
           onClick={() => router.push("/upgrade")}
           className="mt-4 px-5 py-2 rounded text-sm font-semibold"
-          style={{ background: "var(--accent)", color: "var(--ink)" }}
+          style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
         >
           Upgrade to unlock →
         </button>

@@ -169,7 +169,7 @@ function Bubble({ msg, speaking }: { msg: Message; speaking?: boolean }) {
             isUser
               ? {
                   background: "var(--accent)",
-                  color: "var(--ink)",
+                  color: "var(--accent-ink)",
                   borderBottomRightRadius: 4,
                 }
               : {
@@ -756,7 +756,7 @@ export default function InterviewPage() {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold transition-opacity disabled:opacity-30"
               style={
                 voiceMode
-                  ? { background: "var(--accent)", color: "var(--ink)" }
+                  ? { background: "var(--accent)", color: "var(--accent-ink)" }
                   : { background: "var(--surface)", color: "var(--ink-dim)", border: "1px solid var(--border-mid)" }
               }
             >
@@ -876,12 +876,12 @@ export default function InterviewPage() {
                 <svg width="24" height="24" viewBox="0 0 16 16" fill="none">
                   <path
                     d="M8 1.5a2 2 0 0 0-2 2v5a2 2 0 0 0 4 0v-5a2 2 0 0 0-2-2Z"
-                    stroke="var(--ink)"
+                    stroke={isListening ? "#fff" : "var(--accent-ink)"}
                     strokeWidth="1.4"
                   />
                   <path
                     d="M4 7.5v1a4 4 0 0 0 8 0v-1M8 12.5v2M6 14.5h4"
-                    stroke="var(--ink)"
+                    stroke={isListening ? "#fff" : "var(--accent-ink)"}
                     strokeWidth="1.4"
                     strokeLinecap="round"
                   />
@@ -934,7 +934,7 @@ export default function InterviewPage() {
                   onClick={() => handleSend()}
                   disabled={!input.trim() || sending || aiTyping || timeUp}
                   className="shrink-0 rounded-lg px-3.5 py-2 text-sm font-semibold transition-opacity disabled:opacity-30"
-                  style={{ background: "var(--accent)", color: "var(--ink)" }}
+                  style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
                 >
                   {sending ? (
                     <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

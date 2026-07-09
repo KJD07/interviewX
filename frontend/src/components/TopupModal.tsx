@@ -112,7 +112,7 @@ export default function TopupModal({ onClose }: { onClose: () => void }) {
             <button
               onClick={onClose}
               className="w-full py-2.5 rounded-lg font-semibold text-sm"
-              style={{ background: "var(--accent)", color: "var(--ink)" }}
+              style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
             >
               Done
             </button>

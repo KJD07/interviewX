@@ -22,30 +22,81 @@
   --accent:      #1E1E1C;
   --accent-dim:  #5F5F58;
   --accent-glow: rgba(30, 30, 28, 0.08);
+  --accent-ink:  #FAFAF9; /* text color to use ON TOP of var(--accent) */
   --hero-bg:     #EFEFEC;
   --hero-text:   #1E1E1C;
 }
 
-/* ── Tier accents — set data-plan="free|pro|premium|max" on <body> ── */
+/* ── Tier accents — set data-plan="free|pro|premium|max" on <body> ──
+   Each tier also re-tints the neutral shell (page/surface/border/ink)
+   so the whole app reads like the tier's palette, not just isolated
+   buttons — matching the reference cards in interviewx_tier_palettes.html. */
+[data-plan="free"] {
+  --page:        #FAFAF9;
+  --surface:     #FFFFFF;
+  --surface-2:   #EFEFEC;
+  --border:      #E2E1DD;
+  --border-mid:  #D8D7D1;
+  --ink:         #1E1E1C;
+  --ink-dim:     #7A7A73;
+  --ink-faint:   #9A9A94;
+
+  --accent:      #1E1E1C;
+  --accent-dim:  #5F5F58;
+  --accent-glow: rgba(30, 30, 28, 0.08);
+  --accent-ink:  #FAFAF9;
+  --hero-bg:     #EFEFEC;
+  --hero-text:   #1E1E1C;
+}
 [data-plan="pro"] {
+  --page:        #F7F9FA;
+  --surface:     #FFFFFF;
+  --surface-2:   #EDF2F4;
+  --border:      #DCE4E7;
+  --border-mid:  #CBD8DC;
+  --ink:         #152B33;
+  --ink-dim:     #4C6870;
+  --ink-faint:   #7FA5AE;
+
   --accent:      #1B3A44;
   --accent-dim:  #2A5964;
   --accent-glow: rgba(27, 58, 68, 0.10);
+  --accent-ink:  #EAF4F6;
   --hero-bg:     #1B3A44;
   --hero-text:   #EAF4F6;
 }
 [data-plan="premium"] {
+  --page:        #FAF8F4;
+  --surface:     #FFFFFF;
+  --surface-2:   #F2EEE3;
+  --border:      #E4DFD1;
+  --border-mid:  #D8D0BA;
+  --ink:         #1C1A16;
+  --ink-dim:     #7A6F55;
+  --ink-faint:   #8C8674;
+
   --accent:      #1C1A16;
   --accent-dim:  #A9812F;
   --accent-glow: rgba(169, 129, 47, 0.12);
+  --accent-ink:  #F4EFE4;
   --hero-bg:     #1C1A16;
   --hero-text:   #F4EFE4;
 }
 [data-plan="max"] {
+  --page:        #0F0E0C;
+  --surface:     #17140F;
+  --surface-2:   #1C1A15;
+  --border:      #3A342A;
+  --border-mid:  #4A4335;
+  --ink:         #F4EEE0;
+  --ink-dim:     #B8AF98;
+  --ink-faint:   #8C8674;
+
   --accent:      #D4AF37;
   --accent-dim:  #B8952C;
   --accent-glow: rgba(212, 175, 55, 0.14);
-  --hero-bg:     #1C1A16;
+  --accent-ink:  #0F0E0C;
+  --hero-bg:     #1C1A15;
   --hero-text:   #F4EFE4;
 }
 

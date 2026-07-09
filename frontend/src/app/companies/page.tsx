@@ -438,7 +438,7 @@ export default function CompaniesPage() {
                           onClick={() => handleStartInterview(round.id)}
                           disabled={limitReached || starting === round.id}
                           className="shrink-0 px-4 py-2 rounded text-sm font-semibold transition-opacity disabled:opacity-40"
-                          style={{ background: "var(--accent)", color: "var(--ink)" }}
+                          style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
                         >
                           {starting === round.id ? "Starting…" : "Start interview"}
                         </button>

@@ -169,7 +169,7 @@ export default function UpgradePage() {
                     className="w-full py-3 rounded-lg font-semibold text-sm transition-opacity disabled:opacity-50"
                     style={
                       isMax
-                        ? { background: "var(--accent)", color: "var(--ink)" }
+                        ? { background: "var(--accent)", color: "var(--accent-ink)" }
                         : {
                             background: "transparent",
                             color: "var(--accent)",

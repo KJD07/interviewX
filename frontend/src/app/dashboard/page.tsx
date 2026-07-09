@@ -162,7 +162,7 @@ export default function DashboardPage() {
                 onClick={() => router.push("/companies")}
                 disabled={limitReached}
                 className="px-5 py-2.5 rounded text-sm font-semibold transition-opacity disabled:opacity-40"
-                style={{ background: "var(--accent)", color: "var(--ink)" }}
+                style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
               >
                 + Start interview
               </button>
@@ -288,7 +288,7 @@ export default function DashboardPage() {
                 <button
                   onClick={() => router.push("/companies")}
                   className="mt-5 px-5 py-2 rounded text-sm font-semibold"
-                  style={{ background: "var(--accent)", color: "var(--ink)" }}
+                  style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
                 >
                   Browse companies
                 </button>
@@ -317,7 +317,7 @@ export default function DashboardPage() {
               <button
                 onClick={() => router.push("/companies")}
                 className="mt-5 px-5 py-2 rounded text-sm font-semibold"
-                style={{ background: "var(--accent)", color: "var(--ink)" }}
+                style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
               >
                 Browse companies
               </button>

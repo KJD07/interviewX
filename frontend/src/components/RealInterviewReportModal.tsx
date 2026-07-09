@@ -295,7 +295,7 @@ export default function RealInterviewReportModal({ sessionId, onClose, onSubmitt
             onClick={handleSubmit}
             disabled={submitting}
             className="flex-1 py-3 rounded-lg text-sm font-semibold disabled:opacity-60"
-            style={{ background: "var(--accent)", color: "var(--ink)" }}
+            style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
           >
             {submitting ? "Submitting…" : "Submit"}
           </button>

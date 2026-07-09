@@ -17,7 +17,7 @@ export default function LoginPage() {
 
   // Already logged in → go to dashboard
   useEffect(() => {
-    if (user) router.replace("/dashboard");
+    if (user) router.replace("/");
   }, [user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,7 +26,7 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       await login(email, password);
-      router.push("/dashboard");
+      router.push("/");
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.code === "EMAIL_NOT_VERIFIED") {
@@ -138,7 +138,7 @@ export default function LoginPage() {
             type="submit"
             disabled={submitting}
             className="w-full rounded py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
-            style={{ background: "var(--accent)", color: "var(--ink)" }}
+            style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
           >
             {submitting ? "Signing in…" : "Sign in"}
           </button>

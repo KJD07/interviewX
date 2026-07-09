@@ -19,7 +19,7 @@ export default function RegisterPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (user) router.replace("/dashboard");
+    if (user) router.replace("/");
   }, [user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -198,7 +198,7 @@ export default function RegisterPage() {
             type="submit"
             disabled={submitting}
             className="w-full rounded py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
-            style={{ background: "var(--accent)", color: "var(--ink)" }}
+            style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
           >
             {submitting ? "Creating account…" : "Create account"}
           </button>
