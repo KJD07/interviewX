@@ -148,19 +148,25 @@ class StartInterviewView(APIView):
             )
 
         # Plan limit check — None means unlimited (Max plan).
+        # Bonus (top-up) credits are consulted first: if the user has any,
+        # they can start an interview even if their monthly plan quota is
+        # used up, and it's the bonus balance that gets decremented below.
         user = request.user
         limit = monthly_limit_for(user.subscription_plan)
-        if limit is not None and user.interviews_this_month >= limit:
+        plan_exhausted = limit is not None and user.interviews_this_month >= limit
+        if plan_exhausted and user.bonus_interviews <= 0:
             return Response(
                 {
                     "detail": (
                         f"You've reached your {user.subscription_plan} plan limit "
-                        f"({limit} interviews/month). Upgrade to continue."
+                        f"({limit} interviews/month). Upgrade your plan or buy a "
+                        f"top-up pack to keep going."
                     ),
                     "code": "plan_limit_reached",
                 },
                 status=status.HTTP_403_FORBIDDEN,
             )
+        use_bonus_credit = plan_exhausted and user.bonus_interviews > 0
 
         try:
             round_obj, questions = _get_round_with_context(round_id)
@@ -212,9 +218,14 @@ class StartInterviewView(APIView):
             ),
         )
 
-        # Increment usage counter
-        user.interviews_this_month += 1
-        user.save(update_fields=["interviews_this_month"])
+        # Consume a bonus credit if the plan quota was already exhausted,
+        # otherwise count it against the normal monthly quota as before.
+        if use_bonus_credit:
+            user.bonus_interviews -= 1
+            user.save(update_fields=["bonus_interviews"])
+        else:
+            user.interviews_this_month += 1
+            user.save(update_fields=["interviews_this_month"])
 
         return Response(
             {

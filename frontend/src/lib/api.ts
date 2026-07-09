@@ -29,6 +29,7 @@ export interface User {
   username: string;
   subscription_plan: "free" | "premium";
   interviews_this_month?: number;
+  bonus_interviews?: number;
   is_email_verified?: boolean;
   auth_provider?: "email" | "google";
 }
@@ -368,6 +369,23 @@ export interface VerifyPaymentResponse {
   subscription_end_date: string;
 }
 
+export interface CreateTopupOrderResponse {
+  order_id: string;
+  amount: number;
+  currency: string;
+  pack: string;
+  credits: number;
+  key_id: string;
+  user_email: string;
+  user_name: string;
+}
+
+export interface VerifyTopupPaymentResponse {
+  detail: string;
+  credits_added: number;
+  bonus_interviews: number;
+}
+
 export const subscriptions = {
   createOrder: (plan: "pro" | "premium" | "max") =>
     request<CreateOrderResponse>("/api/subscriptions/create-order/", {
@@ -381,6 +399,22 @@ export const subscriptions = {
     razorpay_signature: string
   ) =>
     request<VerifyPaymentResponse>("/api/subscriptions/verify-payment/", {
+      method: "POST",
+      body: JSON.stringify({ razorpay_order_id, razorpay_payment_id, razorpay_signature }),
+    }),
+
+  createTopupOrder: (pack: "spark" | "boost" | "power") =>
+    request<CreateTopupOrderResponse>("/api/subscriptions/topup/create-order/", {
+      method: "POST",
+      body: JSON.stringify({ pack }),
+    }),
+
+  verifyTopupPayment: (
+    razorpay_order_id: string,
+    razorpay_payment_id: string,
+    razorpay_signature: string
+  ) =>
+    request<VerifyTopupPaymentResponse>("/api/subscriptions/topup/verify-payment/", {
       method: "POST",
       body: JSON.stringify({ razorpay_order_id, razorpay_payment_id, razorpay_signature }),
     }),

@@ -19,6 +19,14 @@ class User(AbstractUser):
     )
     interviews_this_month = models.IntegerField(default=0)
     subscription_end_date = models.DateTimeField(null=True, blank=True)
+    bonus_interviews = models.IntegerField(
+        default=0,
+        help_text=(
+            "Extra interview credits bought mid-cycle via top-up packs. "
+            "Consumed before counting against the monthly plan limit, and "
+            "do NOT reset on billing renewal — unused credits roll over."
+        ),
+    )
 
     # --- Email verification / auth provider tracking ---
     is_email_verified = models.BooleanField(default=False)

@@ -34,6 +34,40 @@ PLANS = {
 PAID_PLANS = {k: v for k, v in PLANS.items() if k != "free"}
 
 
+# ---------------------------------------------------------------------------
+# Mid-month top-up packs
+# ---------------------------------------------------------------------------
+# One-off interview credits a user can buy any time to go past their plan's
+# monthly limit without waiting for the next billing cycle. Priced so that
+# upgrading a tier remains the better deal per-interview (top-ups are always
+# more expensive per interview than the next plan up).
+TOPUP_PACKS = {
+    "spark": {
+        "label": "Spark Pack",
+        "amount_paise": 9900,   # ₹99
+        "credits": 5,           # ₹19.8 / interview
+    },
+    "boost": {
+        "label": "Boost Pack",
+        "amount_paise": 24900,  # ₹249
+        "credits": 15,          # ₹16.6 / interview
+    },
+    "power": {
+        "label": "Power Pack",
+        "amount_paise": 44900,  # ₹449
+        "credits": 30,          # ₹15.0 / interview
+    },
+}
+
+
+def topup_amount_for(pack: str):
+    return TOPUP_PACKS[pack]["amount_paise"]
+
+
+def topup_credits_for(pack: str):
+    return TOPUP_PACKS[pack]["credits"]
+
+
 def monthly_limit_for(plan: str):
     return PLANS.get(plan, PLANS["free"])["monthly_limit"]
 

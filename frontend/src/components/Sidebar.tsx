@@ -1,7 +1,9 @@
 "use client";
+import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { planOf, hasSkills } from "@/lib/plans";
+import TopupModal from "@/components/TopupModal";
 
 function GridIcon() {
   return (
@@ -54,6 +56,9 @@ export default function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const plan = planOf(user?.subscription_plan);
+  const [showTopup, setShowTopup] = useState(false);
+  const isMax = user?.subscription_plan === "max";
+  const bonusInterviews = user?.bonus_interviews ?? 0;
 
   const NAV_ITEMS = [
     { href: "/dashboard", label: "Dashboard", icon: GridIcon },
@@ -124,6 +129,22 @@ export default function Sidebar() {
               Manage
             </button>
           </div>
+
+          {bonusInterviews > 0 && (
+            <p className="text-xs mt-1.5" style={{ color: "var(--slate)" }}>
+              +{bonusInterviews} bonus {bonusInterviews === 1 ? "interview" : "interviews"}
+            </p>
+          )}
+
+          {!isMax && (
+            <button
+              onClick={() => setShowTopup(true)}
+              className="text-xs mt-1.5 underline block"
+              style={{ color: "var(--slate)" }}
+            >
+              + Buy more interviews
+            </button>
+          )}
         </div>
 
         <div className="flex items-center justify-between px-1">
@@ -140,6 +161,8 @@ export default function Sidebar() {
           </button>
         </div>
       </div>
+
+      {showTopup && <TopupModal onClose={() => setShowTopup(false)} />}
     </aside>
   );
 }

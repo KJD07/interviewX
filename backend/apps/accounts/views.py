@@ -278,6 +278,7 @@ class MeView(APIView):
                 "username": user.username,
                 "subscription_plan": user.subscription_plan,
                 "interviews_this_month": user.interviews_this_month,
+                "bonus_interviews": user.bonus_interviews,
                 "is_email_verified": user.is_email_verified,
                 "auth_provider": user.auth_provider,
             }

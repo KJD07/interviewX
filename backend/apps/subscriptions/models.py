@@ -21,7 +21,18 @@ class PaymentOrder(models.Model):
     plan = models.CharField(
         max_length=20,
         default="max",
-        help_text="Plan this order is for: pro | premium | max",
+        blank=True,
+        help_text="Plan this order is for: pro | premium | max. Blank for top-up orders.",
+    )
+    topup_pack = models.CharField(
+        max_length=20,
+        blank=True,
+        default="",
+        help_text="Top-up pack this order is for: spark | boost | power. Blank for plan orders.",
+    )
+    topup_credits = models.IntegerField(
+        default=0,
+        help_text="Interview credits granted by this order, if it's a top-up.",
     )
     amount = models.IntegerField(help_text="Amount in paise, e.g. 19900 = ₹199")
     status = models.CharField(

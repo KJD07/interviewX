@@ -80,3 +80,25 @@ const SKILLS_PLAN_IDS: PlanId[] = ["premium", "max"];
 export function hasSkills(subscriptionPlan: string | undefined | null): boolean {
   return SKILLS_PLAN_IDS.includes((subscriptionPlan as PlanId) || "free");
 }
+
+// ── Top-up packs ─────────────────────────────────────────────────────────────
+// One-off interview credit packs, purchasable mid-cycle on top of the
+// monthly plan limit. Mirrors backend TOPUP_PACKS — keep in sync.
+
+export type TopupPackId = "spark" | "boost" | "power";
+
+export interface TopupPackInfo {
+  id: TopupPackId;
+  label: string;
+  priceRupees: number;
+  credits: number;
+  perInterview: string; // display string, e.g. "₹19.8/interview"
+}
+
+export const TOPUP_PACKS: Record<TopupPackId, TopupPackInfo> = {
+  spark: { id: "spark", label: "Spark Pack", priceRupees: 99, credits: 5, perInterview: "₹19.8/interview" },
+  boost: { id: "boost", label: "Boost Pack", priceRupees: 249, credits: 15, perInterview: "₹16.6/interview" },
+  power: { id: "power", label: "Power Pack", priceRupees: 449, credits: 30, perInterview: "₹15.0/interview" },
+};
+
+export const TOPUP_PACK_IDS: TopupPackId[] = ["spark", "boost", "power"];
