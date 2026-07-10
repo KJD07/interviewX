@@ -257,7 +257,7 @@ function EndModal({
         className="w-full max-w-sm rounded-xl p-6 fade-up"
         style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
       >
-        <h2 className="text-base font-bold mb-2" style={{ color: "var(--ink)" }}>
+        <h2 className="font-display text-base font-bold mb-2" style={{ color: "var(--ink)" }}>
           End interview?
         </h2>
         <p className="text-sm mb-6" style={{ color: "var(--ink-dim)" }}>
@@ -267,7 +267,7 @@ function EndModal({
           <button
             onClick={onCancel}
             disabled={loading}
-            className="flex-1 py-2.5 rounded text-sm font-semibold transition-opacity disabled:opacity-40"
+            className="flex-1 py-2.5 rounded-full text-sm font-semibold transition-opacity disabled:opacity-40"
             style={{ background: "var(--border-mid)", color: "var(--ink)" }}
           >
             Keep going
@@ -275,7 +275,7 @@ function EndModal({
           <button
             onClick={onConfirm}
             disabled={loading}
-            className="flex-1 py-2.5 rounded text-sm font-semibold transition-opacity disabled:opacity-40"
+            className="flex-1 py-2.5 rounded-full text-sm font-semibold transition-opacity disabled:opacity-40"
             style={{ background: "var(--danger)", color: "var(--ink)" }}
           >
             {loading ? "Ending…" : "End interview"}
@@ -753,7 +753,7 @@ export default function InterviewPage() {
                   ? "Switch back to text mode"
                   : "Switch to voice mode"
               }
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold transition-opacity disabled:opacity-30"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-opacity disabled:opacity-30"
               style={
                 voiceMode
                   ? { background: "var(--accent)", color: "var(--accent-ink)" }
@@ -778,7 +778,7 @@ export default function InterviewPage() {
 
             <button
               onClick={() => setShowEndModal(true)}
-              className="px-3.5 py-1.5 rounded text-xs font-semibold transition-opacity"
+              className="px-3.5 py-1.5 rounded-full text-xs font-semibold transition-opacity"
               style={{
                 background: "rgba(239,68,68,0.12)",
                 color: "var(--danger)",
@@ -933,7 +933,7 @@ export default function InterviewPage() {
                 <button
                   onClick={() => handleSend()}
                   disabled={!input.trim() || sending || aiTyping || timeUp}
-                  className="shrink-0 rounded-lg px-3.5 py-2 text-sm font-semibold transition-opacity disabled:opacity-30"
+                  className="shrink-0 rounded-full px-3.5 py-2 text-sm font-semibold transition-opacity disabled:opacity-30"
                   style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
                 >
                   {sending ? (

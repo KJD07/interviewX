@@ -5,6 +5,8 @@ from .models import InterviewSession, RealInterviewReport
 
 class InterviewSessionSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(read_only=True)
+    company_name = serializers.CharField(source="round.role.company.name", read_only=True)
+    role_title = serializers.CharField(source="round.role.title", read_only=True)
 
     class Meta:
         model = InterviewSession
@@ -12,6 +14,8 @@ class InterviewSessionSerializer(serializers.ModelSerializer):
             "id",
             "user",
             "round",
+            "company_name",
+            "role_title",
             "status",
             "transcript",
             "scores",
@@ -30,9 +34,12 @@ class InterviewSessionSerializer(serializers.ModelSerializer):
 
 
 class InterviewSessionListSerializer(serializers.ModelSerializer):
+    company_name = serializers.CharField(source="round.role.company.name", read_only=True)
+    role_title = serializers.CharField(source="round.role.title", read_only=True)
+
     class Meta:
         model = InterviewSession
-        fields = ["id", "round", "status", "scores", "duration_minutes", "started_at", "ended_at"]
+        fields = ["id", "round", "company_name", "role_title", "status", "scores", "duration_minutes", "started_at", "ended_at"]
         read_only_fields = fields
 
 class RoundEntrySerializer(serializers.Serializer):

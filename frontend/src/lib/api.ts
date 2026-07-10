@@ -54,6 +54,8 @@ export interface InterviewInsights {
 export interface InterviewSession {
   id: number;
   round: number;
+  company_name?: string;
+  role_title?: string;
   status: "in_progress" | "completed" | "abandoned";
   transcript: { role: "user" | "ai"; text: string; ts: string }[];
   scores: {

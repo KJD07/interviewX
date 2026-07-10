@@ -159,7 +159,7 @@ function VerifyEmailForm() {
           <button
             type="submit"
             disabled={submitting || code.length !== 6}
-            className="w-full rounded py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
+            className="w-full rounded-full py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
             style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
           >
             {submitting ? "Verifying…" : "Verify email"}

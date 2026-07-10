@@ -96,7 +96,7 @@ export default function UpgradePage() {
             >
               Plans
             </span>
-            <h1 className="text-2xl font-bold mb-2" style={{ color: "var(--ink)" }}>
+            <h1 className="font-display text-2xl font-bold mb-2" style={{ color: "var(--ink)" }}>
               Choose the plan that fits your prep
             </h1>
             <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
@@ -137,7 +137,7 @@ export default function UpgradePage() {
                     </span>
                   )}
 
-                  <h2 className="text-lg font-bold mb-1" style={{ color: "var(--ink)" }}>
+                  <h2 className="font-display text-lg font-bold mb-1" style={{ color: "var(--ink)" }}>
                     {plan.label}
                   </h2>
 
@@ -166,7 +166,7 @@ export default function UpgradePage() {
                   <button
                     onClick={() => handleUpgrade(planId)}
                     disabled={loadingPlan !== null || isCurrent}
-                    className="w-full py-3 rounded-lg font-semibold text-sm transition-opacity disabled:opacity-50"
+                    className="w-full py-3 rounded-full font-semibold text-sm transition-opacity disabled:opacity-50"
                     style={
                       isMax
                         ? { background: "var(--accent)", color: "var(--accent-ink)" }

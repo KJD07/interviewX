@@ -47,9 +47,9 @@ class InterviewSessionListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        sessions = InterviewSession.objects.filter(user=request.user).order_by(
-            "-started_at"
-        )
+        sessions = InterviewSession.objects.filter(user=request.user).select_related(
+            "round", "round__role", "round__role__company"
+        ).order_by("-started_at")
         serializer = InterviewSessionListSerializer(sessions, many=True)
         return Response(serializer.data)
 

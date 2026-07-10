@@ -213,7 +213,7 @@ export default function ResultsPage() {
           {/* Header */}
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-2xl font-bold" style={{ color: "var(--ink)" }}>
+              <h1 className="font-display text-2xl font-bold" style={{ color: "var(--ink)" }}>
                 Interview Results
               </h1>
               <span
@@ -303,7 +303,7 @@ export default function ResultsPage() {
               </p>
               <button
                 onClick={() => router.push("/upgrade")}
-                className="mt-4 px-5 py-2 rounded text-sm font-semibold"
+                className="mt-4 px-5 py-2 rounded-full text-sm font-semibold"
                 style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
               >
                 See upgrade options →
@@ -450,7 +450,7 @@ export default function ResultsPage() {
           <div className="flex gap-3 pb-6">
             <button
               onClick={() => router.push("/companies")}
-              className="flex-1 py-3 rounded-lg text-sm font-semibold"
+              className="flex-1 py-3 rounded-full text-sm font-semibold"
               style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
             >
               Practice again
@@ -458,7 +458,7 @@ export default function ResultsPage() {
             {plan.hasInsights && (
               <button
                 onClick={() => router.push("/dashboard")}
-                className="flex-1 py-3 rounded-lg text-sm font-semibold"
+                className="flex-1 py-3 rounded-full text-sm font-semibold"
                 style={{
                   background: "var(--surface)",
                   color: "var(--ink)",

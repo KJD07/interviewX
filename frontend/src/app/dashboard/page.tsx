@@ -124,7 +124,7 @@ export default function DashboardPage() {
           {/* Header row */}
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h1 className="text-2xl font-bold" style={{ color: "var(--ink)" }}>
+              <h1 className="font-display text-2xl font-bold" style={{ color: "var(--ink)" }}>
                 {hasInsights ? "Dashboard" : "Home"}
               </h1>
               {monthlyLimit !== null && (
@@ -144,7 +144,7 @@ export default function DashboardPage() {
               {!isPro ? (
                 <button
                   onClick={() => router.push("/upgrade")}
-                  className="px-5 py-2.5 rounded text-sm font-semibold"
+                  className="px-5 py-2.5 rounded-full text-sm font-semibold"
                   style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)" }}
                 >
                   Upgrade ↗
@@ -152,7 +152,7 @@ export default function DashboardPage() {
               ) : (
                 <button
                   onClick={() => router.push("/upgrade")}
-                  className="px-5 py-2.5 rounded text-sm font-semibold"
+                  className="px-5 py-2.5 rounded-full text-sm font-semibold"
                   style={{ background: "transparent", color: "var(--ink-dim)", border: "1px solid var(--ink-faint)" }}
                 >
                   Manage subscription
@@ -161,7 +161,7 @@ export default function DashboardPage() {
               <button
                 onClick={() => router.push("/companies")}
                 disabled={limitReached}
-                className="px-5 py-2.5 rounded text-sm font-semibold transition-opacity disabled:opacity-40"
+                className="px-5 py-2.5 rounded-full text-sm font-semibold transition-opacity disabled:opacity-40"
                 style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
               >
                 + Start interview
@@ -177,8 +177,8 @@ export default function DashboardPage() {
               </p>
               <button
                 onClick={() => router.push("/progress")}
-                className="text-xs font-medium underline"
-                style={{ color: "var(--accent)" }}
+                className="px-3.5 py-1.5 rounded-full text-xs font-semibold transition-opacity hover:opacity-80"
+                style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)" }}
               >
                 View full progress →
               </button>
@@ -249,7 +249,7 @@ export default function DashboardPage() {
                 <div className="flex items-center justify-center gap-3">
                   <button
                     onClick={() => router.push(`/interview/${lastCompleted.id}/results`)}
-                    className="px-5 py-2.5 rounded text-sm font-semibold"
+                    className="px-5 py-2.5 rounded-full text-sm font-semibold"
                     style={{
                       background: "transparent",
                       color: "var(--ink)",
@@ -260,7 +260,7 @@ export default function DashboardPage() {
                   </button>
                   <button
                     onClick={() => router.push("/upgrade")}
-                    className="px-5 py-2.5 rounded text-sm font-semibold"
+                    className="px-5 py-2.5 rounded-full text-sm font-semibold"
                     style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)" }}
                   >
                     Unlock full insights →
@@ -268,8 +268,8 @@ export default function DashboardPage() {
                 </div>
                 <button
                   onClick={() => router.push("/progress")}
-                  className="mt-4 text-xs underline"
-                  style={{ color: "var(--ink-dim)" }}
+                  className="mt-4 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-opacity hover:opacity-80"
+                  style={{ background: "var(--surface)", color: "var(--ink-dim)", border: "1px solid var(--border-mid)" }}
                 >
                   See your score trend so far →
                 </button>
@@ -287,7 +287,7 @@ export default function DashboardPage() {
                 </p>
                 <button
                   onClick={() => router.push("/companies")}
-                  className="mt-5 px-5 py-2 rounded text-sm font-semibold"
+                  className="mt-5 px-5 py-2 rounded-full text-sm font-semibold"
                   style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
                 >
                   Browse companies
@@ -316,7 +316,7 @@ export default function DashboardPage() {
               </p>
               <button
                 onClick={() => router.push("/companies")}
-                className="mt-5 px-5 py-2 rounded text-sm font-semibold"
+                className="mt-5 px-5 py-2 rounded-full text-sm font-semibold"
                 style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
               >
                 Browse companies
@@ -366,7 +366,12 @@ export default function DashboardPage() {
                   }}
                 >
                   <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>
-                    Session #{s.id}
+                    {s.company_name ?? `Session #${s.id}`}
+                    {s.role_title && (
+                      <span className="ml-1.5 font-normal" style={{ color: "var(--ink-faint)" }}>
+                        · {s.role_title}
+                      </span>
+                    )}
                   </span>
                   <StatusBadge status={s.status} />
                   <ScorePill value={s.scores?.communication} />

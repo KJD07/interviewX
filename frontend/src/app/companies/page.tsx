@@ -322,7 +322,7 @@ export default function CompaniesPage() {
           {view.step === "companies" && (
             <>
               <div className="mb-6">
-                <h1 className="text-2xl font-bold" style={{ color: "var(--ink)" }}>
+                <h1 className="font-display text-2xl font-bold" style={{ color: "var(--ink)" }}>
                   Choose a company
                 </h1>
                 <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
@@ -370,7 +370,7 @@ export default function CompaniesPage() {
           {view.step === "roles" && (
             <>
               <div className="mb-6">
-                <h1 className="text-2xl font-bold" style={{ color: "var(--ink)" }}>
+                <h1 className="font-display text-2xl font-bold" style={{ color: "var(--ink)" }}>
                   {view.company.name}
                 </h1>
                 <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
@@ -403,7 +403,7 @@ export default function CompaniesPage() {
             return (
               <>
                 <div className="mb-6">
-                  <h1 className="text-2xl font-bold" style={{ color: "var(--ink)" }}>
+                  <h1 className="font-display text-2xl font-bold" style={{ color: "var(--ink)" }}>
                     {v.role.title}
                   </h1>
                   <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
@@ -437,7 +437,7 @@ export default function CompaniesPage() {
                         <button
                           onClick={() => handleStartInterview(round.id)}
                           disabled={limitReached || starting === round.id}
-                          className="shrink-0 px-4 py-2 rounded text-sm font-semibold transition-opacity disabled:opacity-40"
+                          className="shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-opacity disabled:opacity-40"
                           style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
                         >
                           {starting === round.id ? "Starting…" : "Start interview"}

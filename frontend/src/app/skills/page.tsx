@@ -213,7 +213,7 @@ export default function SkillsPage() {
                 className="rounded-lg px-6 py-8 text-center"
                 style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
               >
-                <h1 className="text-xl font-bold mb-2" style={{ color: "var(--ink)" }}>
+                <h1 className="font-display text-xl font-bold mb-2" style={{ color: "var(--ink)" }}>
                   Skills is a Premium & Max feature
                 </h1>
                 <p className="text-sm mb-5" style={{ color: "var(--ink-dim)" }}>
@@ -222,7 +222,7 @@ export default function SkillsPage() {
                 </p>
                 <button
                   onClick={() => router.push("/upgrade")}
-                  className="px-4 py-2 rounded text-sm font-semibold"
+                  className="px-4 py-2 rounded-full text-sm font-semibold"
                   style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
                 >
                   Upgrade plan
@@ -266,7 +266,7 @@ export default function SkillsPage() {
                 {view.step === "skills" && (
                   <>
                     <div className="mb-6">
-                      <h1 className="text-2xl font-bold" style={{ color: "var(--ink)" }}>
+                      <h1 className="font-display text-2xl font-bold" style={{ color: "var(--ink)" }}>
                         Practice by skill
                       </h1>
                       <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
@@ -314,7 +314,7 @@ export default function SkillsPage() {
                 {view.step === "roles" && (
                   <>
                     <div className="mb-6">
-                      <h1 className="text-2xl font-bold" style={{ color: "var(--ink)" }}>
+                      <h1 className="font-display text-2xl font-bold" style={{ color: "var(--ink)" }}>
                         {view.skill.name}
                       </h1>
                       <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
@@ -347,7 +347,7 @@ export default function SkillsPage() {
                   return (
                     <>
                       <div className="mb-6">
-                        <h1 className="text-2xl font-bold" style={{ color: "var(--ink)" }}>
+                        <h1 className="font-display text-2xl font-bold" style={{ color: "var(--ink)" }}>
                           {v.role.title}
                         </h1>
                         <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
@@ -373,7 +373,7 @@ export default function SkillsPage() {
                               <button
                                 onClick={() => handleStartInterview(round.id)}
                                 disabled={limitReached || starting === round.id}
-                                className="shrink-0 px-4 py-2 rounded text-sm font-semibold transition-opacity disabled:opacity-40"
+                                className="shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-opacity disabled:opacity-40"
                                 style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
                               >
                                 {starting === round.id ? "Starting…" : "Start interview"}

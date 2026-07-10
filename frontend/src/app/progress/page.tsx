@@ -176,7 +176,7 @@ export default function ProgressPage() {
 
           <main className="max-w-4xl mx-auto px-6 py-10 fade-up">
             <div className="mb-8">
-              <h1 className="text-2xl font-bold" style={{ color: "var(--ink)" }}>
+              <h1 className="font-display text-2xl font-bold" style={{ color: "var(--ink)" }}>
                 Your progress
               </h1>
               <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
@@ -202,7 +202,7 @@ export default function ProgressPage() {
                 </p>
                 <button
                   onClick={() => router.push("/companies")}
-                  className="mt-5 px-5 py-2 rounded text-sm font-semibold"
+                  className="mt-5 px-5 py-2 rounded-full text-sm font-semibold"
                   style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
                 >
                   Browse companies
@@ -291,7 +291,7 @@ function LockedTeaser({ router }: { router: ReturnType<typeof useRouter> }) {
         </p>
         <button
           onClick={() => router.push("/upgrade")}
-          className="mt-4 px-5 py-2 rounded text-sm font-semibold"
+          className="mt-4 px-5 py-2 rounded-full text-sm font-semibold"
           style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
         >
           Upgrade to unlock →
@@ -385,8 +385,8 @@ function DetailedView({
           </div>
           <button
             onClick={() => router.push("/companies")}
-            className="mt-4 text-xs font-medium underline"
-            style={{ color: "var(--accent)" }}
+            className="mt-4 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-opacity hover:opacity-80"
+            style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)" }}
           >
             Practice your weakest topic →
           </button>
