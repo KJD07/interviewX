@@ -307,6 +307,11 @@ export default function InterviewPage() {
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const [timeUp, setTimeUp] = useState(false);
 
+  // ── Full-screen mode state ──────────────────────────────────────────────────
+  const [showFullscreenPrompt, setShowFullscreenPrompt] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [autoExitReason, setAutoExitReason] = useState("");
+
   // ── Voice state ──────────────────────────────────────────────────────────
   const [voiceMode, setVoiceMode] = useState(false);
   const [micSupported, setMicSupported] = useState(true);
@@ -325,6 +330,9 @@ export default function InterviewPage() {
   const finalTranscriptRef = useRef("");
   const voiceModeRef = useRef(false); // mirrors voiceMode for use inside async callbacks
   const shouldListenRef = useRef(false); // whether we *want* to be listening right now
+
+  const hasEnteredFullscreenRef = useRef(false); // true once the candidate has confirmed full-screen
+  const autoExitHandledRef = useRef(false); // guards against double auto-end firing
 
   useEffect(() => {
     voiceModeRef.current = voiceMode;
@@ -676,6 +684,94 @@ export default function InterviewPage() {
     }
   };
 
+  // ── Auto-end (full-screen exit / window minimized) ─────────────────────────
+  // Wrapped in a ref so the event listeners below (registered once) always call
+  // the latest version without needing to re-subscribe on every render.
+  const autoEndInterview = useCallback(
+    async (reason: string) => {
+      if (autoExitHandledRef.current || timeUpHandledRef.current) return;
+      autoExitHandledRef.current = true;
+
+      setAutoExitReason(reason);
+      setShowEndModal(false);
+      setEnding(true);
+      shouldListenRef.current = false;
+      stopListening();
+      window.speechSynthesis?.cancel();
+
+      try {
+        await interviews.end(sessionId);
+      } catch {
+        /* best-effort — the session may already be over server-side */
+      } finally {
+        router.replace(`/interview/${sessionId}/results`);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sessionId, router]
+  );
+
+  const autoEndInterviewRef = useRef(autoEndInterview);
+  useEffect(() => {
+    autoEndInterviewRef.current = autoEndInterview;
+  }, [autoEndInterview]);
+
+  // Escape (or any other way of leaving full-screen) ends the interview.
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const active = !!document.fullscreenElement;
+      setIsFullscreen(active);
+
+      if (!active && hasEnteredFullscreenRef.current && !ending && !autoExitHandledRef.current) {
+        autoEndInterviewRef.current(
+          "You exited full-screen mode, so the interview was automatically ended."
+        );
+      }
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ending]);
+
+  // Minimizing the window (or switching away/backgrounding the tab) ends the interview.
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (
+        document.visibilityState === "hidden" &&
+        hasEnteredFullscreenRef.current &&
+        !ending &&
+        !autoExitHandledRef.current
+      ) {
+        autoEndInterviewRef.current(
+          "Your window was minimized, so the interview was automatically ended."
+        );
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ending]);
+
+  // Leaving the page (e.g. after the interview ends) should release full-screen.
+  useEffect(() => {
+    return () => {
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+    };
+  }, []);
+
+  // Candidate-initiated entry into full-screen (requestFullscreen needs a user gesture).
+  const enterFullscreen = async () => {
+    try {
+      await document.documentElement.requestFullscreen();
+    } catch {
+      // Full-screen may be unsupported/denied — still let the interview proceed.
+    }
+    hasEnteredFullscreenRef.current = true;
+    setShowFullscreenPrompt(false);
+  };
+
   // ── Render ──────────────────────────────────────────────────────────────────
 
   if (loadError) {
@@ -708,6 +804,55 @@ export default function InterviewPage() {
         className="flex flex-col"
         style={{ height: "100dvh", background: "var(--page)" }}
       >
+        {/* ── Full-screen entry prompt ── */}
+        {showFullscreenPrompt && session && session.status === "in_progress" && (
+          <div
+            className="fixed inset-0 z-[60] flex items-center justify-center px-4"
+            style={{ background: "rgba(15,23,42,0.92)", backdropFilter: "blur(4px)" }}
+          >
+            <div
+              className="w-full max-w-sm rounded-xl p-6 text-center fade-up"
+              style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
+            >
+              <h2 className="font-display text-base font-bold mb-2" style={{ color: "var(--ink)" }}>
+                Enter full-screen to begin
+              </h2>
+              <p className="text-sm mb-6" style={{ color: "var(--ink-dim)" }}>
+                This interview runs in full-screen mode. Exiting full-screen or minimizing
+                the window will automatically end the interview, so make sure you&apos;re
+                ready before continuing.
+              </p>
+              <button
+                onClick={enterFullscreen}
+                className="w-full py-2.5 rounded-full text-sm font-semibold transition-opacity"
+                style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
+              >
+                Start full-screen interview
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Auto-ended overlay (shown briefly while redirecting to results) ── */}
+        {ending && autoExitReason && (
+          <div
+            className="fixed inset-0 z-[70] flex items-center justify-center px-4"
+            style={{ background: "rgba(15,23,42,0.92)", backdropFilter: "blur(4px)" }}
+          >
+            <div
+              className="w-full max-w-sm rounded-xl p-6 text-center fade-up"
+              style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
+            >
+              <h2 className="font-display text-base font-bold mb-2" style={{ color: "var(--danger)" }}>
+                Interview ended
+              </h2>
+              <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
+                {autoExitReason} Redirecting to your results…
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* ── Header ── */}
         <header
           className="flex items-center justify-between px-5 py-3.5 shrink-0 border-b gap-2"
@@ -739,6 +884,15 @@ export default function InterviewPage() {
               </span>
             </span>
             <TimerBadge secondsLeft={secondsLeft} />
+            {isFullscreen && (
+              <span
+                className="hidden sm:flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
+                style={{ background: "var(--accent-glow)", color: "var(--accent)" }}
+                title="Exiting full-screen will end the interview"
+              >
+                Full-screen
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
