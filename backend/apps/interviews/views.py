@@ -26,8 +26,35 @@ from .serializers import (
 FREE_PLAN_MONTHLY_LIMIT = 2
 
 # Every interview session gets a randomized time limit in this range.
-MIN_INTERVIEW_MINUTES = 45
-MAX_INTERVIEW_MINUTES = 60
+MIN_INTERVIEW_MINUTES = 41
+MAX_INTERVIEW_MINUTES = 50
+
+# ── Cost-control guardrails ───────────────────────────────────────────────
+# Hard cap on a single candidate answer, in characters. Generous enough
+# that no genuine answer gets cut off — this only stops truly abusive
+# wall-of-text pastes from blowing up token cost on every subsequent call
+# (since the transcript window below is resent each turn).
+MAX_ANSWER_CHARS = 4100
+
+# Cap on the AI's own reply length during the live conversation. Set high
+# enough that a normal reply (even a longer pushback/follow-up) finishes
+# naturally well before hitting this ceiling — it's a safety cap, not a
+# length target.
+CHAT_REPLY_MAX_TOKENS = 410
+
+# Only the most recent N transcript entries (a "turn" = one user OR one AI
+# message) are sent to the model as conversation history, instead of the
+# entire session. Sized to comfortably cover a full ~15-question interview
+# (30 entries = 15 exchanges) so the AI doesn't lose track of earlier
+# answers mid-interview, while still capping the true worst-case runaway
+# session cost. Final scoring is unaffected by this — it reads the full,
+# untruncated session.transcript from the database, not this window.
+MAX_CONTEXT_TURNS = 30
+
+# Hard ceiling on candidate answers per session. If hit before the time
+# limit, the session is auto-scored and completed — same as a time-expired
+# session — so no single interview can run away in turn count.
+MAX_CHAT_TURNS = 50
 
 
 def _seconds_remaining(session: InterviewSession) -> float:
@@ -116,9 +143,18 @@ def _get_round_with_context(round_id: int):
 
 
 def _build_openrouter_messages(session: InterviewSession, system_prompt: str) -> list:
-    """Convert stored transcript to OpenRouter messages format."""
+    """
+    Convert stored transcript to OpenRouter messages format.
+
+    Only the last MAX_CONTEXT_TURNS entries are included as history — the
+    question list already lives in `system_prompt`, so the model doesn't
+    need the full session to ask a sensible next question. Without this,
+    every call would resend the whole growing transcript, making per-call
+    (and therefore per-interview) cost climb the longer a session runs.
+    """
     messages = [{"role": "system", "content": system_prompt}]
-    for turn in session.transcript:
+    recent_turns = session.transcript[-MAX_CONTEXT_TURNS:]
+    for turn in recent_turns:
         role = "user" if turn["role"] == "user" else "assistant"
         messages.append({"role": role, "content": turn["text"]})
     return messages
@@ -200,7 +236,8 @@ class StartInterviewView(APIView):
         # Get opening message from AI (no user turn yet)
         try:
             opening = chat_completion(
-                [{"role": "system", "content": system_prompt}]
+                [{"role": "system", "content": system_prompt}],
+                max_tokens=CHAT_REPLY_MAX_TOKENS,
             )
         except RuntimeError as exc:
             return Response(
@@ -279,7 +316,27 @@ class ChatView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        user_message = request.data.get("message", "").strip()
+        # Hard ceiling on candidate answers per session — auto-score and
+        # complete the same way a time-expired session does, so no single
+        # interview can run away in turn count regardless of duration_minutes.
+        candidate_turns_so_far = sum(
+            1 for t in session.transcript if t.get("role") == "user"
+        )
+        if candidate_turns_so_far >= MAX_CHAT_TURNS:
+            result = _score_and_complete_session(session, time_expired=True)
+            if isinstance(result, Response):
+                return result
+            serializer = InterviewSessionSerializer(result)
+            return Response(
+                {
+                    "detail": "Maximum interview length reached. Interview has ended.",
+                    "code": "turn_limit_reached",
+                    "session": serializer.data,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user_message = request.data.get("message", "").strip()[:MAX_ANSWER_CHARS]
         if not user_message:
             return Response(
                 {"detail": "message is required."},
@@ -307,7 +364,8 @@ class ChatView(APIView):
         transcript = list(session.transcript)
         transcript.append({"role": "user", "text": user_message, "ts": _now_iso()})
 
-        # Build full message history and call AI
+        # Build sliding-window message history (see _build_openrouter_messages)
+        # and call AI
         messages = _build_openrouter_messages(
             session, system_prompt
         )
@@ -316,7 +374,7 @@ class ChatView(APIView):
         messages.append({"role": "user", "content": user_message})
 
         try:
-            ai_reply = chat_completion(messages)
+            ai_reply = chat_completion(messages, max_tokens=CHAT_REPLY_MAX_TOKENS)
         except RuntimeError as exc:
             return Response(
                 {"detail": str(exc)}, status=status.HTTP_502_BAD_GATEWAY
