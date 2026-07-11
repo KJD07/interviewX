@@ -288,7 +288,10 @@ function EndModal({
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
-const SILENCE_MS = 1600; // pause length that triggers auto-send in voice mode
+const SILENCE_MS = 2000; // pause length that triggers auto-send in voice mode
+const INITIAL_WAIT_MS = 5000; // max wait for the user to start speaking on the very first turn
+const SUBSEQUENT_WAIT_MS = 5000; // max wait for the user to start speaking on every turn after that
+const NO_RESPONSE_MESSAGE = "(No response)";
 
 export default function InterviewPage() {
   const { user } = useAuth();
@@ -326,7 +329,14 @@ export default function InterviewPage() {
   const timeUpHandledRef = useRef(false);
 
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  // True whenever we do NOT want to act on recognition events (AI is
+  // speaking, a send is in flight, etc). Checked inside onresult/onstart
+  // so a stray event from an instance we thought we'd killed can't sneak
+  // through and get treated as the user's answer.
+  const micMutedRef = useRef(true);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initialWaitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null); // caps how long we wait for the user to START speaking each turn
+  const hasSpokenOnceRef = useRef(false); // true once the user has produced any speech in this interview
   const finalTranscriptRef = useRef("");
   const voiceModeRef = useRef(false); // mirrors voiceMode for use inside async callbacks
   const shouldListenRef = useRef(false); // whether we *want* to be listening right now
@@ -491,6 +501,12 @@ export default function InterviewPage() {
 
   const speak = useCallback((text: string) => {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
+
+    // Belt-and-suspenders: make sure the mic is actually dead before we
+    // start talking, in case a recognition instance is still winding down.
+    micMutedRef.current = true;
+    stopListening();
+
     window.speechSynthesis.cancel(); // stop anything currently playing
 
     const utter = new SpeechSynthesisUtterance(text);
@@ -499,19 +515,30 @@ export default function InterviewPage() {
     utter.rate = 1;
     utter.pitch = 1;
 
-    utter.onstart = () => setIsAiSpeaking(true);
+    utter.onstart = () => {
+      micMutedRef.current = true;
+      setIsAiSpeaking(true);
+    };
     utter.onend = () => {
       setIsAiSpeaking(false);
-      // Resume hands-free listening once the AI stops talking
-      if (voiceModeRef.current && shouldListenRef.current && !timeUp) {
-        startListening();
-      }
+      // Small grace period after TTS ends before we unmute — some
+      // browsers keep a trailing bit of speaker audio queued that would
+      // otherwise leak into the very start of the next listening session.
+      setTimeout(() => {
+        micMutedRef.current = false;
+        if (voiceModeRef.current && shouldListenRef.current && !timeUp) {
+          startListening();
+        }
+      }, 250);
     };
     utter.onerror = () => {
       setIsAiSpeaking(false);
-      if (voiceModeRef.current && shouldListenRef.current && !timeUp) {
-        startListening();
-      }
+      setTimeout(() => {
+        micMutedRef.current = false;
+        if (voiceModeRef.current && shouldListenRef.current && !timeUp) {
+          startListening();
+        }
+      }, 250);
     };
 
     window.speechSynthesis.speak(utter);
@@ -527,12 +554,32 @@ export default function InterviewPage() {
     }
   };
 
+  const clearInitialWaitTimer = () => {
+    if (initialWaitTimerRef.current) {
+      clearTimeout(initialWaitTimerRef.current);
+      initialWaitTimerRef.current = null;
+    }
+  };
+
   const stopListening = () => {
     clearSilenceTimer();
+    clearInitialWaitTimer();
+    micMutedRef.current = true; // belt-and-suspenders: ignore any late-firing events
     if (recognitionRef.current) {
       try {
+        // Detach ALL handlers before killing the instance. Only nulling
+        // onend (the old code) left onresult/onstart/onerror live, so a
+        // recognition instance that hadn't fully released the mic yet
+        // could still fire onresult with audio it picked up from the
+        // speakers (the AI's own TTS voice) — and that stray transcript
+        // would get auto-sent as if the user said it.
+        recognitionRef.current.onresult = null;
+        recognitionRef.current.onstart = null;
+        recognitionRef.current.onerror = null;
         recognitionRef.current.onend = null; // avoid auto-restart loop on manual stop
-        recognitionRef.current.stop();
+        // abort() cuts the mic immediately; stop() tries to flush a final
+        // result first, which is exactly the window where echo leaks in.
+        recognitionRef.current.abort();
       } catch {
         /* no-op */
       }
@@ -570,9 +617,42 @@ export default function InterviewPage() {
     setInterimText("");
     setVoiceError("");
 
-    recognition.onstart = () => setIsListening(true);
+    recognition.onstart = () => {
+      micMutedRef.current = false; // this instance is legitimate, allow its results through
+      setIsListening(true);
+
+      // Cap how long we wait for the user to START speaking this turn. First
+      // turn of the interview gets a longer grace period; every turn after
+      // the user has spoken at least once uses the shorter dynamic wait.
+      clearInitialWaitTimer();
+      const waitMs = hasSpokenOnceRef.current ? SUBSEQUENT_WAIT_MS : INITIAL_WAIT_MS;
+      initialWaitTimerRef.current = setTimeout(() => {
+        const captured = finalTranscriptRef.current.trim();
+        shouldListenRef.current = true; // resume listening after the AI responds & speaks
+        stopListening();
+        if (captured) {
+          // The user had already said something before the window closed —
+          // send it instead of waiting further.
+          handleSend(captured);
+        } else {
+          // No speech at all within the wait window — don't keep waiting.
+          // Tell the AI the candidate didn't answer so it moves the
+          // interview forward on its own (e.g. re-prompts or asks the next question).
+          handleSend(NO_RESPONSE_MESSAGE);
+        }
+      }, waitMs);
+    };
 
     recognition.onresult = (event: SpeechRecognitionEventLike) => {
+      // Drop anything that arrives while we're supposed to be muted — this
+      // is what actually stops the AI's own TTS voice (leaking in through
+      // the mic) from being transcribed and auto-sent as the user's answer.
+      if (micMutedRef.current) return;
+
+      // The user has started speaking — the initial wait window is satisfied.
+      clearInitialWaitTimer();
+      hasSpokenOnceRef.current = true;
+
       let interim = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
@@ -603,8 +683,10 @@ export default function InterviewPage() {
         setVoiceError("Microphone access denied. Please allow mic access to use voice mode.");
         shouldListenRef.current = false;
         setVoiceMode(false);
+        clearInitialWaitTimer();
       } else if (err === "no-speech") {
-        // Harmless — just restart if we still want to be listening
+        // Harmless — just restart if we still want to be listening; our own
+        // initial-wait timer (not this browser event) governs the cutoff.
       }
       setIsListening(false);
     };
@@ -643,6 +725,7 @@ export default function InterviewPage() {
     if (voiceMode) {
       // Turning OFF
       shouldListenRef.current = false;
+      micMutedRef.current = true;
       stopListening();
       window.speechSynthesis?.cancel();
       setIsAiSpeaking(false);
