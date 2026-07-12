@@ -7,6 +7,8 @@ import { skills, interviews, ApiError } from "@/lib/api";
 import type { Company, CompanyDetail, Role } from "@/lib/api";
 import { planOf, hasSkills } from "@/lib/plans";
 import AppShell from "@/components/AppShell";
+import PaginationControls from "@/components/PaginationControls";
+import { useSearchAndPaginate } from "@/hooks/useSearchAndPaginate";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -143,14 +145,18 @@ export default function SkillsPage() {
       .finally(() => setLoading(false));
   }, [entitled]);
 
+  const skillSearch = useSearchAndPaginate(skillList, (s) => s.name);
+
+  // Grouped by category from whatever the current page (or, while
+  // searching, every match) contains - not the full unfiltered list.
   const grouped = useMemo(() => {
     const groups: Record<string, Company[]> = {};
-    for (const s of skillList) {
+    for (const s of skillSearch.results) {
       const key = s.category || "General";
       (groups[key] ??= []).push(s);
     }
     return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
-  }, [skillList]);
+  }, [skillSearch.results]);
 
   const handleSelectSkill = async (id: number) => {
     setDetailLoading(true);
@@ -274,6 +280,17 @@ export default function SkillsPage() {
                       </p>
                     </div>
 
+                    {skillList.length > 0 && (
+                      <input
+                        type="text"
+                        value={skillSearch.query}
+                        onChange={(e) => skillSearch.setQuery(e.target.value)}
+                        placeholder="Search skills…"
+                        className="w-full rounded-lg px-3.5 py-2.5 text-sm mb-5"
+                        style={{ background: "var(--surface)", border: "1px solid var(--border-mid)", color: "var(--ink)" }}
+                      />
+                    )}
+
                     {loading || detailLoading ? (
                       <div className="space-y-3">
                         {[1, 2, 3].map((n) => <SkeletonCard key={n} />)}
@@ -282,30 +299,43 @@ export default function SkillsPage() {
                       <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
                         No skills available yet.
                       </p>
+                    ) : skillSearch.results.length === 0 ? (
+                      <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
+                        No skills match "{skillSearch.query}".
+                      </p>
                     ) : (
-                      <div className="space-y-8">
-                        {grouped.map(([category, items]) => (
-                          <div key={category}>
-                            <h2
-                              className="text-xs font-semibold uppercase tracking-wider mb-3"
-                              style={{ color: "var(--ink-faint)" }}
-                            >
-                              {category}
-                            </h2>
-                            <div className="space-y-3">
-                              {items.map((s) => (
-                                <ListCard
-                                  key={s.id}
-                                  title={s.name}
-                                  subtitle={s.description || `Tone: ${s.tone_style}`}
-                                  onClick={() => handleSelectSkill(s.id)}
-                                  right={<TonePill tone={s.tone_style} />}
-                                />
-                              ))}
+                      <>
+                        <div className="space-y-8">
+                          {grouped.map(([category, items]) => (
+                            <div key={category}>
+                              <h2
+                                className="text-xs font-semibold uppercase tracking-wider mb-3"
+                                style={{ color: "var(--ink-faint)" }}
+                              >
+                                {category}
+                              </h2>
+                              <div className="space-y-3">
+                                {items.map((s) => (
+                                  <ListCard
+                                    key={s.id}
+                                    title={s.name}
+                                    subtitle={s.description || `Tone: ${s.tone_style}`}
+                                    onClick={() => handleSelectSkill(s.id)}
+                                    right={<TonePill tone={s.tone_style} />}
+                                  />
+                                ))}
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                        {!skillSearch.isSearching && (
+                          <PaginationControls
+                            page={skillSearch.page}
+                            totalPages={skillSearch.totalPages}
+                            onChange={skillSearch.setPage}
+                          />
+                        )}
+                      </>
                     )}
                   </>
                 )}
