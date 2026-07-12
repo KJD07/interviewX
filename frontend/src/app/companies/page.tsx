@@ -8,6 +8,8 @@ import type { Company, CompanyDetail, Role, Round } from "@/lib/api";
 import { planOf, isPaidPlan } from "@/lib/plans";
 import AppShell from "@/components/AppShell";
 import TopupModal from "@/components/TopupModal";
+import PaginationControls from "@/components/PaginationControls";
+import { useSearchAndPaginate } from "@/hooks/useSearchAndPaginate";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -244,6 +246,8 @@ export default function CompaniesPage() {
   // let a user keep going past their monthly limit without upgrading.
   const limitReached = monthlyLimit !== null && monthlyUsed >= monthlyLimit && bonusInterviews <= 0;
 
+  const companySearch = useSearchAndPaginate(companyList, (c) => c.name);
+
   return (
     <ProtectedRoute>
       <AppShell>
@@ -351,6 +355,17 @@ export default function CompaniesPage() {
                 </p>
               </div>
 
+              {companyList.length > 0 && (
+                <input
+                  type="text"
+                  value={companySearch.query}
+                  onChange={(e) => companySearch.setQuery(e.target.value)}
+                  placeholder="Search companies…"
+                  className="w-full rounded-lg px-3.5 py-2.5 text-sm mb-5"
+                  style={{ background: "var(--surface)", border: "1px solid var(--border-mid)", color: "var(--ink)" }}
+                />
+              )}
+
               {loading || detailLoading ? (
                 <div className="space-y-3">
                   {[1, 2, 3].map((n) => <SkeletonCard key={n} />)}
@@ -359,30 +374,43 @@ export default function CompaniesPage() {
                 <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
                   No companies available yet.
                 </p>
+              ) : companySearch.results.length === 0 ? (
+                <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
+                  No companies match "{companySearch.query}".
+                </p>
               ) : (
-                <div className="space-y-3">
-                  {companyList.map((c) => (
-                    <ListCard
-                      key={c.id}
-                      title={c.name}
-                      subtitle={`Tone: ${c.tone_style}`}
-                      onClick={() => handleSelectCompany(c.id)}
-                      right={
-                        <div className="flex items-center gap-2">
-                          {c.is_free && (
-                            <span
-                              className="text-xs font-medium px-2 py-0.5 rounded-full"
-                              style={{ background: "rgba(34,197,94,0.10)", color: "#22c55e" }}
-                            >
-                              Free tier
-                            </span>
-                          )}
-                          <TonePill tone={c.tone_style} />
-                        </div>
-                      }
+                <>
+                  <div className="space-y-3">
+                    {companySearch.results.map((c) => (
+                      <ListCard
+                        key={c.id}
+                        title={c.name}
+                        subtitle={`Tone: ${c.tone_style}`}
+                        onClick={() => handleSelectCompany(c.id)}
+                        right={
+                          <div className="flex items-center gap-2">
+                            {c.is_free && (
+                              <span
+                                className="text-xs font-medium px-2 py-0.5 rounded-full"
+                                style={{ background: "rgba(34,197,94,0.10)", color: "#22c55e" }}
+                              >
+                                Free tier
+                              </span>
+                            )}
+                            <TonePill tone={c.tone_style} />
+                          </div>
+                        }
+                      />
+                    ))}
+                  </div>
+                  {!companySearch.isSearching && (
+                    <PaginationControls
+                      page={companySearch.page}
+                      totalPages={companySearch.totalPages}
+                      onChange={companySearch.setPage}
                     />
-                  ))}
-                </div>
+                  )}
+                </>
               )}
             </>
           )}
