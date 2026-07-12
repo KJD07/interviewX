@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AppShell from "@/components/AppShell";
+import TopupModal from "@/components/TopupModal";
 import { interviews, ApiError } from "@/lib/api";
 import type { InterviewSession } from "@/lib/api";
 import { planOf, isPaidPlan } from "@/lib/plans";
@@ -47,6 +48,7 @@ export default function DashboardPage() {
   const [sessions, setSessions] = useState<InterviewSession[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [fetchError, setFetchError] = useState("");
+  const [showTopup, setShowTopup] = useState(false);
 
   useEffect(() => {
     refreshUser().catch(() => { });
@@ -69,7 +71,10 @@ export default function DashboardPage() {
   const hasInsights = plan.hasInsights;
   const monthlyUsed = (user as any)?.interviews_this_month ?? 0;
   const monthlyLimit = plan.monthlyLimit; // null = unlimited
-  const limitReached = monthlyLimit !== null && monthlyUsed >= monthlyLimit;
+  const bonusInterviews = (user as any)?.bonus_interviews ?? 0;
+  // Plan quota used up AND no purchased top-up credits left — bonus credits
+  // let a user keep going past their monthly limit without upgrading.
+  const limitReached = monthlyLimit !== null && monthlyUsed >= monthlyLimit && bonusInterviews <= 0;
   const lastCompleted = sessions.find((s) => s.status === "completed");
 
   // Analytics computed from history (paid plans only)
@@ -130,6 +135,9 @@ export default function DashboardPage() {
               {monthlyLimit !== null && (
                 <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
                   {monthlyUsed}/{monthlyLimit} {plan.id === "free" ? "free " : ""}interviews used this month.{" "}
+                  {bonusInterviews > 0 && (
+                    <span>+{bonusInterviews} bonus {bonusInterviews === 1 ? "interview" : "interviews"}.{" "}</span>
+                  )}
                   <button
                     onClick={() => router.push("/upgrade")}
                     className="underline"
@@ -137,6 +145,19 @@ export default function DashboardPage() {
                   >
                     {limitReached ? "Upgrade to continue →" : "Upgrade for more →"}
                   </button>
+                  {/* Paid plans already have this via the sidebar (AppShell) */}
+                  {!isPro && (
+                    <>
+                      {" "}·{" "}
+                      <button
+                        onClick={() => setShowTopup(true)}
+                        className="underline"
+                        style={{ color: "var(--accent)" }}
+                      >
+                        Buy more interviews
+                      </button>
+                    </>
+                  )}
                 </p>
               )}
             </div>
@@ -390,6 +411,8 @@ export default function DashboardPage() {
         </main>
       </div>
       </AppShell>
+
+      {showTopup && <TopupModal onClose={() => setShowTopup(false)} />}
     </ProtectedRoute>
   );
 }
