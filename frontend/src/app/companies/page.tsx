@@ -7,6 +7,7 @@ import { companies, interviews, ApiError } from "@/lib/api";
 import type { Company, CompanyDetail, Role, Round } from "@/lib/api";
 import { planOf, isPaidPlan } from "@/lib/plans";
 import AppShell from "@/components/AppShell";
+import TopupModal from "@/components/TopupModal";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -163,6 +164,7 @@ export default function CompaniesPage() {
   const [fetchError, setFetchError] = useState("");
   const [starting, setStarting] = useState<number | null>(null); // round id being started
   const [startError, setStartError] = useState("");
+  const [showTopup, setShowTopup] = useState(false);
 
   // Initial company list fetch
   useEffect(() => {
@@ -237,7 +239,10 @@ export default function CompaniesPage() {
   const isPro = isPaidPlan(user?.subscription_plan);
   const monthlyUsed = (user as any)?.interviews_this_month ?? 0;
   const monthlyLimit = plan.monthlyLimit; // null = unlimited
-  const limitReached = monthlyLimit !== null && monthlyUsed >= monthlyLimit;
+  const bonusInterviews = user?.bonus_interviews ?? 0;
+  // Plan quota used up AND no purchased top-up credits left — bonus credits
+  // let a user keep going past their monthly limit without upgrading.
+  const limitReached = monthlyLimit !== null && monthlyUsed >= monthlyLimit && bonusInterviews <= 0;
 
   return (
     <ProtectedRoute>
@@ -313,8 +318,24 @@ export default function CompaniesPage() {
                 {plan.label} plan limit reached
               </p>
               <p className="text-xs mt-1" style={{ color: "var(--ink-dim)" }}>
-                You've used {monthlyUsed}/{monthlyLimit} interviews this month. Upgrade to continue.
+                You've used {monthlyUsed}/{monthlyLimit} interviews this month.
               </p>
+              <div className="flex flex-wrap gap-2.5 mt-3">
+                <button
+                  onClick={() => setShowTopup(true)}
+                  className="px-3.5 py-1.5 rounded-full text-xs font-semibold"
+                  style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
+                >
+                  Buy more interviews
+                </button>
+                <button
+                  onClick={() => router.push("/upgrade")}
+                  className="px-3.5 py-1.5 rounded-full text-xs font-semibold"
+                  style={{ background: "transparent", color: "var(--accent)", border: "1px solid var(--accent)" }}
+                >
+                  Upgrade plan →
+                </button>
+              </div>
             </div>
           )}
 
@@ -453,6 +474,8 @@ export default function CompaniesPage() {
         </main>
       </div>
       </AppShell>
+
+      {showTopup && <TopupModal onClose={() => setShowTopup(false)} />}
     </ProtectedRoute>
   );
 }
