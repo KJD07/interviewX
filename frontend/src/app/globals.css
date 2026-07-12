@@ -109,6 +109,11 @@ html {
   background-color: var(--page);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
+  /* Reserve space for the vertical scrollbar at all times so pages don't
+     reflow horizontally when content height crosses the scroll threshold
+     (e.g. the companies/skills list shrinking as a search narrows results). */
+  scrollbar-gutter: stable;
+  overflow-y: scroll;
 }
 
 body {
