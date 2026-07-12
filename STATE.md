@@ -1,6 +1,9 @@
 # STATE.md
 ## Current phase
-Phase 7 — Interview flow UI (next)
+Past the original phase plan. Phase 7 (subscriptions + Razorpay) is done,
+plus a basic version of Phase 8 (voice) and a lot of features that weren't
+in the original spec at all (see "Since Phase 6" below). Work is now
+tracked as GitHub issues on the repo rather than one phase per chat.
 
 ## Done
 
@@ -107,12 +110,56 @@ Files changed (all in `frontend/src/`):
   badge, per-skill scores, date), plan badge + monthly usage, empty state,
   "Start interview" CTA → /companies
 
+### Since Phase 6 (not tracked phase-by-phase anymore)
+A lot landed after Phase 6 without STATE.md being kept in sync — this
+section is a catch-up, not a phase-by-phase log like the ones above.
+
+**Phase 7, as originally planned:**
+- Free/Pro/Premium/Max subscription tiers with different monthly interview
+  limits (`apps/subscriptions/plans.py`)
+- Razorpay checkout for paid plans (`/upgrade` page, `create-order` +
+  `verify-payment` endpoints)
+
+**Beyond the original spec:**
+- Google Sign-In + email OTP verification before an account can log in
+  (spec said JWT only, no OAuth — this was a deliberate deviation)
+- 4 plan tiers instead of the spec's 2 (free/premium)
+- Mid-month interview top-up packs (Spark/Boost/Power) — buy extra
+  interviews with Razorpay without upgrading your plan; credits roll over
+- Skill-based interviews (Premium/Max only) — practice a single skill
+  (React, SQL, Docker, etc.) instead of a full company loop, via `/skills`
+  and `seed_skills`
+- Basic voice mode — Web Speech API based speech-to-text/text-to-speech
+  during interviews (this is the spec's Phase 8, in early form)
+- Full-screen "focus mode" during interviews — auto-ends the interview if
+  the candidate exits full screen or switches tabs
+- Progress/analytics page (`/progress`) with score history charts
+- AI question sourcing — admin-triggered pipeline that researches and
+  extracts real candidate-reported questions from the web
+  (`core/question_sourcing.py`)
+- Optional real-interview-report form after a session ends (paid plans) —
+  candidates can report a real interview they gave elsewhere
+- Marketing site: landing page, About, Careers pages, full visual redesign
+
+**Closed via GitHub issues:**
+- #7 — free/paid users who ran out of interviews had no working way to buy
+  more (the button was just a link to the full upgrade page, and one banner
+  had no button at all). Added a working "buy more interviews" flow to the
+  dashboard and companies page, and fixed the limit check to actually
+  account for purchased top-up credits.
+- #8 — companies and skills selection pages had no search or pagination,
+  just one long list. Added real-time search and 5-per-page pagination to
+  both (client-side, shared hook).
+
 ## Next
-Phase 7 — Interview flow UI
-- `/companies` page: list companies → click to see roles → click role to see
-  rounds → "Start interview" button calls POST /api/interviews/start/
-- `/interview/[sessionId]` page: the chat interface (ChatView loop, End button)
-- Route both from dashboard "Start interview" CTA and from the company browser
+Open GitHub issues:
+- #5 — add more companies to `seed_companies.py` (only 6 exist right now)
+- #6 — automatic documentation updates on code changes (needs scoping —
+  this is a CI/tooling decision, not a small change)
+
+Still not started from the original spec:
+- Phase 9 — custom Next.js admin panel (still using Django's built-in admin)
+- Phase 10 — production deploy setup (no prod Dockerfile/config yet)
 
 ## Decisions / deviations from spec
 - Next.js pinned to 14.2.35 (patched version for Dec 2025 RSC CVEs)
@@ -130,4 +177,17 @@ Phase 7 — Interview flow UI
   every page load; cleared on logout.
 
 ## Known issues
-- None
+- `interviews_this_month` never resets monthly and `subscription_end_date`
+  is never checked anywhere — free users effectively get 2 interviews
+  total (not 2/month), and paid plans don't expire or renew automatically.
+- The round list UI expects a `round_type` field the backend doesn't send —
+  round type badges render blank.
+- Seeded company `tone_style` values (`formal_strict`, `casual_friendly`)
+  don't match the interview prompt's tone keys (`formal`, `casual`,
+  `aggressive`) — affected companies fall back to a generic tone instead
+  of the intended one.
+- No rate limiting on login/register/OTP endpoints.
+- No automated tests, backend or frontend.
+- Local dev needs real Razorpay test-mode keys in `.env` to complete a
+  payment or top-up purchase — without them it fails with a clean
+  "Authentication failed" error. Expected, not a bug.

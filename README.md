@@ -24,10 +24,12 @@ for the frozen spec and `STATE.md` for current build progress.
 - Backend: Django 5.0.x + DRF 3.15.x, Python 3.11
 - Database: PostgreSQL 15
 - LLM: OpenRouter (`openai/gpt-4o-mini`)
-- Auth: JWT via `djangorestframework-simplejwt`
-- Payments: Razorpay (Phase 7+)
+- Auth: JWT via `djangorestframework-simplejwt`, plus Google Sign-In and email OTP verification
+- Payments: Razorpay (plan subscriptions + mid-month interview top-ups)
+- Voice: Web Speech API (basic speech-to-text/text-to-speech during interviews)
 
 ## Build process
 
-This project is built one phase at a time, each in its own Claude chat,
-following `STEP_BY_STEP_GUIDE.md`. Do not skip steps or merge phases.
+This project started out built one phase at a time, each in its own Claude
+chat, following `STEP_BY_STEP_GUIDE.md`. Ongoing work is now also tracked
+as GitHub issues on this repo. See `STATE.md` for what's actually built.
