@@ -422,4 +422,32 @@ export const subscriptions = {
     }),
 };
 
+// ── Review endpoints ────────────────────────────────────────────────────────
+
+export interface ReviewPayload {
+  rating: number;
+  comment?: string;
+  session?: number;
+}
+
+export interface Review {
+  id: number;
+  session: number | null;
+  rating: number;
+  comment: string;
+  plan_at_time: string;
+  created_at: string;
+}
+
+export const reviews = {
+  promptStatus: () =>
+    request<{ show: boolean; completed_count: number }>("/api/reviews/prompt-status/"),
+
+  submit: (payload: ReviewPayload) =>
+    request<Review>("/api/reviews/", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+};
+
 export { API_URL };

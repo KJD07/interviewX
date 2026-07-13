@@ -5,8 +5,9 @@ import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { interviews, ApiError } from "@/lib/api";
 import type { InterviewSession } from "@/lib/api";
-import { planOf } from "@/lib/plans";
+import { planOf, isPaidPlan } from "@/lib/plans";
 import RealInterviewReportModal from "@/components/RealInterviewReportModal";
+import ReviewCard from "@/components/ReviewCard";
 
 // ── Score ring ────────────────────────────────────────────────────────────────
 
@@ -95,6 +96,7 @@ export default function ResultsPage() {
   const [error, setError] = useState("");
   const [showTranscript, setShowTranscript] = useState(false);
   const [showRealReportModal, setShowRealReportModal] = useState(false);
+  const [eligibleForRealReport, setEligibleForRealReport] = useState(false);
 
   useEffect(() => {
     interviews.detail(sessionId)
@@ -107,11 +109,13 @@ export default function ResultsPage() {
         }
         // Paid-plan users get a one-time, skippable form asking about any
         // real interview they recently gave — feeds real interview data
-        // back into InterviewX. Only shown once per session.
+        // back into InterviewX. Only shown once per session, and only if
+        // the review card isn't taking this slot instead (see
+        // handleReviewResolved below).
         if (s.status === "completed" && plan.hasInsights) {
           const seenKey = `ix_rr_seen_${sessionId}`;
           if (!localStorage.getItem(seenKey)) {
-            setShowRealReportModal(true);
+            setEligibleForRealReport(true);
           }
         }
       })
@@ -121,6 +125,16 @@ export default function ResultsPage() {
       })
       .finally(() => setLoading(false));
   }, [sessionId, router, plan.hasInsights]);
+
+  // Called by ReviewCard once it knows whether it will render itself.
+  // If the review card is showing, the real-report modal sits out this
+  // session entirely (without marking itself "seen", so it can still
+  // fire on a future session).
+  const handleReviewResolved = (reviewWillShow: boolean) => {
+    if (!reviewWillShow && eligibleForRealReport) {
+      setShowRealReportModal(true);
+    }
+  };
 
   const dismissRealReportModal = () => {
     localStorage.setItem(`ix_rr_seen_${sessionId}`, "1");
@@ -443,6 +457,12 @@ export default function ResultsPage() {
                   )}
                 </div>
               )}
+            </div>
+          )}
+
+          {isPaidPlan(user?.subscription_plan) && (
+            <div className="pb-6">
+              <ReviewCard sessionId={sessionId} onResolved={handleReviewResolved} />
             </div>
           )}
 
