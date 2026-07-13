@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "apps.companies",
     "apps.interviews",
     "apps.subscriptions",
+    "apps.reviews",
 ]
 
 MIDDLEWARE = [
