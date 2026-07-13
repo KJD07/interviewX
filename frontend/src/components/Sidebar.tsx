@@ -76,19 +76,19 @@ export default function Sidebar() {
 
   return (
     <aside
-      className="w-56 shrink-0 min-h-screen flex flex-col justify-between px-4 py-6 border-r"
+      className="w-56 shrink-0 h-screen sticky top-0 flex flex-col px-4 py-6 border-r"
       style={{ background: "var(--surface)", borderColor: "var(--border)" }}
     >
-      <div>
+      <div className="flex flex-col min-h-0 flex-1">
         <button
           onClick={() => router.push("/dashboard")}
-          className="font-display text-lg font-semibold tracking-tight px-2 mb-8 block"
+          className="font-display text-lg font-semibold tracking-tight px-2 mb-8 block shrink-0"
           style={{ color: "var(--ink)" }}
         >
           InterviewX
         </button>
 
-        <nav className="space-y-1">
+        <nav className="space-y-1 overflow-y-auto min-h-0 flex-1 pr-1">
           {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname?.startsWith(href + "/");
             return (
@@ -109,7 +109,7 @@ export default function Sidebar() {
         </nav>
       </div>
 
-      <div className="px-2 space-y-4">
+      <div className="px-2 space-y-4 shrink-0">
         <div
           className="rounded-lg px-3 py-2.5"
           style={{ background: "var(--hero-bg)" }}
