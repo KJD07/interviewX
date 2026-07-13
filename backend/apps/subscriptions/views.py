@@ -132,13 +132,16 @@ class VerifyPaymentView(APIView):
         user = request.user
         user.subscription_plan = order.plan
         user.subscription_end_date = now + timedelta(days=30)
-        # Fresh billing cycle: reset usage so the new plan's limit applies cleanly.
+        # Fresh billing cycle: reset usage and restart the 30-day cycle clock
+        # so the new plan's limit applies cleanly.
         user.interviews_this_month = 0
+        user.current_cycle_start = now
         user.save(
             update_fields=[
                 "subscription_plan",
                 "subscription_end_date",
                 "interviews_this_month",
+                "current_cycle_start",
             ]
         )
 

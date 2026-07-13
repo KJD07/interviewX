@@ -84,11 +84,11 @@ def build_interview_system_prompt(
     )
 
     tone_instructions = {
-        "formal": (
+        "formal_strict": (
             "You are professional, precise, and measured. Use complete sentences. "
             "Maintain a serious, respectful demeanour throughout. No jokes or small talk."
         ),
-        "casual": (
+        "casual_friendly": (
             "You are relaxed and conversational — like a senior engineer having a coffee chat. "
             "Use natural language, contractions, the occasional 'yeah' or 'got it'. "
             "Make the candidate feel at ease, but still push them when answers are thin."
@@ -101,7 +101,7 @@ def build_interview_system_prompt(
     }
 
     tone_desc = tone_instructions.get(
-        company_tone.lower(),
+        company_tone.strip().lower(),
         f"Your tone is {company_tone}. Stay consistent with it throughout."
     )
 

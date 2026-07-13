@@ -27,6 +27,36 @@ class User(AbstractUser):
             "do NOT reset on billing renewal — unused credits roll over."
         ),
     )
+    current_cycle_start = models.DateTimeField(
+        default=timezone.now,
+        help_text="Start of the current 30-day usage cycle.",
+    )
+
+    def sync_subscription_state(self):
+        """Lazily downgrade lapsed subscriptions and roll the monthly
+        interview counter over every 30 days. Called on request since there
+        is no Celery/cron worker in this project. Returns changed fields."""
+        changed = []
+        now = timezone.now()
+
+        if (
+            self.subscription_plan != "free"
+            and self.subscription_end_date is not None
+            and self.subscription_end_date <= now
+        ):
+            self.subscription_plan = "free"
+            self.subscription_end_date = None
+            changed += ["subscription_plan", "subscription_end_date"]
+
+        if now >= self.current_cycle_start + timedelta(days=30):
+            self.interviews_this_month = 0
+            elapsed_cycles = max((now - self.current_cycle_start).days // 30, 1)
+            self.current_cycle_start = self.current_cycle_start + timedelta(
+                days=30 * elapsed_cycles
+            )
+            changed += ["interviews_this_month", "current_cycle_start"]
+
+        return changed
 
     # --- Email verification / auth provider tracking ---
     is_email_verified = models.BooleanField(default=False)

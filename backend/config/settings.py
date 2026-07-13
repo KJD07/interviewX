@@ -108,6 +108,19 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
+    "DEFAULT_THROTTLE_CLASSES": (
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ),
+    "DEFAULT_THROTTLE_RATES": {
+        # Global fallbacks for any endpoint that doesn't set its own scope.
+        "anon": "60/min",
+        "user": "120/min",
+        # Tighter scope applied explicitly to auth endpoints (register,
+        # verify-OTP, resend-OTP, login, google-auth) to block brute-force /
+        # credential-stuffing / OTP-spam attacks.
+        "auth": "10/min",
+    },
 }
 
 SIMPLE_JWT = {

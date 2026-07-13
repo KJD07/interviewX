@@ -314,6 +314,11 @@ export default function InterviewPage() {
   const [showFullscreenPrompt, setShowFullscreenPrompt] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [autoExitReason, setAutoExitReason] = useState("");
+  // Grace-period warning shown before we actually end the interview, so an
+  // accidental Escape / alt-tab doesn't instantly burn a credit.
+  const [exitWarning, setExitWarning] = useState<{ reason: string; secondsLeft: number } | null>(
+    null
+  );
 
   // ── Voice state ──────────────────────────────────────────────────────────
   const [voiceMode, setVoiceMode] = useState(false);
@@ -343,6 +348,8 @@ export default function InterviewPage() {
 
   const hasEnteredFullscreenRef = useRef(false); // true once the candidate has confirmed full-screen
   const autoExitHandledRef = useRef(false); // guards against double auto-end firing
+  const exitWarningIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null); // countdown tick
+  const exitWarningTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null); // fires the actual auto-end
 
   useEffect(() => {
     voiceModeRef.current = voiceMode;
@@ -799,41 +806,84 @@ export default function InterviewPage() {
     autoEndInterviewRef.current = autoEndInterview;
   }, [autoEndInterview]);
 
-  // Escape (or any other way of leaving full-screen) ends the interview.
+  // Cancel a pending exit warning — called when the candidate comes back
+  // (re-enters full-screen / tab becomes visible again) before time runs out.
+  const cancelExitWarning = useCallback(() => {
+    if (exitWarningIntervalRef.current) {
+      clearInterval(exitWarningIntervalRef.current);
+      exitWarningIntervalRef.current = null;
+    }
+    if (exitWarningTimeoutRef.current) {
+      clearTimeout(exitWarningTimeoutRef.current);
+      exitWarningTimeoutRef.current = null;
+    }
+    setExitWarning(null);
+  }, []);
+
+  // Start a grace-period countdown instead of ending the interview
+  // immediately. Gives the candidate a chance to undo an accidental
+  // Escape / alt-tab before a credit gets burned.
+  const GRACE_PERIOD_SECONDS = 10;
+  const beginExitWarning = useCallback(
+    (reason: string) => {
+      if (ending || autoExitHandledRef.current || exitWarningTimeoutRef.current) return;
+
+      setExitWarning({ reason, secondsLeft: GRACE_PERIOD_SECONDS });
+      exitWarningIntervalRef.current = setInterval(() => {
+        setExitWarning((prev) => {
+          if (!prev) return prev;
+          const secondsLeft = prev.secondsLeft - 1;
+          return secondsLeft > 0 ? { ...prev, secondsLeft } : prev;
+        });
+      }, 1000);
+      exitWarningTimeoutRef.current = setTimeout(() => {
+        cancelExitWarning();
+        autoEndInterviewRef.current(
+          `${reason} You didn't return in time, so the interview was automatically ended.`
+        );
+      }, GRACE_PERIOD_SECONDS * 1000);
+    },
+    [ending, cancelExitWarning]
+  );
+
+  useEffect(() => cancelExitWarning, [cancelExitWarning]);
+
+  // Escape (or any other way of leaving full-screen) starts the grace-period
+  // warning rather than ending the interview outright.
   useEffect(() => {
     const handleFullscreenChange = () => {
       const active = !!document.fullscreenElement;
       setIsFullscreen(active);
 
-      if (!active && hasEnteredFullscreenRef.current && !ending && !autoExitHandledRef.current) {
-        autoEndInterviewRef.current(
-          "You exited full-screen mode, so the interview was automatically ended."
-        );
+      if (active) {
+        cancelExitWarning();
+        return;
+      }
+      if (hasEnteredFullscreenRef.current && !ending && !autoExitHandledRef.current) {
+        beginExitWarning("You exited full-screen mode.");
       }
     };
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ending]);
+  }, [ending, beginExitWarning, cancelExitWarning]);
 
-  // Minimizing the window (or switching away/backgrounding the tab) ends the interview.
+  // Minimizing the window (or switching away/backgrounding the tab) starts
+  // the grace-period warning rather than ending the interview outright.
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (
-        document.visibilityState === "hidden" &&
-        hasEnteredFullscreenRef.current &&
-        !ending &&
-        !autoExitHandledRef.current
-      ) {
-        autoEndInterviewRef.current(
-          "Your window was minimized, so the interview was automatically ended."
-        );
+      if (document.visibilityState === "visible") {
+        cancelExitWarning();
+        return;
+      }
+      if (hasEnteredFullscreenRef.current && !ending && !autoExitHandledRef.current) {
+        beginExitWarning("Your window was minimized or you switched tabs.");
       }
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ending]);
+  }, [ending, beginExitWarning, cancelExitWarning]);
 
   // Leaving the page (e.g. after the interview ends) should release full-screen.
   useEffect(() => {
@@ -901,9 +951,10 @@ export default function InterviewPage() {
                 Enter full-screen to begin
               </h2>
               <p className="text-sm mb-6" style={{ color: "var(--ink-dim)" }}>
-                This interview runs in full-screen mode. Exiting full-screen or minimizing
-                the window will automatically end the interview, so make sure you&apos;re
-                ready before continuing.
+                This interview runs in full-screen mode. If you exit full-screen or
+                switch away, you&apos;ll have a short grace period to return before the
+                interview ends automatically — so make sure you&apos;re ready before
+                continuing.
               </p>
               <button
                 onClick={enterFullscreen}
@@ -911,6 +962,44 @@ export default function InterviewPage() {
                 style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
               >
                 Start full-screen interview
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Exit warning (grace period before auto-end actually fires) ── */}
+        {exitWarning && (
+          <div
+            className="fixed inset-0 z-[70] flex items-center justify-center px-4"
+            style={{ background: "rgba(15,23,42,0.92)", backdropFilter: "blur(4px)" }}
+          >
+            <div
+              className="w-full max-w-sm rounded-xl p-6 text-center fade-up"
+              style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
+            >
+              <h2 className="font-display text-base font-bold mb-2" style={{ color: "var(--danger)" }}>
+                Come back to continue
+              </h2>
+              <p className="text-sm mb-2" style={{ color: "var(--ink-dim)" }}>
+                {exitWarning.reason} Return to full-screen within{" "}
+                <span style={{ color: "var(--danger)", fontWeight: 600 }}>
+                  {exitWarning.secondsLeft}s
+                </span>{" "}
+                or the interview will end automatically.
+              </p>
+              <button
+                onClick={async () => {
+                  cancelExitWarning();
+                  try {
+                    await document.documentElement.requestFullscreen?.();
+                  } catch {
+                    /* user gesture may still be required; ignore */
+                  }
+                }}
+                className="w-full py-2.5 rounded-full text-sm font-semibold transition-opacity mt-4"
+                style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
+              >
+                I&apos;m back — resume
               </button>
             </div>
           </div>

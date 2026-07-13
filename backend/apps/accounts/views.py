@@ -10,6 +10,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from .emails import send_otp_email
 from .models import EmailOTP
+from .throttles import AuthRateThrottle
 from .serializers import (
     GoogleAuthSerializer,
     LoginSerializer,
@@ -53,6 +54,8 @@ class RegisterView(APIView):
     """
 
     permission_classes = [AllowAny]
+    throttle_classes = [AuthRateThrottle]
+    throttle_scope = "auth"
 
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
@@ -76,6 +79,8 @@ class VerifyEmailView(APIView):
     """POST /api/auth/verify-email/  { email, code } -> tokens on success."""
 
     permission_classes = [AllowAny]
+    throttle_classes = [AuthRateThrottle]
+    throttle_scope = "auth"
 
     def post(self, request):
         serializer = VerifyOTPSerializer(data=request.data)
@@ -130,6 +135,8 @@ class ResendOTPView(APIView):
     """POST /api/auth/resend-otp/  { email }"""
 
     permission_classes = [AllowAny]
+    throttle_classes = [AuthRateThrottle]
+    throttle_scope = "auth"
 
     def post(self, request):
         serializer = ResendOTPSerializer(data=request.data)
@@ -152,6 +159,8 @@ class ResendOTPView(APIView):
 
 class LoginView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [AuthRateThrottle]
+    throttle_scope = "auth"
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
@@ -208,6 +217,8 @@ class GoogleAuthView(APIView):
     """
 
     permission_classes = [AllowAny]
+    throttle_classes = [AuthRateThrottle]
+    throttle_scope = "auth"
 
     def post(self, request):
         serializer = GoogleAuthSerializer(data=request.data)
@@ -271,6 +282,9 @@ class MeView(APIView):
 
     def get(self, request):
         user = request.user
+        changed_fields = user.sync_subscription_state()
+        if changed_fields:
+            user.save(update_fields=changed_fields)
         return Response(
             {
                 "id": user.id,

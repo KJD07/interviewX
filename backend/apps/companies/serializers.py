@@ -14,7 +14,7 @@ class RoundSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Round
-        fields = ["id", "title", "order", "questions"]
+        fields = ["id", "title", "order", "round_type", "questions"]
 
 
 class RoleSerializer(serializers.ModelSerializer):

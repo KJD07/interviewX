@@ -60,6 +60,12 @@ class Role(models.Model):
 
 
 class Round(models.Model):
+    class RoundType(models.TextChoices):
+        TECHNICAL = "technical", "Technical"
+        BEHAVIORAL = "behavioral", "Behavioral"
+        SYSTEM_DESIGN = "system_design", "System Design"
+        HR = "hr", "HR"
+
     role = models.ForeignKey(
         Role,
         on_delete=models.CASCADE,
@@ -67,9 +73,29 @@ class Round(models.Model):
     )
     title = models.CharField(max_length=100)
     order = models.IntegerField(default=0)
+    round_type = models.CharField(
+        max_length=20,
+        choices=RoundType.choices,
+        default=RoundType.TECHNICAL,
+        help_text="Drives the badge/styling on the frontend round picker.",
+    )
 
     class Meta:
         ordering = ["order"]
+
+    @classmethod
+    def infer_round_type(cls, title: str) -> str:
+        """Best-effort guess of round_type from a human-written round title,
+        used by the seed commands so existing seed data doesn't need every
+        entry hand-annotated."""
+        t = title.lower()
+        if "hr" in t or "leadership" in t or "googleyness" in t:
+            return cls.RoundType.HR
+        if "system design" in t or "design" in t or "architecture" in t or "scalab" in t:
+            return cls.RoundType.SYSTEM_DESIGN
+        if "behav" in t or "culture" in t or "manager" in t:
+            return cls.RoundType.BEHAVIORAL
+        return cls.RoundType.TECHNICAL
 
     def __str__(self) -> str:
         return f"{self.role} / {self.title}"

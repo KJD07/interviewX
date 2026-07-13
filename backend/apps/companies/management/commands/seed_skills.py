@@ -205,7 +205,10 @@ class Command(BaseCommand):
                     round_obj, rd_created = Round.objects.get_or_create(
                         role=role,
                         title=round_title,
-                        defaults={"order": order},
+                        defaults={
+                            "order": order,
+                            "round_type": Round.infer_round_type(round_title),
+                        },
                     )
                     self.stdout.write(f"    {'Created' if rd_created else 'Found'} round: {round_obj.title}")
 

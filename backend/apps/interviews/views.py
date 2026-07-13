@@ -188,6 +188,9 @@ class StartInterviewView(APIView):
         # they can start an interview even if their monthly plan quota is
         # used up, and it's the bonus balance that gets decremented below.
         user = request.user
+        changed_fields = user.sync_subscription_state()
+        if changed_fields:
+            user.save(update_fields=changed_fields)
         limit = monthly_limit_for(user.subscription_plan)
         plan_exhausted = limit is not None and user.interviews_this_month >= limit
         if plan_exhausted and user.bonus_interviews <= 0:
