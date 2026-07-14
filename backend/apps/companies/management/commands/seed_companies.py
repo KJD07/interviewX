@@ -114,6 +114,198 @@ DATA = [
             },
         ],
     },
+    # -----------------------------------------------------------------
+    # New batch — 17 companies (Google/Amazon/Microsoft excluded, already above).
+    # -----------------------------------------------------------------
+    {
+        "name": "Apple",
+        "tone_style": "formal_strict",
+        "description": "Secretive culture, deep technical rounds with strong emphasis on past project depth and craftsmanship.",
+        "roles": [
+            {
+                "title": "Software Engineer",
+                "rounds": ["Recruiter Screen", "Technical Phone Screen", "Onsite Coding Round", "Team Fit / Deep Dive Round"],
+            },
+        ],
+    },
+    {
+        "name": "Meta",
+        "tone_style": "formal_strict",
+        "description": "Fast-paced, DSA + system design heavy, with a strong focus on behavioral questions tied to Meta's core values.",
+        "roles": [
+            {
+                "title": "Software Engineer",
+                "rounds": ["Recruiter Screen", "Coding Interview 1", "Coding Interview 2", "System Design", "Behavioral (Values)"],
+            },
+        ],
+    },
+    {
+        "name": "NVIDIA",
+        "tone_style": "formal_strict",
+        "description": "Strong CS fundamentals, low-level systems and hardware-aware questions, deep technical panels.",
+        "roles": [
+            {
+                "title": "Software Engineer",
+                "rounds": ["Online Assessment", "Technical Screen", "Technical Panel Round 1", "Technical Panel Round 2 (System Design)"],
+            },
+        ],
+    },
+    {
+        "name": "GitLab",
+        "tone_style": "casual_friendly",
+        "description": "Fully remote, async-first culture; interviews emphasize collaboration, writing, and transparency values.",
+        "is_free": True,
+        "roles": [
+            {
+                "title": "Software Engineer",
+                "rounds": ["Recruiter Screen", "Technical Interview", "Values Interview", "Hiring Manager Round"],
+            },
+        ],
+    },
+    {
+        "name": "Airbnb",
+        "tone_style": "casual_friendly",
+        "description": "Emphasis on 'belong anywhere' core values alongside solid DSA and system design rounds.",
+        "roles": [
+            {
+                "title": "Software Engineer",
+                "rounds": ["Recruiter Screen", "Technical Phone Screen", "Onsite Coding", "System Design", "Values Interview"],
+            },
+        ],
+    },
+    {
+        "name": "Canva",
+        "tone_style": "casual_friendly",
+        "description": "Product-minded engineering culture, practical coding rounds and strong focus on collaboration.",
+        "roles": [
+            {
+                "title": "Software Engineer",
+                "rounds": ["Recruiter Screen", "Technical Interview", "System Design", "Values & Culture Round"],
+            },
+        ],
+    },
+    {
+        "name": "Reddit",
+        "tone_style": "casual_friendly",
+        "description": "Pragmatic engineering interviews focused on real-world problem solving and product sense.",
+        "roles": [
+            {
+                "title": "Software Engineer",
+                "rounds": ["Recruiter Screen", "Technical Phone Screen", "Onsite Coding Round", "System Design", "Hiring Manager Round"],
+            },
+        ],
+    },
+    {
+        "name": "Anthropic",
+        "tone_style": "formal_strict",
+        "description": "Research-driven culture; interviews probe deep CS fundamentals, ML/LLM familiarity, and safety-mindedness.",
+        "roles": [
+            {
+                "title": "Software Engineer",
+                "rounds": ["Recruiter Screen", "Technical Screen", "Coding Round", "System Design", "Behavioral / Values Fit"],
+            },
+        ],
+    },
+    {
+        "name": "Dropbox",
+        "tone_style": "casual_friendly",
+        "description": "Infrastructure-heavy engineering interviews with focus on distributed systems and practical coding.",
+        "roles": [
+            {
+                "title": "Software Engineer",
+                "rounds": ["Recruiter Screen", "Technical Phone Screen", "Onsite Coding", "System Design", "Behavioral Round"],
+            },
+        ],
+    },
+    {
+        "name": "OpenAI",
+        "tone_style": "formal_strict",
+        "description": "High technical bar; strong ML/LLM and systems fundamentals expected alongside classic DSA.",
+        "roles": [
+            {
+                "title": "Software Engineer",
+                "rounds": ["Recruiter Screen", "Technical Screen", "Coding Round 1", "Coding Round 2", "System Design", "Behavioral Round"],
+            },
+        ],
+    },
+    {
+        "name": "Stripe",
+        "tone_style": "formal_strict",
+        "description": "Known for a rigorous, well-structured interview loop with a strong emphasis on code quality and correctness.",
+        "roles": [
+            {
+                "title": "Software Engineer",
+                "rounds": ["Recruiter Screen", "Technical Screen", "Onsite Coding Round", "System Design", "Behavioral / Values Round"],
+            },
+        ],
+    },
+    {
+        "name": "Spotify",
+        "tone_style": "casual_friendly",
+        "description": "Squad-based engineering culture; interviews mix coding, system design, and team-fit conversations.",
+        "roles": [
+            {
+                "title": "Software Engineer",
+                "rounds": ["Recruiter Screen", "Technical Phone Screen", "Onsite Coding", "System Design", "Team Fit Round"],
+            },
+        ],
+    },
+    {
+        "name": "Pinterest",
+        "tone_style": "casual_friendly",
+        "description": "Product-focused engineering interviews with solid DSA, system design, and values-based behavioral rounds.",
+        "roles": [
+            {
+                "title": "Software Engineer",
+                "rounds": ["Recruiter Screen", "Technical Phone Screen", "Onsite Coding Round", "System Design", "Behavioral Round"],
+            },
+        ],
+    },
+    {
+        "name": "TikTok",
+        "tone_style": "formal_strict",
+        "description": "Fast-paced, multiple back-to-back technical rounds with strong DSA and system design emphasis.",
+        "roles": [
+            {
+                "title": "Software Engineer",
+                "rounds": ["Online Assessment", "Technical Round 1", "Technical Round 2", "System Design", "HR Round"],
+            },
+        ],
+    },
+    {
+        "name": "Oracle",
+        "tone_style": "formal_strict",
+        "description": "Traditional enterprise interview process, CS fundamentals and DSA heavy with a formal panel round.",
+        "is_free": True,
+        "roles": [
+            {
+                "title": "Software Engineer",
+                "rounds": ["Online Assessment", "Technical Round 1", "Technical Round 2", "HR Round"],
+            },
+        ],
+    },
+    {
+        "name": "ServiceNow",
+        "tone_style": "formal_strict",
+        "description": "Enterprise SaaS platform; interviews balance DSA, practical system design, and behavioral rounds.",
+        "roles": [
+            {
+                "title": "Software Engineer",
+                "rounds": ["Online Assessment", "Technical Round 1", "Technical Round 2 (System Design)", "Managerial / HR Round"],
+            },
+        ],
+    },
+    {
+        "name": "Datadog",
+        "tone_style": "casual_friendly",
+        "description": "Observability platform; interviews emphasize distributed systems, debugging skills, and practical coding.",
+        "roles": [
+            {
+                "title": "Software Engineer",
+                "rounds": ["Recruiter Screen", "Technical Phone Screen", "Onsite Coding Round", "System Design", "Behavioral Round"],
+            },
+        ],
+    },
 ]
 
 
