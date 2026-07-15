@@ -2,6 +2,8 @@ import json
 import random
 from datetime import datetime, timedelta, timezone
 
+from django.contrib.auth import get_user_model
+from django.db import transaction
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -21,6 +23,8 @@ from .serializers import (
     InterviewSessionSerializer,
     RealInterviewReportSerializer,
 )
+
+User = get_user_model()
 
 # Kept for backward-compat imports elsewhere (e.g. frontend limit displays via API).
 FREE_PLAN_MONTHLY_LIMIT = 2
@@ -247,25 +251,51 @@ class StartInterviewView(APIView):
                 {"detail": str(exc)}, status=status.HTTP_502_BAD_GATEWAY
             )
 
-        # Create session with AI opening turn already in transcript
-        session = InterviewSession.objects.create(
-            user=user,
-            round=round_obj,
-            status=InterviewSession.Status.IN_PROGRESS,
-            transcript=[{"role": "ai", "text": opening, "ts": _now_iso()}],
-            duration_minutes=random.randint(
-                MIN_INTERVIEW_MINUTES, MAX_INTERVIEW_MINUTES
-            ),
-        )
+        # Re-check and consume quota atomically under a row lock. The
+        # earlier check above is just a fast-path to fail obviously-over-
+        # limit requests before paying for the AI call; without this
+        # second locked check, two concurrent requests could both read the
+        # same interviews_this_month/bonus_interviews values, both pass,
+        # and both get created — over-granting quota.
+        with transaction.atomic():
+            locked_user = User.objects.select_for_update().get(pk=user.pk)
+            limit = monthly_limit_for(locked_user.subscription_plan)
+            plan_exhausted = (
+                limit is not None and locked_user.interviews_this_month >= limit
+            )
+            if plan_exhausted and locked_user.bonus_interviews <= 0:
+                return Response(
+                    {
+                        "detail": (
+                            f"You've reached your {locked_user.subscription_plan} plan "
+                            f"limit ({limit} interviews/month). Upgrade your plan or "
+                            f"buy a top-up pack to keep going."
+                        ),
+                        "code": "plan_limit_reached",
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            use_bonus_credit = plan_exhausted and locked_user.bonus_interviews > 0
 
-        # Consume a bonus credit if the plan quota was already exhausted,
-        # otherwise count it against the normal monthly quota as before.
-        if use_bonus_credit:
-            user.bonus_interviews -= 1
-            user.save(update_fields=["bonus_interviews"])
-        else:
-            user.interviews_this_month += 1
-            user.save(update_fields=["interviews_this_month"])
+            # Create session with AI opening turn already in transcript
+            session = InterviewSession.objects.create(
+                user=locked_user,
+                round=round_obj,
+                status=InterviewSession.Status.IN_PROGRESS,
+                transcript=[{"role": "ai", "text": opening, "ts": _now_iso()}],
+                duration_minutes=random.randint(
+                    MIN_INTERVIEW_MINUTES, MAX_INTERVIEW_MINUTES
+                ),
+            )
+
+            # Consume a bonus credit if the plan quota was already exhausted,
+            # otherwise count it against the normal monthly quota as before.
+            if use_bonus_credit:
+                locked_user.bonus_interviews -= 1
+                locked_user.save(update_fields=["bonus_interviews"])
+            else:
+                locked_user.interviews_this_month += 1
+                locked_user.save(update_fields=["interviews_this_month"])
 
         return Response(
             {

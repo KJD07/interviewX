@@ -112,13 +112,20 @@ class RoundDetailView(APIView):
 
     def get(self, request, company_id, role_id, round_id):
         try:
-            round_ = Round.objects.prefetch_related("questions").get(
+            round_ = Round.objects.select_related("role__company").prefetch_related(
+                "questions"
+            ).get(
                 pk=round_id,
                 role_id=role_id,
                 role__company_id=company_id,
             )
         except Round.DoesNotExist:
             return Response({"detail": "Round not found."}, status=status.HTTP_404_NOT_FOUND)
+        if not round_.role.company.is_accessible_by(request.user.subscription_plan):
+            return Response(
+                {"detail": _access_denied_detail(round_.role.company)},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         serializer = RoundSerializer(round_)
         return Response(serializer.data)
 

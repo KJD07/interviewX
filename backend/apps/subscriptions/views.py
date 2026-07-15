@@ -106,6 +106,17 @@ class VerifyPaymentView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
+        # Idempotency guard: the signature is deterministic from
+        # order_id|payment_id, so without this check a client could replay
+        # an already-verified order's payload indefinitely to repeatedly
+        # reset interviews_this_month and push subscription_end_date
+        # forward — all off a single successful payment.
+        if order.status == PaymentOrder.Status.PAID:
+            return Response(
+                {"detail": "This order has already been processed."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         # Verify HMAC-SHA256 signature
         expected = hmac.new(
             settings.RAZORPAY_KEY_SECRET.encode(),
