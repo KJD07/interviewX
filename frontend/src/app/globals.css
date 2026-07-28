@@ -30,7 +30,7 @@
 /* ── Tier accents — set data-plan="free|pro|premium|max" on <body> ──
    Each tier also re-tints the neutral shell (page/surface/border/ink)
    so the whole app reads like the tier's palette, not just isolated
-   buttons — matching the reference cards in interviewx_tier_palettes.html. */
+   buttons — matching the reference cards in evalulabs_tier_palettes.html. */
 [data-plan="free"] {
   --page:        #FAFAF9;
   --surface:     #FFFFFF;

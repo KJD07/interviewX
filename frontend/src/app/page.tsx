@@ -25,7 +25,7 @@ const FEATURES = [
   },
   {
     title: "Voice mode",
-    body: "Speak your answers naturally. InterviewX listens, transcribes, and responds in real time.",
+    body: "Speak your answers naturally. EvaluLabs listens, transcribes, and responds in real time.",
     icon: "▲",
   },
   {
@@ -173,7 +173,7 @@ export default function Home() {
       <section className="mx-auto max-w-6xl px-6 py-24">
         <ScrollReveal className="mx-auto mb-14 max-w-2xl text-center">
           <h2 className="font-display text-3xl font-semibold text-[var(--ink)] sm:text-4xl">
-            How InterviewX works
+            How EvaluLabs works
           </h2>
         </ScrollReveal>
 
@@ -212,13 +212,13 @@ export default function Home() {
 
       <footer className="border-t border-[var(--border)] px-6 py-10">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
-          <span className="font-display text-base font-semibold text-[var(--ink)]">InterviewX</span>
+          <span className="font-display text-base font-semibold text-[var(--ink)]">EvaluLabs</span>
           <div className="flex gap-6 text-sm text-[var(--ink-dim)]">
             <Link href="/about" className="hover:text-[var(--ink)]">About</Link>
             <Link href="/career" className="hover:text-[var(--ink)]">Career</Link>
             <Link href="/login" className="hover:text-[var(--ink)]">Sign in</Link>
           </div>
-          <span className="text-xs text-[var(--ink-faint)]">© {new Date().getFullYear()} InterviewX</span>
+          <span className="text-xs text-[var(--ink-faint)]">© {new Date().getFullYear()} EvaluLabs</span>
         </div>
       </footer>
     </div>

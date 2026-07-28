@@ -21,7 +21,7 @@ export default function Career() {
         >
           <span className="text-3xl">✦</span>
           <h1 className="mt-5 font-display text-3xl font-semibold text-[var(--ink)] sm:text-4xl">
-            Careers at InterviewX
+            Careers at EvaluLabs
           </h1>
           <p className="mx-auto mt-4 max-w-md text-[var(--ink-dim)]">
             We're not hiring publicly just yet — but we're growing fast.

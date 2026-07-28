@@ -37,8 +37,8 @@ def chat_completion(
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://interviewx.dev",  # required by OpenRouter
-        "X-Title": "InterviewX",
+        "HTTP-Referer": "https://evalulabs.dev",  # required by OpenRouter
+        "X-Title": "EvaluLabs",
     }
 
     payload = {

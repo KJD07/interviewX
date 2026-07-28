@@ -114,7 +114,7 @@ export default function About() {
               Our story is still being written.
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-[var(--ink-dim)]">
-              We're an early-stage team building InterviewX one interview at a time.
+              We're an early-stage team building EvaluLabs one interview at a time.
               If you have feedback or want to work with us, we'd genuinely love to hear from you.
             </p>
           </div>
@@ -122,7 +122,7 @@ export default function About() {
       </section>
 
       <footer className="border-t border-[var(--border)] px-6 py-10 text-center text-xs text-[var(--ink-faint)]">
-        © {new Date().getFullYear()} InterviewX
+        © {new Date().getFullYear()} EvaluLabs
       </footer>
     </div>
   );

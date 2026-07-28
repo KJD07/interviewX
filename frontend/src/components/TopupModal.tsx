@@ -39,7 +39,7 @@ export default function TopupModal({ onClose }: { onClose: () => void }) {
         key: order.key_id,
         amount: order.amount,
         currency: order.currency,
-        name: "InterviewX",
+        name: "EvaluLabs",
         description: `${TOPUP_PACKS[pack].label} — ${order.credits} interviews`,
         order_id: order.order_id,
         prefill: {

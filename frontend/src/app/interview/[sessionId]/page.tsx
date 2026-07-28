@@ -1032,7 +1032,7 @@ export default function InterviewPage() {
         >
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-base font-bold tracking-tight" style={{ color: "var(--ink)" }}>
-              InterviewX
+              EvaluLabs
             </span>
             <span
               className="hidden sm:block text-xs font-medium px-2 py-0.5 rounded-full"

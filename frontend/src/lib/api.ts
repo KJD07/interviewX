@@ -1,5 +1,5 @@
 // src/lib/api.ts
-// Full API client for InterviewX Django backend.
+// Full API client for EvaluLabs Django backend.
 // Handles JWT access/refresh tokens, typed responses, and auto-refresh on 401.
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";

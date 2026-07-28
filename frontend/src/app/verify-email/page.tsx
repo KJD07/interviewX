@@ -77,7 +77,7 @@ function VerifyEmailForm() {
             className="text-2xl font-bold tracking-tight cursor-blink"
             style={{ color: "var(--ink)" }}
           >
-            InterviewX
+            EvaluLabs
           </span>
           <p className="mt-2 text-sm" style={{ color: "var(--ink-dim)" }}>
             Enter the 6-digit code we emailed you to verify your account.

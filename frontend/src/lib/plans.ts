@@ -1,4 +1,4 @@
-// Single source of truth for InterviewX plan display/limits on the frontend.
+// Single source of truth for EvaluLabs plan display/limits on the frontend.
 // Mirrors backend/apps/subscriptions/plans.py — keep in sync.
 
 export type PlanId = "free" | "pro" | "premium" | "max";

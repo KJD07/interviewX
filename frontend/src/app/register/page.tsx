@@ -69,7 +69,7 @@ export default function RegisterPage() {
             className="text-2xl font-bold tracking-tight cursor-blink"
             style={{ color: "var(--ink)" }}
           >
-            InterviewX
+            EvaluLabs
           </span>
           <p className="mt-2 text-sm" style={{ color: "var(--ink-dim)" }}>
             Create your account to start practising.

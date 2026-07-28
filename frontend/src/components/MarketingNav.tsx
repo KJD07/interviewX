@@ -40,7 +40,7 @@ export default function MarketingNav() {
         }`}
       >
         <Link href="/" className="font-display text-lg font-semibold tracking-tight text-[var(--ink)]">
-          Interview<span className="text-[var(--accent-dim)]">X</span>
+          Evalu<span className="text-[var(--accent-dim)]">Labs</span>
         </Link>
 
         <div className="hidden items-center gap-1 sm:flex">

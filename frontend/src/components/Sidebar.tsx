@@ -85,7 +85,7 @@ export default function Sidebar() {
           className="font-display text-lg font-semibold tracking-tight px-2 mb-8 block shrink-0"
           style={{ color: "var(--ink)" }}
         >
-          InterviewX
+          EvaluLabs
         </button>
 
         <nav className="space-y-1 overflow-y-auto min-h-0 flex-1 pr-1">

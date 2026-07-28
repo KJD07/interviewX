@@ -44,7 +44,7 @@ export default function UpgradePage() {
         key: order.key_id,
         amount: order.amount,
         currency: order.currency,
-        name: "InterviewX",
+        name: "EvaluLabs",
         description: `${PLANS[plan].label} Plan — 1 Month`,
         order_id: order.order_id,
         prefill: {

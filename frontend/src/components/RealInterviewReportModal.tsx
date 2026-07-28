@@ -140,7 +140,7 @@ export default function RealInterviewReportModal({ sessionId, onClose, onSubmitt
         </div>
         <p className="text-sm mb-6" style={{ color: "var(--ink-dim)" }}>
           If you&apos;ve recently interviewed elsewhere, sharing what was asked helps us make
-          InterviewX questions more realistic. Totally optional.
+          EvaluLabs questions more realistic. Totally optional.
         </p>
 
         <div className="space-y-5">

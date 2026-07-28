@@ -141,7 +141,7 @@ SIMPLE_JWT = {
 }
 
 # --- CORS (frontend runs on :3000 in dev) ---
-# Comma-separated list via env for prod (e.g. https://interviewx.dev). Falls
+# Comma-separated list via env for prod (e.g. https://evalulabs.dev). Falls
 # back to the local dev origins so nothing breaks for local `docker compose
 # up`. Uses `or` rather than .get()'s default arg because Docker Compose's
 # env_file loading sets an unfilled var as an actual empty string rather
@@ -196,7 +196,7 @@ if os.environ.get("EMAIL_HOST"):
 else:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
-DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "InterviewX <no-reply@interviewx.local>")
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "EvaluLabs <no-reply@evalulabs.local>")
 
 # --- Google Sign-In ---
 # The OAuth "Web application" client ID from Google Cloud Console. The

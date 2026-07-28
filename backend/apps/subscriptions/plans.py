@@ -1,5 +1,5 @@
 """
-Single source of truth for InterviewX subscription plans.
+Single source of truth for EvaluLabs subscription plans.
 Used by both the interviews app (limit checks) and subscriptions app (payments).
 """
 

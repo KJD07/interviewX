@@ -264,7 +264,7 @@ export default function CompaniesPage() {
               className="text-lg font-bold tracking-tight"
               style={{ color: "var(--ink)" }}
             >
-              InterviewX
+              EvaluLabs
             </button>
             <button
               onClick={() => router.push("/dashboard")}

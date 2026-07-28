@@ -109,7 +109,7 @@ export default function ResultsPage() {
         }
         // Paid-plan users get a one-time, skippable form asking about any
         // real interview they recently gave — feeds real interview data
-        // back into InterviewX. Only shown once per session, and only if
+        // back into EvaluLabs. Only shown once per session, and only if
         // the review card isn't taking this slot instead (see
         // handleReviewResolved below).
         if (s.status === "completed" && plan.hasInsights) {
@@ -211,7 +211,7 @@ export default function ResultsPage() {
           style={{ borderColor: "var(--surface)" }}
         >
           <span className="text-base font-bold tracking-tight" style={{ color: "var(--ink)" }}>
-            InterviewX
+            EvaluLabs
           </span>
           <button
             onClick={() => router.push(plan.hasInsights ? "/dashboard" : "/companies")}

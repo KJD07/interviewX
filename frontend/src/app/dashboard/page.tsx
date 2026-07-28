@@ -101,7 +101,7 @@ export default function DashboardPage() {
             style={{ borderColor: "var(--surface)" }}
           >
             <span className="text-lg font-bold tracking-tight" style={{ color: "var(--ink)" }}>
-              InterviewX
+              EvaluLabs
             </span>
             <div className="flex items-center gap-4">
               <span

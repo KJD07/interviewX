@@ -29,11 +29,11 @@ PASSWORD = "TestPass123!"
 # username, email, plan, interviews_this_month (to preview "almost at limit"
 # / "limit reached" states too — tweak these anytime and re-run the command).
 TEST_USERS = [
-    ("test_free", "test.free@interviewx.dev", "free", 0),
-    ("test_free_maxed", "test.free.maxed@interviewx.dev", "free", 2),  # limit reached
-    ("test_pro", "test.pro@interviewx.dev", "pro", 5),
-    ("test_premium", "test.premium@interviewx.dev", "premium", 12),
-    ("test_max", "test.max@interviewx.dev", "max", 37),  # unlimited, should never block
+    ("test_free", "test.free@evalulabs.dev", "free", 0),
+    ("test_free_maxed", "test.free.maxed@evalulabs.dev", "free", 2),  # limit reached
+    ("test_pro", "test.pro@evalulabs.dev", "pro", 5),
+    ("test_premium", "test.premium@evalulabs.dev", "premium", 12),
+    ("test_max", "test.max@evalulabs.dev", "max", 37),  # unlimited, should never block
 ]
 
 
