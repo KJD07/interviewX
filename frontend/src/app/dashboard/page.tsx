@@ -8,12 +8,14 @@ import TopupModal from "@/components/TopupModal";
 import { interviews, ApiError } from "@/lib/api";
 import type { InterviewSession } from "@/lib/api";
 import { planOf, isPaidPlan } from "@/lib/plans";
+import PaginationControls from "@/components/PaginationControls";
+import { useSearchAndPaginate } from "@/hooks/useSearchAndPaginate";
 
 function StatusBadge({ status }: { status: InterviewSession["status"] }) {
   const map = {
-    in_progress: { label: "In progress", bg: "rgba(99,102,241,0.15)", color: "var(--accent)" },
-    completed: { label: "Completed", bg: "rgba(34,197,94,0.12)", color: "#22c55e" },
-    abandoned: { label: "Abandoned", bg: "rgba(100,116,139,0.15)", color: "var(--ink-dim)" },
+    in_progress: { label: "In progress", bg: "var(--accent-glow)", color: "var(--accent)" },
+    completed: { label: "Completed", bg: "var(--success-bg)", color: "var(--success)" },
+    abandoned: { label: "Abandoned", bg: "var(--surface-2)", color: "var(--ink-dim)" },
   };
   const s = map[status];
   return (
@@ -28,7 +30,7 @@ function StatusBadge({ status }: { status: InterviewSession["status"] }) {
 
 function ScorePill({ value }: { value: number | undefined }) {
   if (value === undefined) return <span style={{ color: "var(--ink-faint)" }}>—</span>;
-  const color = value >= 7 ? "#22c55e" : value >= 5 ? "#f59e0b" : "var(--danger)";
+  const color = value >= 7 ? "var(--success)" : value >= 5 ? "#B8862F" : "var(--danger)";
   return (
     <span className="font-semibold tabular-nums" style={{ color }}>
       {value}<span className="text-xs font-normal" style={{ color: "var(--ink-faint)" }}>/10</span>
@@ -88,6 +90,11 @@ export default function DashboardPage() {
     const v = s.scores?.overall;
     return v !== undefined && (best === undefined || v > best) ? v : best;
   }, undefined);
+
+  const sessionSearch = useSearchAndPaginate(
+    sessions,
+    (s) => `${s.company_name ?? ""} ${s.role_title ?? ""} Session #${s.id}`
+  );
 
   return (
     <ProtectedRoute>
@@ -215,10 +222,10 @@ export default function DashboardPage() {
               ].map((stat) => (
                 <div
                   key={stat.label}
-                  className="rounded-lg px-4 py-4"
-                  style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
+                  className="rounded-2xl px-4 py-4 shadow-[0_4px_16px_rgba(28,26,22,0.05)]"
+                  style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
                 >
-                  <p className="text-2xl font-bold tabular-nums" style={{ color: "var(--ink)" }}>
+                  <p className="font-display text-2xl font-bold tabular-nums" style={{ color: "var(--ink)" }}>
                     {stat.value}
                   </p>
                   <p className="text-xs mt-1" style={{ color: "var(--ink-dim)" }}>
@@ -228,10 +235,10 @@ export default function DashboardPage() {
               ))}
               {avgTech !== undefined && (
                 <div
-                  className="rounded-lg px-4 py-4 col-span-2 sm:col-span-1"
-                  style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
+                  className="rounded-2xl px-4 py-4 col-span-2 sm:col-span-1 shadow-[0_4px_16px_rgba(28,26,22,0.05)]"
+                  style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
                 >
-                  <p className="text-2xl font-bold tabular-nums" style={{ color: "var(--ink)" }}>
+                  <p className="font-display text-2xl font-bold tabular-nums" style={{ color: "var(--ink)" }}>
                     {avgTech}/10
                   </p>
                   <p className="text-xs mt-1" style={{ color: "var(--ink-dim)" }}>
@@ -254,8 +261,8 @@ export default function DashboardPage() {
               </p>
             ) : lastCompleted ? (
               <div
-                className="rounded-xl px-6 py-8 text-center"
-                style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
+                className="rounded-3xl px-6 py-8 text-center shadow-[0_8px_32px_rgba(28,26,22,0.06)]"
+                style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
               >
                 <p className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: "var(--ink-dim)" }}>
                   Your last score
@@ -326,8 +333,8 @@ export default function DashboardPage() {
             </p>
           ) : sessions.length === 0 ? (
             <div
-              className="rounded-lg p-10 text-center"
-              style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
+              className="rounded-3xl p-10 text-center shadow-[0_8px_32px_rgba(28,26,22,0.06)]"
+              style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
             >
               <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>
                 No interviews yet.
@@ -344,69 +351,94 @@ export default function DashboardPage() {
               </button>
             </div>
           ) : (
-            <div
-              className="rounded-lg overflow-hidden"
-              style={{ border: "1px solid var(--border-mid)" }}
-            >
-              {/* Table header */}
-              <div
-                className="grid text-xs font-medium uppercase tracking-wider px-5 py-3"
-                style={{
-                  gridTemplateColumns: "1fr 80px 60px 60px 60px 100px",
-                  background: "var(--surface)",
-                  color: "var(--ink-dim)",
-                  borderBottom: "1px solid var(--border-mid)",
-                }}
-              >
-                <span>Session</span>
-                <span>Status</span>
-                <span>Comm.</span>
-                <span>Tech.</span>
-                <span>Overall</span>
-                <span className="text-right">Date</span>
-              </div>
+            <>
+              <input
+                type="text"
+                value={sessionSearch.query}
+                onChange={(e) => sessionSearch.setQuery(e.target.value)}
+                placeholder="Search sessions by company or role…"
+                className="w-full rounded-lg px-3.5 py-2.5 text-sm mb-4"
+                style={{ background: "var(--surface)", border: "1px solid var(--border-mid)", color: "var(--ink)" }}
+              />
 
-              {sessions.map((s, i) => (
+              {sessionSearch.results.length === 0 ? (
+                <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
+                  No sessions match "{sessionSearch.query}".
+                </p>
+              ) : (
                 <div
-                  key={s.id}
-                  onClick={() =>
-                    router.push(
-                      s.status === "completed"
-                        ? `/interview/${s.id}/results`
-                        : `/interview/${s.id}`
-                    )
-                  }
-                  className="grid items-center px-5 py-4 cursor-pointer transition-colors hover:bg-slate-800"
-                  style={{
-                    gridTemplateColumns: "1fr 80px 60px 60px 60px 100px",
-                    borderBottom:
-                      i < sessions.length - 1
-                        ? "1px solid var(--border-mid)"
-                        : "none",
-                    background: i % 2 === 0 ? "transparent" : "rgba(30,41,59,0.4)",
-                  }}
+                  className="rounded-3xl overflow-hidden shadow-[0_8px_32px_rgba(28,26,22,0.06)]"
+                  style={{ border: "1px solid var(--border)", background: "var(--surface)" }}
                 >
-                  <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>
-                    {s.company_name ?? `Session #${s.id}`}
-                    {s.role_title && (
-                      <span className="ml-1.5 font-normal" style={{ color: "var(--ink-faint)" }}>
-                        · {s.role_title}
-                      </span>
-                    )}
-                  </span>
-                  <StatusBadge status={s.status} />
-                  <ScorePill value={s.scores?.communication} />
-                  <ScorePill value={s.scores?.technical} />
-                  <ScorePill value={s.scores?.overall} />
-                  <span
-                    className="text-xs text-right"
-                    style={{ color: "var(--ink-faint)" }}
+                  {/* Table header */}
+                  <div
+                    className="grid text-xs font-medium uppercase tracking-wider px-5 py-3"
+                    style={{
+                      gridTemplateColumns: "1fr 80px 60px 60px 60px 100px",
+                      background: "var(--surface-2)",
+                      color: "var(--ink-dim)",
+                      borderBottom: "1px solid var(--border)",
+                    }}
                   >
-                    {formatDate(s.started_at)}
-                  </span>
+                    <span>Session</span>
+                    <span>Status</span>
+                    <span>Comm.</span>
+                    <span>Tech.</span>
+                    <span>Overall</span>
+                    <span className="text-right">Date</span>
+                  </div>
+
+                  {sessionSearch.results.map((s, i) => (
+                    <div
+                      key={s.id}
+                      onClick={() =>
+                        router.push(
+                          s.status === "completed"
+                            ? `/interview/${s.id}/results`
+                            : `/interview/${s.id}`
+                        )
+                      }
+                      className="dash-row grid items-center px-5 py-4 cursor-pointer transition-colors"
+                      style={{
+                        gridTemplateColumns: "1fr 80px 60px 60px 60px 100px",
+                        borderBottom:
+                          i < sessionSearch.results.length - 1
+                            ? "1px solid var(--border)"
+                            : "none",
+                        background: i % 2 === 0 ? "transparent" : "var(--surface-2)",
+                      }}
+                    >
+                      <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>
+                        {s.company_name ?? `Session #${s.id}`}
+                        {s.role_title && (
+                          <span className="ml-1.5 font-normal" style={{ color: "var(--ink-faint)" }}>
+                            · {s.role_title}
+                          </span>
+                        )}
+                      </span>
+                      <StatusBadge status={s.status} />
+                      <ScorePill value={s.scores?.communication} />
+                      <ScorePill value={s.scores?.technical} />
+                      <ScorePill value={s.scores?.overall} />
+                      <span
+                        className="text-xs text-right"
+                        style={{ color: "var(--ink-faint)" }}
+                      >
+                        {formatDate(s.started_at)}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              )}
+
+              {!sessionSearch.isSearching && (
+                <PaginationControls
+                  page={sessionSearch.page}
+                  totalPages={sessionSearch.totalPages}
+                  onChange={sessionSearch.setPage}
+                />
+              )}
+            </>
           )}
         </main>
       </div>

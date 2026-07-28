@@ -62,7 +62,8 @@ There is no automated frontend test suite (see STATE.md "Known issues").
 - `lib/api.ts` — single fetch wrapper for the whole app: JWT bearer injection, auto-refresh on 401 with a queue (prevents concurrent-request races on a stale access token), typed endpoint functions, `ApiError`, and `tokens` (localStorage access/refresh). Add new backend endpoints here rather than calling `fetch` directly from components.
 - `context/AuthContext.tsx` — auth state (`user`, `loading`, `login`, `register`, `logout`); user snapshot persisted to `ix_user` in localStorage for instant hydration on reload, cleared on logout.
 - `components/ProtectedRoute.tsx` — wraps authenticated pages, redirects to `/login` if unauthenticated.
-- `hooks/useSearchAndPaginate.ts` — shared client-side search/pagination hook used by both the companies and skills list pages.
+- `hooks/useSearchAndPaginate.ts` — shared client-side search/pagination hook (5 per page, search ignores pagination and shows all matches) used by the companies/skills list pages, the dashboard session history table, and the progress page's per-company breakdown.
+- Theming: `globals.css` defines one light, warm palette (`--page`, `--surface`, `--ink`, `--accent`, etc.) applied uniformly to every plan tier. `data-plan` is still set on `<body>` by `AppShell` for plan-gated logic/labels, but it no longer changes colors — don't reintroduce per-tier color overrides without being asked.
 
 ### Cross-cutting notes
 - Plan/limit logic must be checked in exactly one place: `apps/subscriptions/plans.py`. If you're adding a feature gated by plan tier, add the check there, not inline.

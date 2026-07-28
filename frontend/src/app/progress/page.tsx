@@ -12,6 +12,8 @@ import type {
   ProgressCompany,
 } from "@/lib/api";
 import { isPaidPlan } from "@/lib/plans";
+import PaginationControls from "@/components/PaginationControls";
+import { useSearchAndPaginate } from "@/hooks/useSearchAndPaginate";
 
 // ── Small SVG line chart (no chart library — keeps bundle light) ───────────────
 
@@ -316,6 +318,8 @@ function DetailedView({
     { key: "problem_solving", label: "Problem Solving", color: "#f59e0b" },
   ];
 
+  const companySearch = useSearchAndPaginate(data.companies, (c) => c.company);
+
   return (
     <div className="space-y-6">
       {/* Per-dimension trendlines */}
@@ -399,8 +403,25 @@ function DetailedView({
           <p className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--ink-dim)" }}>
             Performance by company
           </p>
+
+          {data.companies.length > 5 && (
+            <input
+              type="text"
+              value={companySearch.query}
+              onChange={(e) => companySearch.setQuery(e.target.value)}
+              placeholder="Search companies…"
+              className="w-full rounded-lg px-3.5 py-2.5 text-sm mb-4"
+              style={{ background: "var(--page)", border: "1px solid var(--border-mid)", color: "var(--ink)" }}
+            />
+          )}
+
+          {companySearch.results.length === 0 ? (
+            <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
+              No companies match "{companySearch.query}".
+            </p>
+          ) : (
           <div className="space-y-2">
-            {data.companies.map((c: ProgressCompany) => (
+            {companySearch.results.map((c: ProgressCompany) => (
               <div
                 key={c.company}
                 className="flex items-center justify-between px-3 py-2.5 rounded-lg"
@@ -433,6 +454,15 @@ function DetailedView({
               </div>
             ))}
           </div>
+          )}
+
+          {!companySearch.isSearching && (
+            <PaginationControls
+              page={companySearch.page}
+              totalPages={companySearch.totalPages}
+              onChange={companySearch.setPage}
+            />
+          )}
         </Card>
       )}
     </div>
