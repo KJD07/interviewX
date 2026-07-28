@@ -989,7 +989,13 @@ export default function InterviewPage() {
               </p>
               <button
                 onClick={async () => {
-                  cancelExitWarning();
+                  // Don't cancel the warning here — if a permission prompt
+                  // (e.g. mic access for voice mode) is still pending, this
+                  // request can fail silently and we'd be left stuck out of
+                  // full-screen with no way to retry. The fullscreenchange
+                  // listener above cancels the warning once full-screen is
+                  // actually re-entered, so the modal stays up (and
+                  // re-clickable) until that really happens.
                   try {
                     await document.documentElement.requestFullscreen?.();
                   } catch {
