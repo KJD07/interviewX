@@ -41,7 +41,8 @@ Skills use the same endpoints with `?kind=skill` — they're stored as
 | POST | `/api/interviews/start/` | Start an interview for a round (checks plan/top-up limit) |
 | POST | `/api/interviews/<id>/chat/` | Send an answer, get the AI's next reply |
 | POST | `/api/interviews/<id>/end/` | End the interview, get scores + feedback |
-| POST | `/api/interviews/<id>/real-report/` | Optional form: report a real interview given elsewhere (paid plans only) |
+| GET | `/api/interviews/real-reports/` | List the logged-in user's own submitted real-interview reports (any plan) |
+| POST | `/api/interviews/real-reports/` | Submit a report of a real interview given elsewhere (paid plans only); optional `session` field, approved reports grant 5 bonus interviews |
 
 ## Subscriptions & payments (`/api/subscriptions/`)
 

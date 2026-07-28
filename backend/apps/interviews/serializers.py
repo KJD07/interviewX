@@ -49,7 +49,12 @@ class RoundEntrySerializer(serializers.Serializer):
 
 class RealInterviewReportSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(read_only=True)
-    session = serializers.PrimaryKeyRelatedField(read_only=True)
+    # Optional: which of the user's own completed sessions (if any) this
+    # report was submitted alongside, for context only. Validated against
+    # the requesting user in validate_session below.
+    session = serializers.PrimaryKeyRelatedField(
+        queryset=InterviewSession.objects.all(), required=False, allow_null=True
+    )
     rounds = serializers.ListField(child=serializers.DictField(), required=False, default=list)
 
     class Meta:
@@ -65,9 +70,21 @@ class RealInterviewReportSerializer(serializers.ModelSerializer):
             "role_title",
             "rounds",
             "can_provide_proof",
+            "status",
+            "reviewed_at",
             "created_at",
         ]
-        read_only_fields = ["id", "session", "user", "created_at"]
+        read_only_fields = ["id", "user", "status", "reviewed_at", "created_at"]
+
+    def validate_session(self, session):
+        if session is None:
+            return session
+        request = self.context["request"]
+        if session.user_id != request.user.id:
+            raise serializers.ValidationError("Not found.")
+        if session.status != InterviewSession.Status.COMPLETED:
+            raise serializers.ValidationError("Session is not completed yet.")
+        return session
 
     def validate(self, attrs):
         if attrs.get("had_recent_interview") == RealInterviewReport.HadRecentInterview.NO:
@@ -105,5 +122,4 @@ class RealInterviewReportSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data["user"] = self.context["request"].user
-        validated_data["session"] = self.context["session"]
         return super().create(validated_data)

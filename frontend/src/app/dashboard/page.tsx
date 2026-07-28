@@ -9,6 +9,7 @@ import { interviews, ApiError } from "@/lib/api";
 import type { InterviewSession } from "@/lib/api";
 import { planOf, isPaidPlan } from "@/lib/plans";
 import PaginationControls from "@/components/PaginationControls";
+import RealInterviewReportsCard from "@/components/RealInterviewReportsCard";
 import { useSearchAndPaginate } from "@/hooks/useSearchAndPaginate";
 
 function StatusBadge({ status }: { status: InterviewSession["status"] }) {
@@ -248,6 +249,11 @@ export default function DashboardPage() {
               )}
             </div>
           )}
+
+          {/* Persistent entry point for submitting real-interview data — earns
+              5 bonus interviews per approved report. Paid plans only, since
+              submission itself is gated the same way server-side. */}
+          {hasInsights && !loadingSessions && !fetchError && <RealInterviewReportsCard />}
 
           {/* Free plan: no dashboard/history — just their most recent plain score */}
           {!hasInsights ? (

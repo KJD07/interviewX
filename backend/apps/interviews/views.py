@@ -783,40 +783,39 @@ def _company_rollups(history):
     return companies
 
 
-class RealInterviewReportView(APIView):
+class RealInterviewReportListCreateView(APIView):
     """
-    POST /api/interviews/<session_id>/real-report/
-
-    Optional post-interview form, shown only to paid-plan (pro/premium/max)
-    users right after a session completes. Captures a real interview the
-    candidate recently gave elsewhere — company, role, rounds, and topics —
-    to feed the question-sourcing pipeline. Fully skippable by the user;
-    this endpoint is only hit if they choose to submit.
+    GET  /api/interviews/real-reports/ — list the authenticated user's own
+         submitted real-interview reports (any plan — so a user who's since
+         downgraded can still see the status of past submissions).
+    POST /api/interviews/real-reports/ — submit a new report. Available to
+         paid-plan (pro/premium/max) users only. Optionally shown right
+         after a session completes (pass `session`), or filled on-demand
+         from the dashboard at any time (omit `session`). Captures a real
+         interview the candidate recently gave elsewhere — company, role,
+         rounds, and topics — to feed the question-sourcing pipeline.
+         A user may submit any number of reports over time; each one that
+         an admin approves grants 5 bonus interview credits (see
+         apps.interviews.admin).
     """
 
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, session_id):
-        try:
-            session = InterviewSession.objects.get(pk=session_id, user=request.user)
-        except InterviewSession.DoesNotExist:
-            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+    def get(self, request):
+        reports = RealInterviewReport.objects.filter(user=request.user)
+        serializer = RealInterviewReportSerializer(reports, many=True)
+        return Response(serializer.data)
 
+    def post(self, request):
         if not has_insights(request.user.subscription_plan):
             return Response(
                 {"detail": "This form is available on Pro, Premium, and Max plans."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        if session.status != InterviewSession.Status.COMPLETED:
-            return Response(
-                {"detail": "Interview session is not completed yet."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
         serializer = RealInterviewReportSerializer(
             data=request.data,
-            context={"request": request, "session": session},
+            context={"request": request},
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()

@@ -6,7 +6,7 @@ from .views import (
     InterviewSessionDetailView,
     InterviewSessionListCreateView,
     ProgressView,
-    RealInterviewReportView,
+    RealInterviewReportListCreateView,
     StartInterviewView,
 )
 
@@ -22,6 +22,6 @@ urlpatterns = [
     path("start/", StartInterviewView.as_view(), name="interview-start"),
     path("<int:session_id>/chat/", ChatView.as_view(), name="interview-chat"),
     path("<int:session_id>/end/", EndInterviewView.as_view(), name="interview-end"),
-    # Post-interview real-interview-report form (paid plans only)
-    path("<int:session_id>/real-report/", RealInterviewReportView.as_view(), name="interview-real-report"),
+    # Real-interview-report form (paid plans submit; own reports listable by anyone)
+    path("real-reports/", RealInterviewReportListCreateView.as_view(), name="interview-real-reports"),
 ]

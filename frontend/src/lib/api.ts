@@ -116,6 +116,17 @@ export interface RealInterviewReportPayload {
   role_title?: string;
   rounds?: RealInterviewRound[];
   can_provide_proof?: boolean;
+  // Which of the user's own completed sessions this was submitted
+  // alongside, if any (omit when submitted on-demand from the dashboard).
+  session?: number;
+}
+
+export interface RealInterviewReport extends RealInterviewReportPayload {
+  id: number;
+  user: number;
+  status: "pending" | "approved" | "rejected";
+  reviewed_at: string | null;
+  created_at: string;
 }
 
 // ── Core fetch wrapper ───────────────────────────────────────────────────────
@@ -343,14 +354,13 @@ export const interviews = {
 
   progress: () => request<ProgressResponse>("/api/interviews/progress/"),
 
-  submitRealReport: (session_id: number, payload: RealInterviewReportPayload) =>
-    request<RealInterviewReportPayload & { id: number; created_at: string }>(
-      `/api/interviews/${session_id}/real-report/`,
-      {
-        method: "POST",
-        body: JSON.stringify(payload),
-      }
-    ),
+  realReports: () => request<RealInterviewReport[]>("/api/interviews/real-reports/"),
+
+  submitRealReport: (payload: RealInterviewReportPayload) =>
+    request<RealInterviewReport>("/api/interviews/real-reports/", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
 };
 
 // ── Subscription endpoints ────────────────────────────────────────────────────

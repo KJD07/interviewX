@@ -61,10 +61,21 @@ class RealInterviewReport(models.Model):
         YES = "yes", "Yes"
         NO = "no", "No"
 
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending review"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+
+    # Optional — set when the report was submitted right after a specific
+    # EvaluLabs session (for context only); null when submitted on-demand
+    # from the dashboard, since the real interview it describes doesn't
+    # have to relate to any particular practice session.
     session = models.ForeignKey(
         InterviewSession,
         on_delete=models.CASCADE,
         related_name="real_reports",
+        null=True,
+        blank=True,
     )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -84,6 +95,15 @@ class RealInterviewReport(models.Model):
     # when had_recent_interview == "yes", rest optional.
     rounds = models.JSONField(default=list, blank=True)
     can_provide_proof = models.BooleanField(default=False)
+    # Approving a "yes" report (see admin actions) grants the submitting
+    # user 5 bonus interviews, once. Reports with had_recent_interview ==
+    # "no" carry no reward and stay pending/rejected only for record-keeping.
+    status = models.CharField(
+        max_length=10,
+        choices=Status.choices,
+        default=Status.PENDING,
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
