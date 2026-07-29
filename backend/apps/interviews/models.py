@@ -91,8 +91,12 @@ class RealInterviewReport(models.Model):
     email = models.EmailField(blank=True)
     company_name = models.CharField(max_length=200, blank=True)
     role_title = models.CharField(max_length=200, blank=True)
-    # [{"round_name": "...", "topics": "..."}, ...] — first entry required
-    # when had_recent_interview == "yes", rest optional.
+    # [{"round_name": "...", "topics": "...", "questions": ["..."]}, ...] —
+    # first entry required when had_recent_interview == "yes", rest
+    # optional. "questions" holds the literal questions the candidate was
+    # asked in that round (optional) — each becomes a pending
+    # InterviewQuestion row (see companies.InterviewQuestion.source_report)
+    # for an admin to verify.
     rounds = models.JSONField(default=list, blank=True)
     can_provide_proof = models.BooleanField(default=False)
     # Approving a "yes" report (see admin actions) grants the submitting
@@ -105,6 +109,13 @@ class RealInterviewReport(models.Model):
     )
     reviewed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    # Separate from `status`/`reviewed_at` above, which track the report
+    # text itself. This tracks the CANDIDATE-SUBMITTED QUESTIONS reward: set
+    # once an admin has verified (approved) at least one submitted question
+    # from this report AND the user held a paid plan at that moment, so a
+    # submission with several questions approved in separate admin batches
+    # is never rewarded more than once. See apps.companies.admin.
+    questions_reward_granted_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-created_at"]

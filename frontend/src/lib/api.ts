@@ -106,6 +106,10 @@ export interface StartInterviewResponse {
 export interface RealInterviewRound {
   round_name: string;
   topics: string;
+  // Literal questions the candidate was asked in this round, if they chose
+  // to share them. Verified submissions earn 5 extra bonus interviews
+  // (once per report) for users currently on a paid plan.
+  questions?: string[];
 }
 
 export interface RealInterviewReportPayload {

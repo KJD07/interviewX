@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -102,16 +103,27 @@ class Round(models.Model):
 
 
 class InterviewQuestion(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending review"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+
     QUESTION_TYPES = [
         ("mcq", "MCQ"),
         ("coding", "Coding"),
         ("behavioral", "Behavioral"),
+        ("other", "Other"),
     ]
 
+    # Null for a candidate-submitted question not yet linked to a curated
+    # Round (see submitted_* fields below) — an admin attaches the real
+    # Round manually once they've verified the submission.
     round = models.ForeignKey(
         Round,
         on_delete=models.CASCADE,
         related_name="questions",
+        null=True,
+        blank=True,
     )
     question_text = models.TextField()
     question_type = models.CharField(max_length=20, choices=QUESTION_TYPES)
@@ -121,6 +133,34 @@ class InterviewQuestion(models.Model):
         default=False,
         help_text="True if sourced automatically from the web via AI, rather than entered by an admin.",
     )
+    # Candidate-submission tracking. Admin/AI-sourced rows leave these unset
+    # and default straight to APPROVED so they behave exactly as before.
+    status = models.CharField(
+        max_length=10,
+        choices=Status.choices,
+        default=Status.APPROVED,
+        help_text="Candidate-submitted questions start 'pending' until an admin verifies them.",
+    )
+    submitted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="submitted_questions",
+    )
+    source_report = models.ForeignKey(
+        "interviews.RealInterviewReport",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="submitted_questions",
+        help_text="The real-interview-report submission this question came from, if any.",
+    )
+    # Free-text company/role/round names as reported by the candidate, kept
+    # only until an admin resolves and attaches the real Round above.
+    submitted_company_name = models.CharField(max_length=200, blank=True)
+    submitted_role_title = models.CharField(max_length=200, blank=True)
+    submitted_round_name = models.CharField(max_length=200, blank=True)
 
     class Meta:
         ordering = ["id"]

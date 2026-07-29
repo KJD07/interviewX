@@ -1,6 +1,13 @@
 from rest_framework import serializers
 
+from apps.companies.models import InterviewQuestion
+
 from .models import InterviewSession, RealInterviewReport
+
+# Per-round cap on candidate-submitted questions, kept small since these are
+# reviewed by hand by an admin before they're trusted or rewarded.
+MAX_QUESTIONS_PER_ROUND = 10
+MAX_QUESTION_LENGTH = 1000
 
 
 class InterviewSessionSerializer(serializers.ModelSerializer):
@@ -45,6 +52,11 @@ class InterviewSessionListSerializer(serializers.ModelSerializer):
 class RoundEntrySerializer(serializers.Serializer):
     round_name = serializers.CharField(max_length=200)
     topics = serializers.CharField(max_length=2000, allow_blank=True)
+    questions = serializers.ListField(
+        child=serializers.CharField(max_length=MAX_QUESTION_LENGTH, allow_blank=False),
+        required=False,
+        default=list,
+    )
 
 
 class RealInterviewReportSerializer(serializers.ModelSerializer):
@@ -109,7 +121,14 @@ class RealInterviewReportSerializer(serializers.ModelSerializer):
                     errors["rounds"] = "The first round's name is required."
                     break
                 if round_name:
-                    validated_rounds.append({"round_name": round_name, "topics": topics})
+                    questions = [
+                        q.strip()
+                        for q in (r.get("questions") or [])
+                        if isinstance(q, str) and q.strip()
+                    ][:MAX_QUESTIONS_PER_ROUND]
+                    validated_rounds.append(
+                        {"round_name": round_name, "topics": topics, "questions": questions}
+                    )
             attrs["rounds"] = validated_rounds
 
         if "can_provide_proof" not in self.initial_data:
@@ -122,4 +141,23 @@ class RealInterviewReportSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data["user"] = self.context["request"].user
-        return super().create(validated_data)
+        report = super().create(validated_data)
+
+        questions_to_create = [
+            InterviewQuestion(
+                submitted_by=report.user,
+                source_report=report,
+                submitted_company_name=report.company_name,
+                submitted_role_title=report.role_title,
+                submitted_round_name=r.get("round_name", ""),
+                question_text=q,
+                question_type="other",
+                status=InterviewQuestion.Status.PENDING,
+            )
+            for r in (report.rounds or [])
+            for q in r.get("questions", [])
+        ]
+        if questions_to_create:
+            InterviewQuestion.objects.bulk_create(questions_to_create)
+
+        return report

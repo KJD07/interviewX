@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { interviews, ApiError } from "@/lib/api";
-import type { RealInterviewRound, RealInterviewReport } from "@/lib/api";
+import type { RealInterviewReport } from "@/lib/api";
 
 interface Props {
   sessionId?: number;
@@ -90,7 +90,14 @@ function ChoiceCard({
 
 // Steps for the "yes, I interviewed recently" path. The "no" path only
 // ever uses step 0 followed by a one-tap confirm-and-submit screen.
-const YES_STEPS = ["Recently interviewed?", "Your details", "Rounds asked", "Review & submit"];
+const YES_STEPS = ["Recently interviewed?", "Your details", "Rounds asked", "Proof & submit"];
+
+interface RoundDraft {
+  round_name: string;
+  topics: string;
+  // Raw textarea value, one question per line — split into an array on submit.
+  questionsText: string;
+}
 
 export default function RealInterviewReportModal({ sessionId, onClose, onSubmitted }: Props) {
   const [hadRecentInterview, setHadRecentInterview] = useState<"" | "yes" | "no">("");
@@ -100,17 +107,20 @@ export default function RealInterviewReportModal({ sessionId, onClose, onSubmitt
   const [email, setEmail] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [roleTitle, setRoleTitle] = useState("");
-  const [rounds, setRounds] = useState<RealInterviewRound[]>([{ round_name: "", topics: "" }]);
+  const [rounds, setRounds] = useState<RoundDraft[]>([
+    { round_name: "", topics: "", questionsText: "" },
+  ]);
   const [canProvideProof, setCanProvideProof] = useState<"" | "yes" | "no">("");
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
-  const updateRound = (index: number, field: keyof RealInterviewRound, value: string) => {
+  const updateRound = (index: number, field: keyof RoundDraft, value: string) => {
     setRounds((prev) => prev.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
   };
-  const addRound = () => setRounds((prev) => [...prev, { round_name: "", topics: "" }]);
+  const addRound = () =>
+    setRounds((prev) => [...prev, { round_name: "", topics: "", questionsText: "" }]);
   const removeRound = (index: number) =>
     setRounds((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev));
 
@@ -168,7 +178,14 @@ export default function RealInterviewReportModal({ sessionId, onClose, onSubmitt
               role_title: roleTitle.trim(),
               rounds: rounds
                 .filter((r) => r.round_name.trim())
-                .map((r) => ({ round_name: r.round_name.trim(), topics: r.topics.trim() })),
+                .map((r) => ({
+                  round_name: r.round_name.trim(),
+                  topics: r.topics.trim(),
+                  questions: r.questionsText
+                    .split("\n")
+                    .map((q) => q.trim())
+                    .filter(Boolean),
+                })),
               can_provide_proof: canProvideProof === "yes",
               session: sessionId,
             }
@@ -219,7 +236,11 @@ export default function RealInterviewReportModal({ sessionId, onClose, onSubmitt
             <span className="font-semibold" style={{ color: "var(--accent)" }}>
               5 free interviews
             </span>
-            . Totally optional.
+            , and if you also list the exact questions you were asked, verifying those earns{" "}
+            <span className="font-semibold" style={{ color: "var(--accent)" }}>
+              5 more
+            </span>{" "}
+            (paid-plan members only). Totally optional.
           </p>
 
           {/* Progress dots — only shown once a path is chosen */}
@@ -355,6 +376,13 @@ export default function RealInterviewReportModal({ sessionId, onClose, onSubmitt
                       rows={2}
                       className={`${inputStyle} resize-none`}
                     />
+                    <textarea
+                      value={r.questionsText}
+                      onChange={(e) => updateRound(i, "questionsText", e.target.value)}
+                      placeholder="Exact questions you were asked, one per line (optional — verified questions earn extra bonus interviews)"
+                      rows={2}
+                      className={`${inputStyle} resize-none`}
+                    />
                   </div>
                 ))}
                 <button
@@ -369,30 +397,14 @@ export default function RealInterviewReportModal({ sessionId, onClose, onSubmitt
             </Field>
           )}
 
-          {/* "Yes" path — step 3: proof + review */}
+          {/* "Yes" path — step 3: proof + submit */}
           {step === 3 && hadRecentInterview === "yes" && (
-            <>
-              <Field label="Can you provide proof of the interview you were recently interviewed for?" error={errors.canProvideProof}>
-                <div className="space-y-2.5">
-                  <ChoiceCard selected={canProvideProof === "yes"} onClick={() => setCanProvideProof("yes")} title="Yes" subtitle="I can share an offer letter, email, or similar." />
-                  <ChoiceCard selected={canProvideProof === "no"} onClick={() => setCanProvideProof("no")} title="No" subtitle="I don't have anything to share." />
-                </div>
-              </Field>
-
-              <div className="rounded-2xl p-4 space-y-1" style={{ background: "var(--surface-2)", border: "1px solid var(--border-mid)" }}>
-                <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--ink-dim)" }}>
-                  Review
-                </p>
-                <p className="text-sm" style={{ color: "var(--ink)" }}>
-                  <span style={{ color: "var(--ink-dim)" }}>Company · Role: </span>
-                  {companyName || "—"} · {roleTitle || "—"}
-                </p>
-                <p className="text-sm" style={{ color: "var(--ink)" }}>
-                  <span style={{ color: "var(--ink-dim)" }}>Rounds reported: </span>
-                  {rounds.filter((r) => r.round_name.trim()).length}
-                </p>
+            <Field label="Can you provide proof of the interview you were recently interviewed for?" error={errors.canProvideProof}>
+              <div className="space-y-2.5">
+                <ChoiceCard selected={canProvideProof === "yes"} onClick={() => setCanProvideProof("yes")} title="Yes" subtitle="I can share an offer letter, email, or similar." />
+                <ChoiceCard selected={canProvideProof === "no"} onClick={() => setCanProvideProof("no")} title="No" subtitle="I don't have anything to share." />
               </div>
-            </>
+            </Field>
           )}
 
           {submitError && (

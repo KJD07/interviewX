@@ -796,7 +796,12 @@ class RealInterviewReportListCreateView(APIView):
          rounds, and topics — to feed the question-sourcing pipeline.
          A user may submit any number of reports over time; each one that
          an admin approves grants 5 bonus interview credits (see
-         apps.interviews.admin).
+         apps.interviews.admin). Separately, any literal questions the
+         candidate reports being asked (rounds[].questions) become pending
+         InterviewQuestion rows; once an admin verifies (approves) at least
+         one of them, the submitter is granted 5 more bonus interviews,
+         once per report — but only if they currently hold a paid plan
+         (see apps.companies.admin.approve_questions).
     """
 
     permission_classes = [IsAuthenticated]

@@ -1,3 +1,4 @@
+from django.db.models import Prefetch
 from rest_framework import status
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
@@ -6,6 +7,12 @@ from rest_framework.views import APIView
 from core.question_sourcing import QuestionSourcingError, source_questions_for_round
 
 from .models import Company, InterviewQuestion, Role, Round
+
+# Candidate-submitted questions stay hidden from these read endpoints until
+# an admin verifies them; admin/AI-sourced questions default to approved.
+_approved_questions = Prefetch(
+    "questions", queryset=InterviewQuestion.objects.filter(status=InterviewQuestion.Status.APPROVED)
+)
 from .serializers import (
     CompanyListSerializer,
     CompanySerializer,
@@ -50,7 +57,10 @@ class CompanyDetailView(APIView):
     def get(self, request, company_id):
         try:
             company = Company.objects.prefetch_related(
-                "roles__rounds__questions"
+                Prefetch(
+                    "roles__rounds__questions",
+                    queryset=InterviewQuestion.objects.filter(status=InterviewQuestion.Status.APPROVED),
+                )
             ).get(pk=company_id)
         except Company.DoesNotExist:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
@@ -79,7 +89,10 @@ class RoleListView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
         roles = Role.objects.filter(company_id=company_id).prefetch_related(
-            "rounds__questions"
+            Prefetch(
+                "rounds__questions",
+                queryset=InterviewQuestion.objects.filter(status=InterviewQuestion.Status.APPROVED),
+            )
         )
         serializer = RoleSerializer(roles, many=True)
         return Response(serializer.data)
@@ -100,7 +113,7 @@ class RoundListView(APIView):
                 {"detail": _access_denied_detail(role.company)},
                 status=status.HTTP_403_FORBIDDEN,
             )
-        rounds = Round.objects.filter(role=role).prefetch_related("questions")
+        rounds = Round.objects.filter(role=role).prefetch_related(_approved_questions)
         serializer = RoundSerializer(rounds, many=True)
         return Response(serializer.data)
 
@@ -113,7 +126,7 @@ class RoundDetailView(APIView):
     def get(self, request, company_id, role_id, round_id):
         try:
             round_ = Round.objects.select_related("role__company").prefetch_related(
-                "questions"
+                _approved_questions
             ).get(
                 pk=round_id,
                 role_id=role_id,
