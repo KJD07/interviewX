@@ -93,6 +93,14 @@ DATABASES = {
         "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "aiis_pass"),
         "HOST": os.environ.get("POSTGRES_HOST", "db"),
         "PORT": os.environ.get("POSTGRES_PORT", "5432"),
+        # Reuse each DB connection for up to N seconds instead of opening a
+        # fresh one per request — relieves connection churn now that gthread
+        # workers serve many concurrent requests. Env-tunable; set to 0 when
+        # running behind a transaction-mode pooler (e.g. PgBouncer).
+        "CONN_MAX_AGE": int(os.environ.get("DJANGO_CONN_MAX_AGE", "60")),
+        # With persistent connections, revalidate at the start of each request
+        # so a dropped/stale connection never surfaces as a request error.
+        "CONN_HEALTH_CHECKS": True,
     }
 }
 
