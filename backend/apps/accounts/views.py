@@ -8,6 +8,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from apps.subscriptions.plans import effective_monthly_limit, effective_plan
+
 from .emails import send_otp_email
 from .models import EmailOTP
 from .throttles import AuthRateThrottle
@@ -32,7 +34,8 @@ def _token_response(user) -> dict:
             "id": user.id,
             "email": user.email,
             "username": user.username,
-            "subscription_plan": user.subscription_plan,
+            "subscription_plan": effective_plan(user),
+            "monthly_limit": effective_monthly_limit(user),
             "is_email_verified": user.is_email_verified,
             "auth_provider": user.auth_provider,
         },
@@ -285,13 +288,19 @@ class MeView(APIView):
         changed_fields = user.sync_subscription_state()
         if changed_fields:
             user.save(update_fields=changed_fields)
+        is_sponsored = user.sponsorship_campaign_id is not None
         return Response(
             {
                 "id": user.id,
                 "email": user.email,
                 "username": user.username,
-                "subscription_plan": user.subscription_plan,
-                "interviews_this_month": user.interviews_this_month,
+                "subscription_plan": effective_plan(user),
+                "monthly_limit": effective_monthly_limit(user),
+                "interviews_this_month": (
+                    user.sponsorship_interviews_used
+                    if is_sponsored
+                    else user.interviews_this_month
+                ),
                 "bonus_interviews": user.bonus_interviews,
                 "is_email_verified": user.is_email_verified,
                 "auth_provider": user.auth_provider,

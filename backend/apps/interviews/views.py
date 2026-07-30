@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.companies.models import Round
-from apps.subscriptions.plans import has_insights, monthly_limit_for
+from apps.subscriptions.plans import effective_monthly_limit, effective_plan, has_insights
 from core.openrouter_client import (
     build_feedback_prompt,
     build_interview_system_prompt,
@@ -195,21 +195,32 @@ class StartInterviewView(APIView):
         changed_fields = user.sync_subscription_state()
         if changed_fields:
             user.save(update_fields=changed_fields)
-        limit = monthly_limit_for(user.subscription_plan)
-        plan_exhausted = limit is not None and user.interviews_this_month >= limit
-        if plan_exhausted and user.bonus_interviews <= 0:
+        is_sponsored = user.sponsorship_campaign_id is not None
+        limit = effective_monthly_limit(user)
+        used = user.sponsorship_interviews_used if is_sponsored else user.interviews_this_month
+        plan_exhausted = limit is not None and used >= limit
+        # Sponsored seats are never extendable with bonus/top-up credits —
+        # the cap is a fixed per-cycle allowance from the sponsoring
+        # institution, not a purchasable plan quota.
+        if plan_exhausted and (is_sponsored or user.bonus_interviews <= 0):
+            if is_sponsored:
+                detail = (
+                    f"You've used all {limit} interviews from "
+                    f"{user.sponsorship_campaign.name} this cycle. Ask your "
+                    f"institution to renew access, or subscribe personally to "
+                    f"keep going."
+                )
+            else:
+                detail = (
+                    f"You've reached your {user.subscription_plan} plan limit "
+                    f"({limit} interviews/month). Upgrade your plan or buy a "
+                    f"top-up pack to keep going."
+                )
             return Response(
-                {
-                    "detail": (
-                        f"You've reached your {user.subscription_plan} plan limit "
-                        f"({limit} interviews/month). Upgrade your plan or buy a "
-                        f"top-up pack to keep going."
-                    ),
-                    "code": "plan_limit_reached",
-                },
+                {"detail": detail, "code": "plan_limit_reached"},
                 status=status.HTTP_403_FORBIDDEN,
             )
-        use_bonus_credit = plan_exhausted and user.bonus_interviews > 0
+        use_bonus_credit = not is_sponsored and plan_exhausted and user.bonus_interviews > 0
 
         try:
             round_obj, questions = _get_round_with_context(round_id)
@@ -218,7 +229,7 @@ class StartInterviewView(APIView):
                 {"detail": "Round not found."}, status=status.HTTP_404_NOT_FOUND
             )
 
-        if not round_obj.role.company.is_accessible_by(user.subscription_plan):
+        if not round_obj.role.company.is_accessible_by(effective_plan(user)):
             company = round_obj.role.company
             detail = (
                 "Skill-based interviews are available on Premium and Max plans."
@@ -259,23 +270,35 @@ class StartInterviewView(APIView):
         # and both get created — over-granting quota.
         with transaction.atomic():
             locked_user = User.objects.select_for_update().get(pk=user.pk)
-            limit = monthly_limit_for(locked_user.subscription_plan)
-            plan_exhausted = (
-                limit is not None and locked_user.interviews_this_month >= limit
+            is_sponsored = locked_user.sponsorship_campaign_id is not None
+            limit = effective_monthly_limit(locked_user)
+            used = (
+                locked_user.sponsorship_interviews_used
+                if is_sponsored
+                else locked_user.interviews_this_month
             )
-            if plan_exhausted and locked_user.bonus_interviews <= 0:
+            plan_exhausted = limit is not None and used >= limit
+            if plan_exhausted and (is_sponsored or locked_user.bonus_interviews <= 0):
+                if is_sponsored:
+                    detail = (
+                        f"You've used all {limit} interviews from "
+                        f"{locked_user.sponsorship_campaign.name} this cycle. Ask "
+                        f"your institution to renew access, or subscribe "
+                        f"personally to keep going."
+                    )
+                else:
+                    detail = (
+                        f"You've reached your {locked_user.subscription_plan} plan "
+                        f"limit ({limit} interviews/month). Upgrade your plan or "
+                        f"buy a top-up pack to keep going."
+                    )
                 return Response(
-                    {
-                        "detail": (
-                            f"You've reached your {locked_user.subscription_plan} plan "
-                            f"limit ({limit} interviews/month). Upgrade your plan or "
-                            f"buy a top-up pack to keep going."
-                        ),
-                        "code": "plan_limit_reached",
-                    },
+                    {"detail": detail, "code": "plan_limit_reached"},
                     status=status.HTTP_403_FORBIDDEN,
                 )
-            use_bonus_credit = plan_exhausted and locked_user.bonus_interviews > 0
+            use_bonus_credit = (
+                not is_sponsored and plan_exhausted and locked_user.bonus_interviews > 0
+            )
 
             # Create session with AI opening turn already in transcript
             session = InterviewSession.objects.create(
@@ -288,9 +311,13 @@ class StartInterviewView(APIView):
                 ),
             )
 
-            # Consume a bonus credit if the plan quota was already exhausted,
-            # otherwise count it against the normal monthly quota as before.
-            if use_bonus_credit:
+            # Consume against the sponsorship cycle if sponsored, otherwise a
+            # bonus credit if the plan quota was already exhausted, otherwise
+            # the normal monthly quota as before.
+            if is_sponsored:
+                locked_user.sponsorship_interviews_used += 1
+                locked_user.save(update_fields=["sponsorship_interviews_used"])
+            elif use_bonus_credit:
                 locked_user.bonus_interviews -= 1
                 locked_user.save(update_fields=["bonus_interviews"])
             else:
@@ -539,7 +566,7 @@ def _score_and_complete_session(session: InterviewSession, *, time_expired: bool
             {"detail": "Round not found."}, status=status.HTTP_404_NOT_FOUND
         )
 
-    detailed = has_insights(session.user.subscription_plan)
+    detailed = has_insights(effective_plan(session.user))
 
     engagement = _analyze_candidate_engagement(session.transcript)
 
@@ -668,7 +695,7 @@ class ProgressView(APIView):
 
     def get(self, request):
         user = request.user
-        detailed = has_insights(user.subscription_plan)
+        detailed = has_insights(effective_plan(user))
 
         sessions = list(
             InterviewSession.objects.filter(
@@ -832,7 +859,7 @@ class RealInterviewReportListCreateView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        if not has_insights(request.user.subscription_plan):
+        if not has_insights(effective_plan(request.user)):
             return Response(
                 {"detail": "This form is available on Pro, Premium, and Max plans."},
                 status=status.HTTP_403_FORBIDDEN,

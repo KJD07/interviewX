@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.subscriptions.plans import effective_plan
 from core.question_sourcing import QuestionSourcingError, source_questions_for_round
 
 from .models import Company, InterviewQuestion, Role, Round
@@ -38,7 +39,10 @@ class CompanyListView(APIView):
     def get(self, request):
         kind = request.query_params.get("kind", Company.Kind.COMPANY)
         companies = Company.objects.filter(kind=kind)
-        plan = request.user.subscription_plan
+        changed_fields = request.user.sync_subscription_state()
+        if changed_fields:
+            request.user.save(update_fields=changed_fields)
+        plan = effective_plan(request.user)
         if kind == Company.Kind.SKILL:
             # Skills are all-or-nothing: not entitled -> nothing shown.
             if not Company(kind=Company.Kind.SKILL).is_accessible_by(plan):
@@ -64,7 +68,10 @@ class CompanyDetailView(APIView):
             ).get(pk=company_id)
         except Company.DoesNotExist:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
-        if not company.is_accessible_by(request.user.subscription_plan):
+        changed_fields = request.user.sync_subscription_state()
+        if changed_fields:
+            request.user.save(update_fields=changed_fields)
+        if not company.is_accessible_by(effective_plan(request.user)):
             return Response(
                 {"detail": _access_denied_detail(company)},
                 status=status.HTTP_403_FORBIDDEN,
@@ -83,7 +90,10 @@ class RoleListView(APIView):
             company = Company.objects.get(pk=company_id)
         except Company.DoesNotExist:
             return Response({"detail": "Company not found."}, status=status.HTTP_404_NOT_FOUND)
-        if not company.is_accessible_by(request.user.subscription_plan):
+        changed_fields = request.user.sync_subscription_state()
+        if changed_fields:
+            request.user.save(update_fields=changed_fields)
+        if not company.is_accessible_by(effective_plan(request.user)):
             return Response(
                 {"detail": _access_denied_detail(company)},
                 status=status.HTTP_403_FORBIDDEN,
@@ -108,7 +118,10 @@ class RoundListView(APIView):
             role = Role.objects.select_related("company").get(pk=role_id, company_id=company_id)
         except Role.DoesNotExist:
             return Response({"detail": "Role not found."}, status=status.HTTP_404_NOT_FOUND)
-        if not role.company.is_accessible_by(request.user.subscription_plan):
+        changed_fields = request.user.sync_subscription_state()
+        if changed_fields:
+            request.user.save(update_fields=changed_fields)
+        if not role.company.is_accessible_by(effective_plan(request.user)):
             return Response(
                 {"detail": _access_denied_detail(role.company)},
                 status=status.HTTP_403_FORBIDDEN,
@@ -134,7 +147,10 @@ class RoundDetailView(APIView):
             )
         except Round.DoesNotExist:
             return Response({"detail": "Round not found."}, status=status.HTTP_404_NOT_FOUND)
-        if not round_.role.company.is_accessible_by(request.user.subscription_plan):
+        changed_fields = request.user.sync_subscription_state()
+        if changed_fields:
+            request.user.save(update_fields=changed_fields)
+        if not round_.role.company.is_accessible_by(effective_plan(request.user)):
             return Response(
                 {"detail": _access_denied_detail(round_.role.company)},
                 status=status.HTTP_403_FORBIDDEN,

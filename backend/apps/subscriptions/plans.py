@@ -89,3 +89,25 @@ SKILLS_PLANS = {"premium", "max"}
 
 def has_skills(plan: str) -> bool:
     return plan in SKILLS_PLANS
+
+
+# ---------------------------------------------------------------------------
+# Sponsorship campaigns (college/institution partnerships)
+# ---------------------------------------------------------------------------
+# A sponsored user's real `subscription_plan` field is left untouched — these
+# derive the *effective* tier/limit for the duration of an active sponsorship
+# (see SponsorshipCampaign + User.sync_subscription_state()), so callers that
+# gate features/limits should use these instead of the raw field wherever a
+# sponsored user needs to see the campaign's grant rather than their own plan.
+
+
+def effective_plan(user) -> str:
+    if user.sponsorship_campaign_id:
+        return user.sponsorship_campaign.granted_plan
+    return user.subscription_plan
+
+
+def effective_monthly_limit(user):
+    if user.sponsorship_campaign_id:
+        return user.sponsorship_campaign.interview_limit
+    return monthly_limit_for(user.subscription_plan)

@@ -32,10 +32,24 @@ class User(AbstractUser):
         help_text="Start of the current 30-day usage cycle.",
     )
 
+    # --- Institutional sponsorship (college partnerships) ---
+    # Fully parallel to the fields above — never overwritten by, and never
+    # overwrites, the user's own subscription_plan/interviews_this_month.
+    sponsorship_campaign = models.ForeignKey(
+        "subscriptions.SponsorshipCampaign",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="students",
+    )
+    sponsorship_cycle_start = models.DateTimeField(null=True, blank=True)
+    sponsorship_interviews_used = models.IntegerField(default=0)
+
     def sync_subscription_state(self):
-        """Lazily downgrade lapsed subscriptions and roll the monthly
-        interview counter over every 30 days. Called on request since there
-        is no Celery/cron worker in this project. Returns changed fields."""
+        """Lazily downgrade lapsed subscriptions, roll the monthly interview
+        counter over every 30 days, and attach/expire/roll any institutional
+        sponsorship. Called on request since there is no Celery/cron worker
+        in this project. Returns changed fields."""
         changed = []
         now = timezone.now()
 
@@ -55,6 +69,49 @@ class User(AbstractUser):
                 days=30 * elapsed_cycles
             )
             changed += ["interviews_this_month", "current_cycle_start"]
+
+        from apps.subscriptions.models import SponsorshipCampaign
+
+        if self.sponsorship_campaign_id is None:
+            domain = self.email.rsplit("@", 1)[-1].lower() if self.email else ""
+            campaign = (
+                SponsorshipCampaign.objects.filter(
+                    email_domain=domain,
+                    is_active=True,
+                    sponsor_covers_until__gt=now,
+                ).first()
+                if domain
+                else None
+            )
+            if campaign:
+                self.sponsorship_campaign = campaign
+                self.sponsorship_cycle_start = now
+                self.sponsorship_interviews_used = 0
+                changed += [
+                    "sponsorship_campaign",
+                    "sponsorship_cycle_start",
+                    "sponsorship_interviews_used",
+                ]
+        else:
+            campaign = self.sponsorship_campaign
+            if not campaign.is_active or now >= campaign.sponsor_covers_until:
+                self.sponsorship_campaign = None
+                self.sponsorship_cycle_start = None
+                self.sponsorship_interviews_used = 0
+                changed += [
+                    "sponsorship_campaign",
+                    "sponsorship_cycle_start",
+                    "sponsorship_interviews_used",
+                ]
+            elif now >= self.sponsorship_cycle_start + timedelta(days=campaign.cycle_days):
+                self.sponsorship_interviews_used = 0
+                elapsed_cycles = max(
+                    (now - self.sponsorship_cycle_start).days // campaign.cycle_days, 1
+                )
+                self.sponsorship_cycle_start = self.sponsorship_cycle_start + timedelta(
+                    days=campaign.cycle_days * elapsed_cycles
+                )
+                changed += ["sponsorship_interviews_used", "sponsorship_cycle_start"]
 
         return changed
 

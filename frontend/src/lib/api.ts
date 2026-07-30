@@ -40,6 +40,7 @@ export interface User {
   email: string;
   username: string;
   subscription_plan: "free" | "premium";
+  monthly_limit?: number | null;
   interviews_this_month?: number;
   bonus_interviews?: number;
   is_email_verified?: boolean;

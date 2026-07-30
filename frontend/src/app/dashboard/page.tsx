@@ -85,7 +85,7 @@ export default function DashboardPage() {
   const isPro = isPaidPlan(user?.subscription_plan);
   const hasInsights = plan.hasInsights;
   const monthlyUsed = user?.interviews_this_month ?? 0;
-  const monthlyLimit = plan.monthlyLimit; // null = unlimited
+  const monthlyLimit = user?.monthly_limit ?? plan.monthlyLimit; // null = unlimited
   const bonusInterviews = user?.bonus_interviews ?? 0;
   // Plan quota used up AND no purchased top-up credits left — bonus credits
   // let a user keep going past their monthly limit without upgrading.
