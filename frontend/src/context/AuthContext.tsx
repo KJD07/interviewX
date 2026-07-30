@@ -53,6 +53,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(false);
   }, []);
 
+  // Fired by lib/api.ts when a token refresh fails (refresh token expired,
+  // invalid, or blacklisted after rotation). Without this, tokens are wiped
+  // but `user`/`ix_user` stay stale, so the UI keeps looking logged in while
+  // every request silently fails — this clears local auth state so
+  // ProtectedRoute redirects to /login instead.
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      localStorage.removeItem("ix_user");
+      setUser(null);
+    };
+    window.addEventListener("ix:auth-expired", handleAuthExpired);
+    return () => window.removeEventListener("ix:auth-expired", handleAuthExpired);
+  }, []);
+
   const persistUser = (u: User) => {
     setUser(u);
     localStorage.setItem("ix_user", JSON.stringify(u));

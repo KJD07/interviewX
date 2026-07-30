@@ -21,6 +21,18 @@ export const tokens = {
   },
 };
 
+// Dispatched whenever a token refresh fails (refresh token expired/invalid/
+// blacklisted). AuthContext listens for this to clear its `user` state and
+// the `ix_user` localStorage snapshot — without it, tokens.clear() wipes the
+// tokens but the app still looks logged in (stale ix_user), so every
+// subsequent request fails the same way with no path back to /login.
+const AUTH_EXPIRED_EVENT = "ix:auth-expired";
+function notifyAuthExpired() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
+  }
+}
+
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export interface User {
@@ -150,11 +162,15 @@ async function refreshAccessToken(): Promise<string | null> {
 
   if (!res.ok) {
     tokens.clear();
+    notifyAuthExpired();
     return null;
   }
 
   const data = await res.json();
-  tokens.set(data.access, refresh);
+  // The backend may rotate refresh tokens (SIMPLE_JWT ROTATE_REFRESH_TOKENS);
+  // if it sends a new one back, it must replace ours — reusing the old one
+  // after rotation gets it blacklisted and permanently breaks future refreshes.
+  tokens.set(data.access, data.refresh ?? refresh);
   return data.access;
 }
 

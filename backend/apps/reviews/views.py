@@ -1,3 +1,4 @@
+from django.db import IntegrityError
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -37,7 +38,16 @@ class ReviewCreateView(APIView):
 
         serializer = ReviewSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
-        serializer.save(user=request.user, plan_at_time=request.user.subscription_plan)
+        try:
+            serializer.save(user=request.user, plan_at_time=request.user.subscription_plan)
+        except IntegrityError:
+            # Lost a race against a concurrent duplicate submission from the
+            # same user — the exists() check above can't fully prevent this
+            # since Review.user is a OneToOneField with no app-level lock.
+            return Response(
+                {"detail": "You've already submitted a review."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 

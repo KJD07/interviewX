@@ -117,15 +117,18 @@ class InterviewQuestionAdmin(admin.ModelAdmin):
         from apps.interviews.models import RealInterviewReport
 
         eligible = queryset.exclude(status=InterviewQuestion.Status.APPROVED)
-        approved_count = eligible.update(status=InterviewQuestion.Status.APPROVED)
 
         # Reward once per distinct submission (RealInterviewReport) that had
         # a question just verified — never for admin/AI-sourced rows, which
         # have no source_report, and never twice for the same report.
+        # Must be captured BEFORE the update() below, since that flips these
+        # same rows to APPROVED and would make this query return nothing.
         report_ids = list(
             eligible.exclude(source_report__isnull=True)
             .values_list("source_report_id", flat=True).distinct()
         )
+
+        approved_count = eligible.update(status=InterviewQuestion.Status.APPROVED)
 
         rewarded = 0
         skipped_plan = 0

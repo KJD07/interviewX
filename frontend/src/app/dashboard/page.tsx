@@ -54,14 +54,26 @@ export default function DashboardPage() {
   const [showTopup, setShowTopup] = useState(false);
 
   useEffect(() => {
+    // Guards against setState firing after the user has already navigated
+    // away — without it, a slow response landing post-unmount would still
+    // update state on a component React has discarded.
+    let cancelled = false;
     refreshUser().catch(() => { });
     interviews.list()
-      .then(setSessions)
+      .then((data) => {
+        if (!cancelled) setSessions(data);
+      })
       .catch((err) => {
+        if (cancelled) return;
         if (err instanceof ApiError) setFetchError(err.detail);
         else setFetchError("Could not load sessions.");
       })
-      .finally(() => setLoadingSessions(false));
+      .finally(() => {
+        if (!cancelled) setLoadingSessions(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleLogout = () => {
@@ -72,9 +84,9 @@ export default function DashboardPage() {
   const plan = planOf(user?.subscription_plan);
   const isPro = isPaidPlan(user?.subscription_plan);
   const hasInsights = plan.hasInsights;
-  const monthlyUsed = (user as any)?.interviews_this_month ?? 0;
+  const monthlyUsed = user?.interviews_this_month ?? 0;
   const monthlyLimit = plan.monthlyLimit; // null = unlimited
-  const bonusInterviews = (user as any)?.bonus_interviews ?? 0;
+  const bonusInterviews = user?.bonus_interviews ?? 0;
   // Plan quota used up AND no purchased top-up credits left — bonus credits
   // let a user keep going past their monthly limit without upgrading.
   const limitReached = monthlyLimit !== null && monthlyUsed >= monthlyLimit && bonusInterviews <= 0;

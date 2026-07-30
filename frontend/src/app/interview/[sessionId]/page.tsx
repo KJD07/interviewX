@@ -351,6 +351,17 @@ export default function InterviewPage() {
   const exitWarningIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null); // countdown tick
   const exitWarningTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null); // fires the actual auto-end
 
+  // Exit-warning strikes and "grace period in progress" are mirrored into
+  // sessionStorage (keyed per session id) because otherwise a candidate could
+  // dodge the auto-end entirely by refreshing the page: hasEnteredFullscreenRef
+  // and the grace-period timer are plain in-memory state that resets to a
+  // clean slate on every mount, so a refresh mid-countdown silently cancels
+  // the pending auto-end and a refresh after each exit resets the "one free
+  // warning" leniency indefinitely.
+  const MAX_EXIT_STRIKES = 2;
+  const exitPendingKey = `ix_exit_pending_${sessionId}`;
+  const exitStrikesKey = `ix_exit_strikes_${sessionId}`;
+
   useEffect(() => {
     voiceModeRef.current = voiceMode;
   }, [voiceMode]);
@@ -373,8 +384,13 @@ export default function InterviewPage() {
 
   useEffect(() => {
     if (!sessionId) return;
+    // Guards against a late response (e.g. the user navigated away while it
+    // was in flight) still calling setState/router.replace on a component
+    // React has already discarded.
+    let cancelled = false;
     interviews.detail(sessionId)
       .then((s) => {
+        if (cancelled) return;
         setSession(s);
         // Rehydrate existing transcript
         if (s.transcript && s.transcript.length > 0) {
@@ -386,9 +402,13 @@ export default function InterviewPage() {
         }
       })
       .catch((err) => {
+        if (cancelled) return;
         if (err instanceof ApiError) setLoadError(err.detail);
         else setLoadError("Could not load session.");
       });
+    return () => {
+      cancelled = true;
+    };
   }, [sessionId, router]);
 
   // ── Countdown timer ──────────────────────────────────────────────────────────
@@ -818,7 +838,10 @@ export default function InterviewPage() {
       exitWarningTimeoutRef.current = null;
     }
     setExitWarning(null);
-  }, []);
+    // The candidate returned in time — the countdown they were dodging is
+    // over, so there's nothing left to protect against a refresh.
+    sessionStorage.removeItem(exitPendingKey);
+  }, [exitPendingKey]);
 
   // Start a grace-period countdown instead of ending the interview
   // immediately. Gives the candidate a chance to undo an accidental
@@ -827,6 +850,26 @@ export default function InterviewPage() {
   const beginExitWarning = useCallback(
     (reason: string) => {
       if (ending || autoExitHandledRef.current || exitWarningTimeoutRef.current) return;
+
+      // Cumulative strikes persist across refreshes (sessionStorage), so
+      // repeatedly exiting full-screen and refreshing to reset the "one free
+      // warning" doesn't grant an unlimited number of free passes — a repeat
+      // offender gets ended immediately instead of a fresh grace period.
+      const strikes = Number(sessionStorage.getItem(exitStrikesKey) || "0") + 1;
+      sessionStorage.setItem(exitStrikesKey, String(strikes));
+
+      if (strikes > MAX_EXIT_STRIKES) {
+        sessionStorage.removeItem(exitPendingKey);
+        autoEndInterviewRef.current(
+          `${reason} This happened multiple times, so the interview was automatically ended.`
+        );
+        return;
+      }
+
+      // Marks a countdown as "in progress" so that if the candidate refreshes
+      // instead of returning, the next mount can detect the dodge and end the
+      // interview immediately rather than starting over with a clean slate.
+      sessionStorage.setItem(exitPendingKey, reason);
 
       setExitWarning({ reason, secondsLeft: GRACE_PERIOD_SECONDS });
       exitWarningIntervalRef.current = setInterval(() => {
@@ -843,10 +886,26 @@ export default function InterviewPage() {
         );
       }, GRACE_PERIOD_SECONDS * 1000);
     },
-    [ending, cancelExitWarning]
+    [ending, cancelExitWarning, exitPendingKey, exitStrikesKey]
   );
 
   useEffect(() => cancelExitWarning, [cancelExitWarning]);
+
+  // If the page mounts and finds a grace-period countdown was left "in
+  // progress" from before, the candidate refreshed instead of returning —
+  // treat it the same as letting the countdown expire, rather than silently
+  // granting a clean slate.
+  useEffect(() => {
+    if (!sessionId) return;
+    const pendingReason = sessionStorage.getItem(exitPendingKey);
+    if (pendingReason) {
+      sessionStorage.removeItem(exitPendingKey);
+      autoEndInterviewRef.current(
+        `${pendingReason} You didn't return in time, so the interview was automatically ended.`
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]);
 
   // Escape (or any other way of leaving full-screen) starts the grace-period
   // warning rather than ending the interview outright.

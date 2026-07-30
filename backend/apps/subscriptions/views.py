@@ -19,6 +19,71 @@ def _razorpay_client():
     )
 
 
+# How long a "created" order gets before we consider it eligible for
+# reconciliation. Short-lived in-flight checkouts (still on the Razorpay
+# widget) shouldn't be touched.
+_STUCK_ORDER_AGE = timedelta(minutes=5)
+
+
+def _settle_order(order, payment_id):
+    """
+    Apply the same upgrade/credit effects as the client-driven verify-payment
+    endpoints, from server-confirmed Razorpay data rather than a client-supplied
+    signature. Used only by the reconciliation path below — the normal
+    verify-payment views still verify their own HMAC signature.
+    """
+    now = datetime.now(timezone.utc)
+    order.razorpay_payment_id = payment_id
+    order.status = PaymentOrder.Status.PAID
+    order.paid_at = now
+    order.save(update_fields=["razorpay_payment_id", "status", "paid_at"])
+
+    user = order.user
+    if order.topup_pack:
+        user.bonus_interviews += order.topup_credits
+        user.save(update_fields=["bonus_interviews"])
+    else:
+        user.subscription_plan = order.plan
+        user.subscription_end_date = now + timedelta(days=30)
+        user.interviews_this_month = 0
+        user.current_cycle_start = now
+        user.save(
+            update_fields=[
+                "subscription_plan",
+                "subscription_end_date",
+                "interviews_this_month",
+                "current_cycle_start",
+            ]
+        )
+
+
+def _reconcile_stuck_orders(user):
+    """
+    Settle any of this user's orders that Razorpay confirms were actually
+    captured but that never got a verify-payment call (browser closed/crashed
+    right after a successful charge). Called lazily whenever the user opens a
+    new order, the same on-request pattern used elsewhere in this stack
+    (see User.sync_subscription_state()) since there's no Celery/cron worker
+    to run this as a scheduled job.
+    """
+    cutoff = datetime.now(timezone.utc) - _STUCK_ORDER_AGE
+    stuck = PaymentOrder.objects.filter(
+        user=user, status=PaymentOrder.Status.CREATED, created_at__lte=cutoff
+    )
+    if not stuck.exists():
+        return
+
+    client = _razorpay_client()
+    for order in stuck:
+        try:
+            payments = client.order.payments(order.razorpay_order_id).get("items", [])
+        except Exception:
+            continue
+        captured = next((p for p in payments if p.get("status") == "captured"), None)
+        if captured:
+            _settle_order(order, captured["id"])
+
+
 class CreateOrderView(APIView):
     """
     POST /api/subscriptions/create-order/
@@ -35,6 +100,8 @@ class CreateOrderView(APIView):
                 {"detail": f"Invalid plan. Choose one of: {', '.join(PAID_PLANS)}."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        _reconcile_stuck_orders(request.user)
 
         amount = amount_for(plan)
         client = _razorpay_client()
@@ -191,6 +258,8 @@ class CreateTopupOrderView(APIView):
                 {"detail": "Max plan already includes unlimited interviews."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        _reconcile_stuck_orders(request.user)
 
         amount = topup_amount_for(pack)
         credits = topup_credits_for(pack)
