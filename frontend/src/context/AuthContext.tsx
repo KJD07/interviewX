@@ -8,7 +8,7 @@ import React, {
   useEffect,
   useState,
 } from "react";
-import { auth, tokens } from "@/lib/api";
+import { auth, tokens, AUTH_EXPIRED_EVENT } from "@/lib/api";
 import type { User } from "@/lib/api";
 
 interface AuthContextValue {
@@ -63,8 +63,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem("ix_user");
       setUser(null);
     };
-    window.addEventListener("ix:auth-expired", handleAuthExpired);
-    return () => window.removeEventListener("ix:auth-expired", handleAuthExpired);
+    window.addEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
   }, []);
 
   const persistUser = (u: User) => {

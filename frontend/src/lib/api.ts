@@ -26,7 +26,7 @@ export const tokens = {
 // the `ix_user` localStorage snapshot — without it, tokens.clear() wipes the
 // tokens but the app still looks logged in (stale ix_user), so every
 // subsequent request fails the same way with no path back to /login.
-const AUTH_EXPIRED_EVENT = "ix:auth-expired";
+export const AUTH_EXPIRED_EVENT = "ix:auth-expired";
 function notifyAuthExpired() {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));

@@ -330,9 +330,15 @@ class ChatView(APIView):
         # retries) so they can't both read the same pre-append transcript and
         # clobber each other, and it lets us persist the candidate's answer
         # immediately — before the (possibly slow/flaky) LLM call — so a
-        # timeout there never loses what they typed. The lock is released
-        # before calling out to OpenRouter below, so it's never held for the
-        # duration of an external HTTP call.
+        # timeout there never loses what they typed.
+        #
+        # Nothing inside this block may make an external HTTP call: the row
+        # lock (and the DB connection's transaction) is held for its whole
+        # duration, so an LLM call in here would block every other request
+        # touching this session for as long as OpenRouter takes to answer.
+        # The end-of-interview scoring paths below therefore only *decide*
+        # here and do the actual scoring after the lock is released.
+        cutoff_reason = None
         with transaction.atomic():
             try:
                 session = InterviewSession.objects.select_for_update().get(
@@ -352,64 +358,62 @@ class ChatView(APIView):
             # Time's up — auto-score and complete the session instead of
             # accepting another answer.
             if _seconds_remaining(session) <= 0:
-                result = _score_and_complete_session(session, time_expired=True)
-                if isinstance(result, Response):
-                    return result
-                serializer = InterviewSessionSerializer(result)
-                return Response(
-                    {
-                        "detail": "Time limit reached. Interview has ended.",
-                        "code": "time_expired",
-                        "session": serializer.data,
-                    },
-                    status=status.HTTP_400_BAD_REQUEST,
+                cutoff_reason = (
+                    "time_expired",
+                    "Time limit reached. Interview has ended.",
                 )
+            else:
+                # Hard ceiling on candidate answers per session — auto-score and
+                # complete the same way a time-expired session does, so no single
+                # interview can run away in turn count regardless of duration_minutes.
+                candidate_turns_so_far = sum(
+                    1 for t in session.transcript if t.get("role") == "user"
+                )
+                if candidate_turns_so_far >= MAX_CHAT_TURNS:
+                    cutoff_reason = (
+                        "turn_limit_reached",
+                        "Maximum interview length reached. Interview has ended.",
+                    )
 
-            # Hard ceiling on candidate answers per session — auto-score and
-            # complete the same way a time-expired session does, so no single
-            # interview can run away in turn count regardless of duration_minutes.
-            candidate_turns_so_far = sum(
-                1 for t in session.transcript if t.get("role") == "user"
+            if cutoff_reason is None:
+                # Rebuild context
+                try:
+                    round_obj, questions = _get_round_with_context(session.round_id)
+                except Round.DoesNotExist:
+                    return Response(
+                        {"detail": "Round not found."}, status=status.HTTP_404_NOT_FOUND
+                    )
+
+                # Build sliding-window message history (see _build_openrouter_messages)
+                # before appending the new user turn to session.transcript.
+                system_prompt = build_interview_system_prompt(
+                    company_name=round_obj.role.company.name,
+                    company_tone=round_obj.role.company.tone_style,
+                    role_title=round_obj.role.title,
+                    round_title=round_obj.title,
+                    questions=questions,
+                    is_skill=round_obj.role.company.kind == round_obj.role.company.Kind.SKILL,
+                )
+                messages = _build_openrouter_messages(session, system_prompt)
+                messages.append({"role": "user", "content": user_message})
+
+                transcript = list(session.transcript)
+                transcript.append({"role": "user", "text": user_message, "ts": _now_iso()})
+                session.transcript = transcript
+                session.save(update_fields=["transcript"])
+
+        # Scoring involves a full-transcript LLM call, so it runs outside the
+        # lock above.
+        if cutoff_reason is not None:
+            code, detail = cutoff_reason
+            result = _score_and_complete_session(session, time_expired=True)
+            if isinstance(result, Response):
+                return result
+            serializer = InterviewSessionSerializer(result)
+            return Response(
+                {"detail": detail, "code": code, "session": serializer.data},
+                status=status.HTTP_400_BAD_REQUEST,
             )
-            if candidate_turns_so_far >= MAX_CHAT_TURNS:
-                result = _score_and_complete_session(session, time_expired=True)
-                if isinstance(result, Response):
-                    return result
-                serializer = InterviewSessionSerializer(result)
-                return Response(
-                    {
-                        "detail": "Maximum interview length reached. Interview has ended.",
-                        "code": "turn_limit_reached",
-                        "session": serializer.data,
-                    },
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            # Rebuild context
-            try:
-                round_obj, questions = _get_round_with_context(session.round_id)
-            except Round.DoesNotExist:
-                return Response(
-                    {"detail": "Round not found."}, status=status.HTTP_404_NOT_FOUND
-                )
-
-            # Build sliding-window message history (see _build_openrouter_messages)
-            # before appending the new user turn to session.transcript.
-            system_prompt = build_interview_system_prompt(
-                company_name=round_obj.role.company.name,
-                company_tone=round_obj.role.company.tone_style,
-                role_title=round_obj.role.title,
-                round_title=round_obj.title,
-                questions=questions,
-                is_skill=round_obj.role.company.kind == round_obj.role.company.Kind.SKILL,
-            )
-            messages = _build_openrouter_messages(session, system_prompt)
-            messages.append({"role": "user", "content": user_message})
-
-            transcript = list(session.transcript)
-            transcript.append({"role": "user", "text": user_message, "ts": _now_iso()})
-            session.transcript = transcript
-            session.save(update_fields=["transcript"])
 
         try:
             ai_reply = chat_completion(messages, max_tokens=CHAT_REPLY_MAX_TOKENS)
@@ -422,11 +426,18 @@ class ChatView(APIView):
         # already committed above, so this only needs to safely append on top
         # of whatever the transcript looks like now.
         with transaction.atomic():
-            session = InterviewSession.objects.select_for_update().get(pk=session_id)
-            transcript = list(session.transcript)
-            transcript.append({"role": "ai", "text": ai_reply, "ts": _now_iso()})
-            session.transcript = transcript
-            session.save(update_fields=["transcript"])
+            try:
+                session = InterviewSession.objects.select_for_update().get(pk=session_id)
+            except InterviewSession.DoesNotExist:
+                return Response({"ai_message": ai_reply})
+            # The session may have been ended from another tab (or auto-ended)
+            # while the LLM was still generating — in that case it has already
+            # been scored, so appending another turn to it would be wrong.
+            if session.status == InterviewSession.Status.IN_PROGRESS:
+                transcript = list(session.transcript)
+                transcript.append({"role": "ai", "text": ai_reply, "ts": _now_iso()})
+                session.transcript = transcript
+                session.save(update_fields=["transcript"])
 
         return Response({"ai_message": ai_reply})
 

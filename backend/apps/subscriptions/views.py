@@ -4,6 +4,8 @@ from datetime import datetime, timezone, timedelta
 
 import razorpay
 from django.conf import settings
+from django.db import transaction
+from django.db.models import F
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -25,36 +27,48 @@ def _razorpay_client():
 _STUCK_ORDER_AGE = timedelta(minutes=5)
 
 
-def _settle_order(order, payment_id):
+def _settle_order(order_id, payment_id):
     """
     Apply the same upgrade/credit effects as the client-driven verify-payment
     endpoints, from server-confirmed Razorpay data rather than a client-supplied
     signature. Used only by the reconciliation path below — the normal
     verify-payment views still verify their own HMAC signature.
-    """
-    now = datetime.now(timezone.utc)
-    order.razorpay_payment_id = payment_id
-    order.status = PaymentOrder.Status.PAID
-    order.paid_at = now
-    order.save(update_fields=["razorpay_payment_id", "status", "paid_at"])
 
-    user = order.user
-    if order.topup_pack:
-        user.bonus_interviews += order.topup_credits
-        user.save(update_fields=["bonus_interviews"])
-    else:
-        user.subscription_plan = order.plan
-        user.subscription_end_date = now + timedelta(days=30)
-        user.interviews_this_month = 0
-        user.current_cycle_start = now
-        user.save(
-            update_fields=[
-                "subscription_plan",
-                "subscription_end_date",
-                "interviews_this_month",
-                "current_cycle_start",
-            ]
+    Locks the order row and re-checks its status first, so two concurrent
+    reconciliation passes (e.g. a double-clicked upgrade button) can't both
+    settle the same captured payment and grant its credits/plan extension
+    twice — the same hazard the verify-payment views guard against with their
+    already-processed check.
+    """
+    with transaction.atomic():
+        order = (
+            PaymentOrder.objects.select_for_update()
+            .select_related("user")
+            .get(pk=order_id)
         )
+        if order.status != PaymentOrder.Status.CREATED:
+            return  # another request already settled it
+
+        now = datetime.now(timezone.utc)
+        order.razorpay_payment_id = payment_id
+        order.status = PaymentOrder.Status.PAID
+        order.paid_at = now
+        order.save(update_fields=["razorpay_payment_id", "status", "paid_at"])
+
+        user = order.user
+        if order.topup_pack:
+            # F() rather than a read-modify-write, so a concurrent credit
+            # change elsewhere can't be clobbered by a stale in-memory value.
+            type(user).objects.filter(pk=user.pk).update(
+                bonus_interviews=F("bonus_interviews") + order.topup_credits
+            )
+        else:
+            type(user).objects.filter(pk=user.pk).update(
+                subscription_plan=order.plan,
+                subscription_end_date=now + timedelta(days=30),
+                interviews_this_month=0,
+                current_cycle_start=now,
+            )
 
 
 def _reconcile_stuck_orders(user):
@@ -81,7 +95,7 @@ def _reconcile_stuck_orders(user):
             continue
         captured = next((p for p in payments if p.get("status") == "captured"), None)
         if captured:
-            _settle_order(order, captured["id"])
+            _settle_order(order.pk, captured["id"])
 
 
 class CreateOrderView(APIView):
