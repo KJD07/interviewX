@@ -10,14 +10,16 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.subscriptions.plans import effective_monthly_limit, effective_plan
 
-from .emails import send_otp_email
-from .models import EmailOTP
+from .emails import send_otp_email, send_password_reset_email
+from .models import EmailOTP, PasswordResetOTP
 from .throttles import AuthRateThrottle
 from .serializers import (
+    ForgotPasswordSerializer,
     GoogleAuthSerializer,
     LoginSerializer,
     RegisterSerializer,
     ResendOTPSerializer,
+    ResetPasswordSerializer,
     VerifyOTPSerializer,
 )
 
@@ -158,6 +160,98 @@ class ResendOTPView(APIView):
 
         _issue_otp(user)
         return Response({"detail": "A new verification code has been sent."})
+
+
+class ForgotPasswordView(APIView):
+    """POST /api/auth/forgot-password/  { email } -> always a generic response,
+    never revealing whether the email is registered."""
+
+    permission_classes = [AllowAny]
+    throttle_classes = [AuthRateThrottle]
+    throttle_scope = "auth"
+
+    def post(self, request):
+        serializer = ForgotPasswordSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        email = serializer.validated_data["email"].lower()
+        generic_response = Response(
+            {"detail": "If that account exists, a password reset code has been sent."}
+        )
+
+        try:
+            user = User.objects.get(email__iexact=email)
+        except User.DoesNotExist:
+            return generic_response
+
+        if user.auth_provider == "google" and not user.has_usable_password():
+            # Nothing to reset — don't leak this, just don't send a code.
+            return generic_response
+
+        otp = PasswordResetOTP.generate_for_user(user)
+        send_password_reset_email(user, otp.code)
+        return generic_response
+
+
+class ResetPasswordView(APIView):
+    """POST /api/auth/reset-password/  { email, code, new_password, new_password2 }
+    -> tokens on success."""
+
+    permission_classes = [AllowAny]
+    throttle_classes = [AuthRateThrottle]
+    throttle_scope = "auth"
+
+    def post(self, request):
+        serializer = ResetPasswordSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        email = serializer.validated_data["email"].lower()
+        code = serializer.validated_data["code"]
+        new_password = serializer.validated_data["new_password"]
+
+        try:
+            user = User.objects.get(email__iexact=email)
+        except User.DoesNotExist:
+            return Response({"detail": "Invalid email or code."}, status=status.HTTP_400_BAD_REQUEST)
+
+        otp = (
+            PasswordResetOTP.objects.filter(user=user, is_used=False)
+            .order_by("-created_at")
+            .first()
+        )
+        if not otp:
+            return Response(
+                {"detail": "No active code found. Request a new one."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if otp.is_expired:
+            return Response({"detail": "Code expired. Request a new one."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if otp.attempts >= PasswordResetOTP.MAX_ATTEMPTS:
+            return Response(
+                {"detail": "Too many incorrect attempts. Request a new code."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if otp.code != code:
+            otp.attempts += 1
+            otp.save(update_fields=["attempts"])
+            remaining = PasswordResetOTP.MAX_ATTEMPTS - otp.attempts
+            return Response(
+                {"detail": f"Incorrect code. {remaining} attempt(s) left."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        otp.is_used = True
+        otp.save(update_fields=["is_used"])
+
+        user.set_password(new_password)
+        user.save(update_fields=["password"])
+
+        return Response(_token_response(user), status=status.HTTP_200_OK)
 
 
 class LoginView(APIView):

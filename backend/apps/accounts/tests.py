@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -200,6 +201,155 @@ class SponsorshipTests(TestCase):
 
         self.assertEqual(resp.status_code, 403)
         self.assertEqual(resp.data["code"], "plan_limit_reached")
+
+
+class PasswordResetTests(TestCase):
+    """Covers the forgot-password / reset-password OTP flow."""
+
+    def setUp(self):
+        # forgot-password/reset-password share the 'auth' throttle scope with
+        # every other view in this module — clear it so an earlier test class
+        # (e.g. AuthThrottleTests deliberately exhausting the scope) can't
+        # bleed a 429 into these tests when the whole suite runs together.
+        cache.clear()
+
+    def _make_user(self, **kwargs):
+        defaults = dict(
+            username="candidate",
+            email="candidate@example.com",
+            is_email_verified=True,
+        )
+        defaults.update(kwargs)
+        user = User(**defaults)
+        user.set_password("oldpass123")
+        user.save()
+        return user
+
+    def test_forgot_password_does_not_leak_unknown_email(self):
+        client = APIClient()
+        resp = client.post(
+            reverse("auth-forgot-password"),
+            {"email": "nobody@example.com"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("detail", resp.data)
+
+    def test_forgot_password_creates_otp_for_known_email(self):
+        from .models import PasswordResetOTP
+
+        user = self._make_user()
+        client = APIClient()
+        resp = client.post(
+            reverse("auth-forgot-password"),
+            {"email": user.email},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(
+            PasswordResetOTP.objects.filter(user=user, is_used=False).exists()
+        )
+
+    def test_reset_password_with_correct_code_succeeds_and_issues_tokens(self):
+        from .models import PasswordResetOTP
+
+        user = self._make_user()
+        otp = PasswordResetOTP.generate_for_user(user)
+
+        client = APIClient()
+        resp = client.post(
+            reverse("auth-reset-password"),
+            {
+                "email": user.email,
+                "code": otp.code,
+                "new_password": "newpass456",
+                "new_password2": "newpass456",
+            },
+            format="json",
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("access", resp.data)
+        self.assertIn("refresh", resp.data)
+
+        user.refresh_from_db()
+        self.assertTrue(user.check_password("newpass456"))
+
+        # Old password no longer works, new one does, via the real login view.
+        login_resp = client.post(
+            reverse("auth-login"),
+            {"email": user.email, "password": "newpass456"},
+            format="json",
+        )
+        self.assertEqual(login_resp.status_code, 200)
+
+    def test_reset_password_with_wrong_code_fails_and_increments_attempts(self):
+        from .models import PasswordResetOTP
+
+        user = self._make_user()
+        otp = PasswordResetOTP.generate_for_user(user)
+
+        client = APIClient()
+        resp = client.post(
+            reverse("auth-reset-password"),
+            {
+                "email": user.email,
+                "code": "000000" if otp.code != "000000" else "111111",
+                "new_password": "newpass456",
+                "new_password2": "newpass456",
+            },
+            format="json",
+        )
+
+        self.assertEqual(resp.status_code, 400)
+        otp.refresh_from_db()
+        self.assertEqual(otp.attempts, 1)
+        user.refresh_from_db()
+        self.assertTrue(user.check_password("oldpass123"))
+
+    def test_reset_password_with_expired_code_fails(self):
+        from .models import PasswordResetOTP
+
+        user = self._make_user()
+        otp = PasswordResetOTP.generate_for_user(user)
+        otp.created_at = timezone.now() - timedelta(minutes=11)
+        otp.save(update_fields=["created_at"])
+
+        client = APIClient()
+        resp = client.post(
+            reverse("auth-reset-password"),
+            {
+                "email": user.email,
+                "code": otp.code,
+                "new_password": "newpass456",
+                "new_password2": "newpass456",
+            },
+            format="json",
+        )
+
+        self.assertEqual(resp.status_code, 400)
+
+    def test_reset_password_mismatched_confirmation_rejected(self):
+        from .models import PasswordResetOTP
+
+        user = self._make_user()
+        otp = PasswordResetOTP.generate_for_user(user)
+
+        client = APIClient()
+        resp = client.post(
+            reverse("auth-reset-password"),
+            {
+                "email": user.email,
+                "code": otp.code,
+                "new_password": "newpass456",
+                "new_password2": "different789",
+            },
+            format="json",
+        )
+
+        self.assertEqual(resp.status_code, 400)
+        user.refresh_from_db()
+        self.assertTrue(user.check_password("oldpass123"))
 
 
 class AuthThrottleTests(TestCase):

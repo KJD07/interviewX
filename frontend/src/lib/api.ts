@@ -274,6 +274,23 @@ export const auth = {
     }),
 
   me: () => request<User>("/api/auth/me/"),
+
+  forgotPassword: (email: string) =>
+    request<{ detail: string }>("/api/auth/forgot-password/", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+
+  resetPassword: (
+    email: string,
+    code: string,
+    new_password: string,
+    new_password2: string
+  ) =>
+    request<AuthResponse>("/api/auth/reset-password/", {
+      method: "POST",
+      body: JSON.stringify({ email, code, new_password, new_password2 }),
+    }),
 };
 
 // ── Company endpoints ─────────────────────────────────────────────────────────

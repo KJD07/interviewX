@@ -23,6 +23,13 @@ interface AuthContextValue {
   ) => Promise<{ email: string }>;
   verifyEmail: (email: string, code: string) => Promise<void>;
   resendOtp: (email: string) => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (
+    email: string,
+    code: string,
+    newPassword: string,
+    newPassword2: string
+  ) => Promise<void>;
   loginWithGoogle: (idToken: string) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
@@ -102,6 +109,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await auth.resendOtp(email);
   }, []);
 
+  const forgotPassword = useCallback(async (email: string) => {
+    await auth.forgotPassword(email);
+  }, []);
+
+  const resetPassword = useCallback(
+    async (
+      email: string,
+      code: string,
+      newPassword: string,
+      newPassword2: string
+    ) => {
+      const data = await auth.resetPassword(email, code, newPassword, newPassword2);
+      tokens.set(data.access, data.refresh);
+      persistUser(data.user);
+    },
+    []
+  );
+
   const loginWithGoogle = useCallback(async (idToken: string) => {
     const data = await auth.google(idToken);
     tokens.set(data.access, data.refresh);
@@ -128,6 +153,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         register,
         verifyEmail,
         resendOtp,
+        forgotPassword,
+        resetPassword,
         loginWithGoogle,
         logout,
         refreshUser,
