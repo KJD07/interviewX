@@ -45,12 +45,18 @@ There is no automated frontend test suite (see STATE.md "Known issues").
 ## Architecture
 
 ### Backend: five Django apps, one shared plans module
-- `apps/accounts` — custom `User` model (`AUTH_USER_MODEL = "accounts.User"`), JWT auth (register/OTP-verify/login/Google sign-in), `EmailOTP`. `User.sync_subscription_state()` lazily downgrades lapsed subscriptions and rolls the monthly interview counter every 30 days — called on request (no Celery/cron worker exists), not on a schedule.
+- `apps/accounts` — custom `User` model (`AUTH_USER_MODEL = "accounts.User"`), JWT auth (register/OTP-verify/login/Google sign-in), `EmailOTP`. `User.sync_subscription_state()` lazily downgrades lapsed subscriptions, rolls the monthly interview counter every 30 days, and attaches/expires/rolls institutional sponsorships (see below) — called on request (no Celery/cron worker exists), not on a schedule.
 - `apps/companies` — `Company` → `Role` → `Round` → `InterviewQuestion`, all nested under `/api/companies/`. **Skills are `Company` rows with `kind="skill"` instead of `kind="company"`** — same models, same endpoints, filtered with `?kind=skill`; there is no separate skills table.
 - `apps/interviews` — `InterviewSession` (transcript + scores + insights as JSONFields) plus the three AI-engine endpoints (`start/`, `<id>/chat/`, `<id>/end/`) that drive the whole interview loop through `core/openrouter_client.py`. Also owns `RealInterviewReport` (optional post-interview form, paid plans only) and `ProgressView` (score history for `/progress`).
-- `apps/subscriptions` — `PaymentOrder` + Razorpay create-order/verify-payment flow, for both plan upgrades and mid-month interview top-up packs (Spark/Boost/Power — credits that roll over and don't reset on renewal).
+- `apps/subscriptions` — `PaymentOrder` + Razorpay create-order/verify-payment flow, for both plan upgrades and mid-month interview top-up packs (Spark/Boost/Power — credits that roll over and don't reset on renewal). Also owns `SponsorshipCampaign` (institutional/college partnerships).
 - `apps/reviews` — a single star-rating `Review` per user (`OneToOneField`), prompted periodically on the frontend after interviews complete.
 - `apps/subscriptions/plans.py` is the **single source of truth** for plan tiers (free/pro/premium/max), monthly limits, and top-up packs — both the interviews app (limit checks) and subscriptions app (payments) import from it. Never hardcode plan limits/prices elsewhere.
+
+### Institutional sponsorship campaigns
+- `SponsorshipCampaign` (`apps/subscriptions/models.py`) grants every user whose email matches `email_domain` (e.g. `thapar.edu`) a `granted_plan`'s feature set, capped at `interview_limit` interviews per `cycle_days`, while `sponsor_covers_until` is in the future. Created and managed entirely through Django admin — no public signup flow or API.
+- A sponsored user's own `subscription_plan`/`interviews_this_month` fields are **never** touched by the campaign — attachment/expiry/rollover lives entirely in the parallel `sponsorship_campaign` / `sponsorship_cycle_start` / `sponsorship_interviews_used` fields on `User`, evaluated lazily in `User.sync_subscription_state()`.
+- Because the raw field is left alone, **any code gating a feature/limit by plan tier must call `effective_plan(user)` / `effective_monthly_limit(user)` from `apps/subscriptions/plans.py`, never read `user.subscription_plan` directly** — those two helpers return the campaign's granted plan/limit for sponsored users and fall back to the real field otherwise. (`apps/companies/views.py` was previously missed and shipped this bug — sponsored users saw only free-tier companies/skills — before being fixed to use `effective_plan()`.)
+- Admin gotcha: `sponsor_covers_until` has no default and must be set to a real future date when creating a campaign — the Django admin's "Today"/"Now" shortcut links fill in the current moment, which if left as-is makes the campaign expire immediately.
 
 ### The interview loop (core of the product)
 1. `POST /api/interviews/start/` — checks plan/top-up limit via `subscriptions/plans.py`, builds a system prompt via `build_interview_system_prompt()` (per-company tone: `formal_strict` / `casual_friendly` / `aggressive`, driving the AI's persona), creates an `InterviewSession` with a randomized 45–60 min `duration_minutes`.
@@ -66,7 +72,7 @@ There is no automated frontend test suite (see STATE.md "Known issues").
 - Theming: `globals.css` defines one light, warm palette (`--page`, `--surface`, `--ink`, `--accent`, etc.) applied uniformly to every plan tier. `data-plan` is still set on `<body>` by `AppShell` for plan-gated logic/labels, but it no longer changes colors — don't reintroduce per-tier color overrides without being asked.
 
 ### Cross-cutting notes
-- Plan/limit logic must be checked in exactly one place: `apps/subscriptions/plans.py`. If you're adding a feature gated by plan tier, add the check there, not inline.
+- Plan/limit logic must be checked in exactly one place: `apps/subscriptions/plans.py`. If you're adding a feature gated by plan tier, add the check there, not inline — and gate on `effective_plan(user)`/`effective_monthly_limit(user)`, not the raw `user.subscription_plan` field, so sponsored users are covered too.
 - `InterviewSession.round` uses `Round`, not `Company`/`Role` directly — company/role names are reached through the FK chain (`round.role.company`).
 - `Round.infer_round_type()` is a best-effort classifier used by seed commands only, based on keyword matching in the round title — not run at request time.
 - Company `tone_style` values in seed data must match the tone keys `build_interview_system_prompt()` understands (`formal_strict`, `casual_friendly`, `aggressive`); see STATE.md "Known issues" — some seeded companies currently don't match and fall back to a generic tone.
