@@ -251,7 +251,7 @@ function EndModal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center px-4"
-      style={{ background: "rgba(15,23,42,0.85)", backdropFilter: "blur(4px)" }}
+      style={{ background: "rgba(6, 10, 20, 0.7)" }}
     >
       <div
         className="w-full max-w-sm rounded-xl p-6 fade-up"
@@ -1000,7 +1000,7 @@ export default function InterviewPage() {
         {showFullscreenPrompt && session && session.status === "in_progress" && (
           <div
             className="fixed inset-0 z-[60] flex items-center justify-center px-4"
-            style={{ background: "rgba(15,23,42,0.92)", backdropFilter: "blur(4px)" }}
+            style={{ background: "rgba(6, 10, 20, 0.7)" }}
           >
             <div
               className="w-full max-w-sm rounded-xl p-6 text-center fade-up"
@@ -1030,7 +1030,7 @@ export default function InterviewPage() {
         {exitWarning && (
           <div
             className="fixed inset-0 z-[70] flex items-center justify-center px-4"
-            style={{ background: "rgba(15,23,42,0.92)", backdropFilter: "blur(4px)" }}
+            style={{ background: "rgba(6, 10, 20, 0.7)" }}
           >
             <div
               className="w-full max-w-sm rounded-xl p-6 text-center fade-up"
@@ -1074,7 +1074,7 @@ export default function InterviewPage() {
         {ending && autoExitReason && (
           <div
             className="fixed inset-0 z-[70] flex items-center justify-center px-4"
-            style={{ background: "rgba(15,23,42,0.92)", backdropFilter: "blur(4px)" }}
+            style={{ background: "rgba(6, 10, 20, 0.7)" }}
           >
             <div
               className="w-full max-w-sm rounded-xl p-6 text-center fade-up"
