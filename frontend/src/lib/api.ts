@@ -188,9 +188,10 @@ export class ApiError extends Error {
 async function request<T>(
   path: string,
   options: RequestInit = {},
-  retry = true
+  retry = true,
+  authRequired = true
 ): Promise<T> {
-  const access = tokens.getAccess();
+  const access = authRequired ? tokens.getAccess() : null;
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options.headers as Record<string, string>),
@@ -199,8 +200,11 @@ async function request<T>(
 
   const res = await fetch(`${API_URL}${path}`, { ...options, headers });
 
-  // Auto-refresh on 401
-  if (res.status === 401 && retry) {
+  // Auto-refresh on 401. Public endpoints (authRequired=false) never attach a
+  // token in the first place, so a 401 from them is a real auth error (e.g.
+  // invalid credentials) — let it fall through to the generic error handling
+  // below instead of being swallowed by the refresh/retry flow.
+  if (authRequired && res.status === 401 && retry) {
     if (!isRefreshing) {
       isRefreshing = true;
       const newToken = await refreshAccessToken();
@@ -244,42 +248,54 @@ async function request<T>(
 
 export const auth = {
   register: (email: string, username: string, password: string, password2: string) =>
-    request<RegisterResponse>("/api/auth/register/", {
-      method: "POST",
-      body: JSON.stringify({ email, username, password, password2 }),
-    }),
+    request<RegisterResponse>(
+      "/api/auth/register/",
+      { method: "POST", body: JSON.stringify({ email, username, password, password2 }) },
+      true,
+      false
+    ),
 
   verifyEmail: (email: string, code: string) =>
-    request<AuthResponse>("/api/auth/verify-email/", {
-      method: "POST",
-      body: JSON.stringify({ email, code }),
-    }),
+    request<AuthResponse>(
+      "/api/auth/verify-email/",
+      { method: "POST", body: JSON.stringify({ email, code }) },
+      true,
+      false
+    ),
 
   resendOtp: (email: string) =>
-    request<{ detail: string }>("/api/auth/resend-otp/", {
-      method: "POST",
-      body: JSON.stringify({ email }),
-    }),
+    request<{ detail: string }>(
+      "/api/auth/resend-otp/",
+      { method: "POST", body: JSON.stringify({ email }) },
+      true,
+      false
+    ),
 
   login: (email: string, password: string) =>
-    request<AuthResponse>("/api/auth/login/", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-    }),
+    request<AuthResponse>(
+      "/api/auth/login/",
+      { method: "POST", body: JSON.stringify({ email, password }) },
+      true,
+      false
+    ),
 
   google: (id_token: string) =>
-    request<AuthResponse>("/api/auth/google/", {
-      method: "POST",
-      body: JSON.stringify({ id_token }),
-    }),
+    request<AuthResponse>(
+      "/api/auth/google/",
+      { method: "POST", body: JSON.stringify({ id_token }) },
+      true,
+      false
+    ),
 
   me: () => request<User>("/api/auth/me/"),
 
   forgotPassword: (email: string) =>
-    request<{ detail: string }>("/api/auth/forgot-password/", {
-      method: "POST",
-      body: JSON.stringify({ email }),
-    }),
+    request<{ detail: string }>(
+      "/api/auth/forgot-password/",
+      { method: "POST", body: JSON.stringify({ email }) },
+      true,
+      false
+    ),
 
   resetPassword: (
     email: string,
@@ -287,10 +303,12 @@ export const auth = {
     new_password: string,
     new_password2: string
   ) =>
-    request<AuthResponse>("/api/auth/reset-password/", {
-      method: "POST",
-      body: JSON.stringify({ email, code, new_password, new_password2 }),
-    }),
+    request<AuthResponse>(
+      "/api/auth/reset-password/",
+      { method: "POST", body: JSON.stringify({ email, code, new_password, new_password2 }) },
+      true,
+      false
+    ),
 };
 
 // ── Company endpoints ─────────────────────────────────────────────────────────

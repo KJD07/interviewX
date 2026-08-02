@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { interviews, ApiError } from "@/lib/api";
 import type { RealInterviewReport } from "@/lib/api";
 
@@ -201,10 +202,10 @@ export default function RealInterviewReportModal({ sessionId, onClose, onSubmitt
 
   const totalSteps = hadRecentInterview === "yes" ? YES_STEPS.length : 2;
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center px-4 py-8"
-      style={{ background: "rgba(15,23,42,0.75)", backdropFilter: "blur(4px)" }}
+      style={{ background: "rgba(6, 10, 20, 0.7)" }}
     >
       <div
         className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl fade-up shadow-[0_20px_60px_rgba(15,23,42,0.35)]"
@@ -477,6 +478,7 @@ export default function RealInterviewReportModal({ sessionId, onClose, onSubmitt
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
