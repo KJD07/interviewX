@@ -64,13 +64,21 @@ export interface InterviewInsights {
   improvement_areas?: { area: string; suggestion: string }[];
 }
 
+// A code/system-design submission attached to a transcript turn, or (with
+// no `content`) the AI's signal to open the workspace before one exists.
+export interface WorkspacePayload {
+  type: "coding" | "system_design";
+  content?: string;
+  language?: string;
+}
+
 export interface InterviewSession {
   id: number;
   round: number;
   company_name?: string;
   role_title?: string;
   status: "in_progress" | "completed" | "abandoned";
-  transcript: { role: "user" | "ai"; text: string; ts: string }[];
+  transcript: { role: "user" | "ai"; text: string; ts: string; workspace?: WorkspacePayload }[];
   scores: {
     communication?: number;
     technical?: number;
@@ -113,6 +121,7 @@ export interface CompanyDetail extends Company {
 export interface StartInterviewResponse {
   session_id: number;
   ai_message: string;
+  open_workspace: { type: "coding" | "system_design"; language?: string } | null;
   session: InterviewSession;
 }
 
@@ -397,11 +406,14 @@ export const interviews = {
       body: JSON.stringify({ round_id }),
     }),
 
-  chat: (session_id: number, message: string) =>
-    request<{ ai_message: string }>(`/api/interviews/${session_id}/chat/`, {
-      method: "POST",
-      body: JSON.stringify({ message }),
-    }),
+  chat: (session_id: number, message: string, workspace?: WorkspacePayload) =>
+    request<{ ai_message: string; open_workspace: { type: "coding" | "system_design"; language?: string } | null }>(
+      `/api/interviews/${session_id}/chat/`,
+      {
+        method: "POST",
+        body: JSON.stringify({ message, workspace }),
+      }
+    ),
 
   end: (session_id: number) =>
     request<InterviewSession>(`/api/interviews/${session_id}/end/`, {

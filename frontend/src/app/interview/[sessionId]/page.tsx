@@ -4,7 +4,9 @@ import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { interviews, ApiError } from "@/lib/api";
-import type { InterviewSession } from "@/lib/api";
+import type { InterviewSession, WorkspacePayload } from "@/lib/api";
+import CodeWorkspace from "@/components/interview/CodeWorkspace";
+import SystemDesignWorkspace from "@/components/interview/SystemDesignWorkspace";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -12,7 +14,12 @@ interface Message {
   role: "user" | "ai";
   text: string;
   ts: string;
+  workspace?: WorkspacePayload;
 }
+
+// The AI's signal to show a workspace — no `content` yet, just what kind and
+// (for coding) which language, until the candidate actually submits.
+type OpenWorkspace = { type: "coding" | "system_design"; language?: string } | null;
 
 // Minimal typing for the Web Speech API (not in default TS DOM lib)
 interface SpeechRecognitionResultLike {
@@ -163,25 +170,43 @@ function Bubble({ msg, speaking }: { msg: Message; speaking?: boolean }) {
         </div>
       )}
       <div className="max-w-[75%]">
-        <div
-          className="rounded-2xl px-4 py-3 text-sm leading-relaxed"
-          style={
-            isUser
-              ? {
-                  background: "var(--accent)",
-                  color: "var(--accent-ink)",
-                  borderBottomRightRadius: 4,
-                }
-              : {
-                  background: "var(--surface)",
-                  border: speaking ? "1px solid var(--accent)" : "1px solid var(--border-mid)",
-                  color: "var(--ink)",
-                  borderBottomLeftRadius: 4,
-                }
-          }
-        >
-          {msg.text}
-        </div>
+        {msg.workspace?.content ? (
+          <pre
+            className="rounded-2xl px-4 py-3 text-xs leading-relaxed overflow-x-auto whitespace-pre-wrap"
+            style={
+              isUser
+                ? { background: "var(--accent)", color: "var(--accent-ink)", borderBottomRightRadius: 4 }
+                : {
+                    background: "var(--surface)",
+                    border: "1px solid var(--border-mid)",
+                    color: "var(--ink)",
+                    borderBottomLeftRadius: 4,
+                  }
+            }
+          >
+            <code>{msg.workspace.content}</code>
+          </pre>
+        ) : (
+          <div
+            className="rounded-2xl px-4 py-3 text-sm leading-relaxed"
+            style={
+              isUser
+                ? {
+                    background: "var(--accent)",
+                    color: "var(--accent-ink)",
+                    borderBottomRightRadius: 4,
+                  }
+                : {
+                    background: "var(--surface)",
+                    border: speaking ? "1px solid var(--accent)" : "1px solid var(--border-mid)",
+                    color: "var(--ink)",
+                    borderBottomLeftRadius: 4,
+                  }
+            }
+          >
+            {msg.text}
+          </div>
+        )}
         <p
           className={`text-xs mt-1 flex items-center gap-1 ${isUser ? "justify-end" : "justify-start"}`}
           style={{ color: "var(--ink-faint)" }}
@@ -310,6 +335,10 @@ export default function InterviewPage() {
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const [timeUp, setTimeUp] = useState(false);
 
+  // ── Coding / system-design workspace state ──────────────────────────────
+  const [openWorkspace, setOpenWorkspace] = useState<OpenWorkspace>(null);
+  const [workspaceSubmitting, setWorkspaceSubmitting] = useState(false);
+
   // ── Full-screen mode state ──────────────────────────────────────────────────
   const [showFullscreenPrompt, setShowFullscreenPrompt] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -394,7 +423,14 @@ export default function InterviewPage() {
         setSession(s);
         // Rehydrate existing transcript
         if (s.transcript && s.transcript.length > 0) {
-          setMessages(s.transcript as Message[]);
+          const transcript = s.transcript as Message[];
+          setMessages(transcript);
+          // If the AI's last turn opened a workspace and the candidate hasn't
+          // submitted anything for it yet, restore that panel on reload.
+          const last = transcript[transcript.length - 1];
+          if (last.role === "ai" && last.workspace && !last.workspace.content) {
+            setOpenWorkspace({ type: last.workspace.type, language: last.workspace.language });
+          }
         }
         // If session already ended, redirect to results
         if (s.status === "completed") {
@@ -467,27 +503,42 @@ export default function InterviewPage() {
   // ── Send message (accepts optional override so voice transcripts don't race state) ──
 
   const handleSend = useCallback(
-    async (overrideText?: string) => {
+    async (overrideText?: string, workspace?: WorkspacePayload, isCheckIn?: boolean) => {
       const text = (overrideText ?? input).trim();
-      if (!text || sending || aiTyping || timeUp) return;
+      if (!text && !workspace) return;
+      if (sending || aiTyping || timeUp) return;
 
-      const userMsg: Message = { role: "user", text, ts: new Date().toISOString() };
+      const userMsg: Message = { role: "user", text, ts: new Date().toISOString(), workspace };
       setMessages((prev) => [...prev, userMsg]);
-      setInput("");
+      if (!workspace) setInput("");
       setInterimText("");
       setSending(true);
-      setAiTyping(true);
+      // A silent pause check-in doesn't need the full typing-indicator treatment.
+      if (!isCheckIn) setAiTyping(true);
+      if (workspace) setWorkspaceSubmitting(true);
 
       if (textareaRef.current) textareaRef.current.style.height = "auto";
 
       try {
-        const res = await interviews.chat(sessionId, text);
+        const res = await interviews.chat(sessionId, text, workspace);
         const aiMsg: Message = {
           role: "ai",
           text: res.ai_message,
           ts: new Date().toISOString(),
+          workspace: res.open_workspace ?? undefined,
         };
         setMessages((prev) => [...prev, aiMsg]);
+
+        if (res.open_workspace) {
+          setOpenWorkspace(res.open_workspace);
+        } else if (workspace && !isCheckIn) {
+          // Only an actual workspace submission (not a background check-in,
+          // and not an ordinary typed/spoken chat message sent while the
+          // panel happens to be open) closes it when the AI doesn't request
+          // a new one — otherwise talking/typing alongside an open workspace
+          // (e.g. explaining your approach out loud) would wrongly dismiss it.
+          setOpenWorkspace(null);
+        }
 
         // Speak the AI's reply out loud if we're in voice mode
         if (voiceModeRef.current && ttsSupported) {
@@ -509,11 +560,28 @@ export default function InterviewPage() {
       } finally {
         setSending(false);
         setAiTyping(false);
+        setWorkspaceSubmitting(false);
         textareaRef.current?.focus();
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [input, sending, aiTyping, timeUp, sessionId, ttsSupported]
+  );
+
+  const handleWorkspaceSubmit = useCallback(
+    (content: string) => {
+      if (!openWorkspace) return;
+      handleSend("", { type: openWorkspace.type, content, language: openWorkspace.language }, false);
+    },
+    [openWorkspace, handleSend]
+  );
+
+  const handleWorkspaceCheckIn = useCallback(
+    (content: string) => {
+      if (!openWorkspace) return;
+      handleSend("", { type: openWorkspace.type, content, language: openWorkspace.language }, true);
+    },
+    [openWorkspace, handleSend]
   );
 
   // Keyboard: Enter to send (Shift+Enter for newline)
@@ -1239,7 +1307,22 @@ export default function InterviewPage() {
           className="px-4 py-3 shrink-0 border-t"
           style={{ borderColor: "var(--surface)" }}
         >
-          {voiceMode ? (
+          {openWorkspace ? (
+            openWorkspace.type === "coding" ? (
+              <CodeWorkspace
+                language={openWorkspace.language ?? "javascript"}
+                onSubmit={handleWorkspaceSubmit}
+                onCheckIn={handleWorkspaceCheckIn}
+                submitting={workspaceSubmitting}
+              />
+            ) : (
+              <SystemDesignWorkspace
+                onSubmit={handleWorkspaceSubmit}
+                onCheckIn={handleWorkspaceCheckIn}
+                submitting={workspaceSubmitting}
+              />
+            )
+          ) : voiceMode ? (
             <div className="flex flex-col items-center gap-2 py-2">
               <button
                 onClick={() => {

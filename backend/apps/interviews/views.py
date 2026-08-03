@@ -15,6 +15,7 @@ from core.openrouter_client import (
     build_feedback_prompt,
     build_interview_system_prompt,
     chat_completion,
+    extract_workspace_action,
 )
 
 from .models import InterviewSession, RealInterviewReport
@@ -133,6 +134,40 @@ class InterviewSessionDetailView(APIView):
 
 # ── Phase 5: AI interview engine ──────────────────────────────────────────────
 
+# Maps a skill/company name to its natural coding language, for skill-based
+# practice rounds (see seed_skills.py) whose InterviewQuestion rows predate
+# the `language` field and were all backfilled to the generic "javascript"
+# default regardless of what the skill actually is.
+LANGUAGE_BY_COMPANY_NAME = {
+    "python": "python",
+    "django": "python",
+    "sql": "sql",
+    "node.js": "javascript",
+    "javascript": "javascript",
+    "typescript": "typescript",
+    "react": "javascript",
+    "java": "java",
+    "go": "go",
+    "c++": "cpp",
+}
+
+
+def _resolve_coding_language(company_name: str, question_language: str | None) -> str:
+    """
+    Prefer a language inferred from the company/skill name over the stored
+    question language whenever the stored value is just the generic
+    "javascript" default — every InterviewQuestion row predates the
+    `language` field and was backfilled to that default on migration, so it
+    doesn't reflect the actual skill for e.g. Python/SQL practice rounds.
+    An explicitly-set non-default language (something an admin deliberately
+    changed) is always trusted over the name-based guess.
+    """
+    inferred = LANGUAGE_BY_COMPANY_NAME.get(company_name.strip().lower())
+    if question_language and question_language != "javascript":
+        return question_language
+    return inferred or question_language or "javascript"
+
+
 def _get_round_with_context(round_id: int):
     """Return (round, questions_list) or raise Round.DoesNotExist."""
     round_obj = (
@@ -141,9 +176,63 @@ def _get_round_with_context(round_id: int):
         .get(pk=round_id)
     )
     questions = list(
-        round_obj.questions.values("question_text", "question_type", "ideal_answer")
+        round_obj.questions.values(
+            "question_text", "question_type", "ideal_answer", "starter_code", "language"
+        )
     )
+    company_name = round_obj.role.company.name
+    for q in questions:
+        if q["question_type"] == "coding":
+            q["language"] = _resolve_coding_language(company_name, q.get("language"))
     return round_obj, questions
+
+
+def _fallback_opening_workspace(round_obj: Round, questions: list[dict]) -> dict | None:
+    """
+    Deterministic backup for the AI's opening-message [[OPEN_WORKSPACE:...]]
+    marker (see build_interview_system_prompt). The marker relies on the
+    model remembering to tag its own on-the-fly questions, which it doesn't
+    reliably do — especially for rounds with no attached InterviewQuestion
+    rows, where the whole opening question is improvised. Round.round_type
+    and the first question's question_type are both known ahead of the LLM
+    call, so use them to force the workspace open when the marker is missing,
+    rather than trusting the model alone for something this data already tells us.
+    `questions` has already had its `language` fields resolved by
+    _get_round_with_context, so this can use them as-is.
+
+    Skill-based practice rounds (see seed_skills.py) currently have zero
+    curated `coding`-type questions at all — their questions were sourced
+    generically without that tag — so the branch above never fires for them.
+    The skill's own name (e.g. "Python", "SQL") is itself a reliable
+    language signal even with no coding question to key off, so fall back
+    to it for any skill round that isn't a system-design round.
+    """
+    if round_obj.round_type == Round.RoundType.SYSTEM_DESIGN:
+        return {"type": "system_design"}
+    if questions and questions[0]["question_type"] == "coding":
+        return {"type": "coding", "language": questions[0].get("language") or "javascript"}
+    company = round_obj.role.company
+    if company.kind == company.Kind.SKILL:
+        language = LANGUAGE_BY_COMPANY_NAME.get(company.name.strip().lower())
+        if language:
+            return {"type": "coding", "language": language}
+    return None
+
+
+def _format_workspace_submission(message: str, workspace: dict) -> str:
+    """
+    Fold a submitted code/design workspace payload into the plain-text turn
+    stored in the transcript and sent to the LLM — chat_completion() only
+    ever deals in plain strings, so structured content has to be embedded
+    as a formatted block rather than sent as a separate field.
+    """
+    content = (workspace.get("content") or "").strip()
+    if workspace.get("type") == "coding":
+        language = workspace.get("language") or "javascript"
+        block = f"[Candidate submitted code — language: {language}]\n```{language}\n{content}\n```"
+    else:
+        block = f"[Candidate submitted a system design write-up]\n{content}"
+    return f"{message}\n\n{block}" if message else block
 
 
 def _build_openrouter_messages(session: InterviewSession, system_prompt: str) -> list:
@@ -261,6 +350,9 @@ class StartInterviewView(APIView):
             return Response(
                 {"detail": str(exc)}, status=status.HTTP_502_BAD_GATEWAY
             )
+        opening, open_workspace = extract_workspace_action(opening)
+        if not open_workspace:
+            open_workspace = _fallback_opening_workspace(round_obj, questions)
 
         # Re-check and consume quota atomically under a row lock. The
         # earlier check above is just a fast-path to fail obviously-over-
@@ -301,11 +393,14 @@ class StartInterviewView(APIView):
             )
 
             # Create session with AI opening turn already in transcript
+            opening_turn = {"role": "ai", "text": opening, "ts": _now_iso()}
+            if open_workspace:
+                opening_turn["workspace"] = open_workspace
             session = InterviewSession.objects.create(
                 user=locked_user,
                 round=round_obj,
                 status=InterviewSession.Status.IN_PROGRESS,
-                transcript=[{"role": "ai", "text": opening, "ts": _now_iso()}],
+                transcript=[opening_turn],
                 duration_minutes=random.randint(
                     MIN_INTERVIEW_MINUTES, MAX_INTERVIEW_MINUTES
                 ),
@@ -328,6 +423,7 @@ class StartInterviewView(APIView):
             {
                 "session_id": session.pk,
                 "ai_message": opening,
+                "open_workspace": open_workspace,
                 "session": InterviewSessionSerializer(session).data,
             },
             status=status.HTTP_201_CREATED,
@@ -346,11 +442,25 @@ class ChatView(APIView):
 
     def post(self, request, session_id):
         user_message = request.data.get("message", "").strip()[:MAX_ANSWER_CHARS]
-        if not user_message:
+        workspace = request.data.get("workspace") or None
+        if workspace and not (workspace.get("content") or "").strip():
+            workspace = None
+        if not user_message and not workspace:
             return Response(
                 {"detail": "message is required."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        # What actually gets sent to the LLM / stored as this turn's text —
+        # a workspace submission is folded into the plain-text turn since
+        # chat_completion() only ever deals in strings (see
+        # _format_workspace_submission). The transcript entry keeps the raw
+        # `workspace` dict alongside so the frontend can re-render it as a
+        # code/design block instead of plain paragraph text.
+        turn_text = (
+            _format_workspace_submission(user_message, workspace)
+            if workspace
+            else user_message
+        )
 
         # Locked read-append-save of the user turn: select_for_update serializes
         # concurrent requests on the same session (double-click send, client
@@ -422,10 +532,13 @@ class ChatView(APIView):
                     is_skill=round_obj.role.company.kind == round_obj.role.company.Kind.SKILL,
                 )
                 messages = _build_openrouter_messages(session, system_prompt)
-                messages.append({"role": "user", "content": user_message})
+                messages.append({"role": "user", "content": turn_text})
 
                 transcript = list(session.transcript)
-                transcript.append({"role": "user", "text": user_message, "ts": _now_iso()})
+                user_turn = {"role": "user", "text": turn_text, "ts": _now_iso()}
+                if workspace:
+                    user_turn["workspace"] = workspace
+                transcript.append(user_turn)
                 session.transcript = transcript
                 session.save(update_fields=["transcript"])
 
@@ -448,6 +561,7 @@ class ChatView(APIView):
             return Response(
                 {"detail": str(exc)}, status=status.HTTP_502_BAD_GATEWAY
             )
+        ai_reply, open_workspace = extract_workspace_action(ai_reply)
 
         # Re-lock and re-read before appending the AI turn: the user turn was
         # already committed above, so this only needs to safely append on top
@@ -462,11 +576,14 @@ class ChatView(APIView):
             # been scored, so appending another turn to it would be wrong.
             if session.status == InterviewSession.Status.IN_PROGRESS:
                 transcript = list(session.transcript)
-                transcript.append({"role": "ai", "text": ai_reply, "ts": _now_iso()})
+                ai_turn = {"role": "ai", "text": ai_reply, "ts": _now_iso()}
+                if open_workspace:
+                    ai_turn["workspace"] = open_workspace
+                transcript.append(ai_turn)
                 session.transcript = transcript
                 session.save(update_fields=["transcript"])
 
-        return Response({"ai_message": ai_reply})
+        return Response({"ai_message": ai_reply, "open_workspace": open_workspace})
 
 
 # Non-attempts that should never earn meaningful credit, regardless of what

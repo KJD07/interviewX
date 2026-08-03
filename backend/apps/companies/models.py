@@ -111,6 +111,7 @@ class InterviewQuestion(models.Model):
     QUESTION_TYPES = [
         ("mcq", "MCQ"),
         ("coding", "Coding"),
+        ("system_design", "System Design"),
         ("behavioral", "Behavioral"),
         ("other", "Other"),
     ]
@@ -128,6 +129,18 @@ class InterviewQuestion(models.Model):
     question_text = models.TextField()
     question_type = models.CharField(max_length=20, choices=QUESTION_TYPES)
     ideal_answer = models.TextField(blank=True)
+    # Coding questions only — pre-filled into the in-interview code editor so
+    # the candidate writes just the function body, not surrounding boilerplate.
+    starter_code = models.TextField(
+        blank=True,
+        help_text="Coding questions only: function stub pre-filled into the code editor.",
+    )
+    language = models.CharField(
+        max_length=20,
+        blank=True,
+        default="javascript",
+        help_text="Coding questions only: editor syntax-highlighting language.",
+    )
     source_url = models.CharField(max_length=255, blank=True)
     generated_by_ai = models.BooleanField(
         default=False,

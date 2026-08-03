@@ -6,6 +6,7 @@ Model: openai/gpt-4o-mini
 
 import json
 import os
+import re
 from typing import Any
 
 import httpx
@@ -13,6 +14,28 @@ import httpx
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 MODEL = "openai/gpt-4o-mini"
 TIMEOUT = 30  # seconds
+
+# Matches the hidden workspace-trigger marker the interviewer AI is
+# instructed to append to its reply (see build_interview_system_prompt) —
+# e.g. "[[OPEN_WORKSPACE:coding:python]]" or "[[OPEN_WORKSPACE:system_design]]".
+WORKSPACE_MARKER_RE = re.compile(r"\[\[OPEN_WORKSPACE:(coding|system_design)(?::([\w+#-]+))?\]\]\s*$")
+
+
+def extract_workspace_action(ai_message: str) -> tuple[str, dict[str, str] | None]:
+    """
+    Strip a trailing [[OPEN_WORKSPACE:...]] marker off an AI reply.
+    Returns (visible_text, action) where action is
+    {"type": "coding"|"system_design", "language": <str, coding only>} or None.
+    """
+    match = WORKSPACE_MARKER_RE.search(ai_message)
+    if not match:
+        return ai_message, None
+    visible_text = ai_message[: match.start()].rstrip()
+    workspace_type = match.group(1)
+    action = {"type": workspace_type}
+    if workspace_type == "coding":
+        action["language"] = match.group(2) or "javascript"
+    return visible_text, action
 
 
 def chat_completion(
@@ -78,9 +101,14 @@ def build_interview_system_prompt(
     questions: list[dict],
     is_skill: bool = False,
 ) -> str:
+    def _format_question(q: dict) -> str:
+        line = f"[{q['question_type']}] {q['question_text']}"
+        if q["question_type"] == "coding" and q.get("starter_code"):
+            line += f"\n   Starter code ({q.get('language') or 'javascript'}):\n   {q['starter_code']}"
+        return line
+
     q_block = "\n".join(
-        f"{i+1}. [{q['question_type']}] {q['question_text']}"
-        for i, q in enumerate(questions)
+        f"{i+1}. {_format_question(q)}" for i, q in enumerate(questions)
     )
 
     tone_instructions = {
@@ -135,6 +163,14 @@ def build_interview_system_prompt(
 - Never give lengthy mid-interview feedback or reveal scoring.
 - React like a human — vary your responses, don't use the same filler phrase every time.
 - After the final question is done, say exactly: "That wraps up the interview. Thanks for your time today."
+
+## Coding / system-design workspace protocol
+The candidate's screen can show a code editor or a design-writeup area. You control when it opens by ending your message with a hidden marker — it is stripped before the candidate sees your text, so never mention it out loud.
+- When you ask a question tagged [coding] above, end your message with: [[OPEN_WORKSPACE:coding:<language>]] using that question's language (default "javascript" if none given).
+- When you ask a question tagged [system_design] above, end your message with: [[OPEN_WORKSPACE:system_design]]
+- You may also invent your own on-the-fly coding or system-design challenge as a follow-up/pressure question (not from the list) — if you do, end that message with the matching marker the same way.
+- Only include a marker on messages that are actually posing a new coding/design problem — never on reactions, follow-up pressure questions about something already submitted, or the closing line.
+- After the candidate submits code or a design (you'll see it quoted back to you in their turn), read it critically and ask pointed follow-up questions about it — edge cases, complexity, failure modes, scaling — exactly as a real interviewer applying pressure would. Do not re-open the workspace just to make a comment.
 
 ## Questions to cover (in order)
 {q_block}
