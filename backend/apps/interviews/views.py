@@ -200,22 +200,31 @@ def _fallback_opening_workspace(round_obj: Round, questions: list[dict]) -> dict
     `questions` has already had its `language` fields resolved by
     _get_round_with_context, so this can use them as-is.
 
-    Skill-based practice rounds (see seed_skills.py) currently have zero
-    curated `coding`-type questions at all — their questions were sourced
-    generically without that tag — so the branch above never fires for them.
-    The skill's own name (e.g. "Python", "SQL") is itself a reliable
-    language signal even with no coding question to key off, so fall back
-    to it for any skill round that isn't a system-design round.
+    Only forces the workspace open when the opening question actually is a
+    coding/system-design one. This used to also force it open for every
+    skill-round opening turn regardless of the first question's actual type
+    (guessing from the skill's name, e.g. "Python" implies a coding task) —
+    that meant candidates got a code editor pinned to the screen even when
+    the opening question was mcq/behavioral and never called for one.
+
+    The question-sourcing pipeline's ALLOWED_TYPES never tags a curated
+    question "system_design" (only mcq/coding/behavioral), so a SYSTEM_DESIGN
+    round with real curated questions can still legitimately open on an
+    mcq/behavioral warm-up first — round_type alone isn't proof the opening
+    question is a design one. It's only proof when there are no curated
+    questions at all: then the opening question is fully improvised by the
+    model, and for a SYSTEM_DESIGN round that improvised opener is guaranteed
+    to be the design prompt.
     """
+    if questions:
+        first_type = questions[0]["question_type"]
+        if first_type == "coding":
+            return {"type": "coding", "language": questions[0].get("language") or "javascript"}
+        if first_type == "system_design":
+            return {"type": "system_design"}
+        return None
     if round_obj.round_type == Round.RoundType.SYSTEM_DESIGN:
         return {"type": "system_design"}
-    if questions and questions[0]["question_type"] == "coding":
-        return {"type": "coding", "language": questions[0].get("language") or "javascript"}
-    company = round_obj.role.company
-    if company.kind == company.Kind.SKILL:
-        language = LANGUAGE_BY_COMPANY_NAME.get(company.name.strip().lower())
-        if language:
-            return {"type": "coding", "language": language}
     return None
 
 
