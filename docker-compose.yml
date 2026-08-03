@@ -56,6 +56,11 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
       NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      # Bind mounts from the Windows host into the container don't reliably
+      # propagate native FS-change events, so webpack/Turbopack falls back
+      # to slow/spurious rebuilds without polling-based watching.
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
     depends_on:
       - backend
 

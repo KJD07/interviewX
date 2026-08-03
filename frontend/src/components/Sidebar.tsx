@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { planOf, hasSkills } from "@/lib/plans";
@@ -80,21 +81,21 @@ export default function Sidebar() {
       style={{ background: "var(--surface)", borderColor: "var(--border)" }}
     >
       <div className="flex flex-col min-h-0 flex-1">
-        <button
-          onClick={() => router.push("/dashboard")}
+        <Link
+          href="/dashboard"
           className="font-display text-lg font-semibold tracking-tight px-2 mb-8 block shrink-0"
           style={{ color: "var(--ink)" }}
         >
           EvaluLabs
-        </button>
+        </Link>
 
         <nav className="space-y-1 overflow-y-auto min-h-0 flex-1 pr-1">
           {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || pathname?.startsWith(href + "/");
             return (
-              <button
+              <Link
                 key={href}
-                onClick={() => router.push(href)}
+                href={href}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
                 style={{
                   background: active ? "var(--accent-glow)" : "transparent",
@@ -103,7 +104,7 @@ export default function Sidebar() {
               >
                 <Icon />
                 {label}
-              </button>
+              </Link>
             );
           })}
         </nav>
@@ -121,13 +122,13 @@ export default function Sidebar() {
             <span className="font-display text-sm font-semibold" style={{ color: "var(--hero-text)" }}>
               {plan.label}
             </span>
-            <button
-              onClick={() => router.push("/upgrade")}
+            <Link
+              href="/upgrade"
               className="text-xs underline"
               style={{ color: "var(--hero-text)", opacity: 0.75 }}
             >
               Manage
-            </button>
+            </Link>
           </div>
 
           {bonusInterviews > 0 && (
