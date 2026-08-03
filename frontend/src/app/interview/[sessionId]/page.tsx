@@ -374,6 +374,7 @@ export default function InterviewPage() {
   const finalTranscriptRef = useRef("");
   const voiceModeRef = useRef(false); // mirrors voiceMode for use inside async callbacks
   const shouldListenRef = useRef(false); // whether we *want* to be listening right now
+  const voiceModeBeforeWorkspaceRef = useRef(false); // was voice mode on right before a workspace auto-disabled it, so we can resume it once the workspace closes
 
   const hasEnteredFullscreenRef = useRef(false); // true once the candidate has confirmed full-screen
   const autoExitHandledRef = useRef(false); // guards against double auto-end firing
@@ -846,6 +847,42 @@ export default function InterviewPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Drop out of voice mode whenever a coding/system-design workspace opens —
+  // typing code and talking over the mic don't mix, and leaving voice mode on
+  // would keep listening (and auto-sending on silence) underneath the editor.
+  // Note: this only stops the mic, not the speaker — the AI's spoken intro to
+  // the workspace (queued by handleSend's speak() call in the same turn) must
+  // be allowed to finish; speak()'s own onend checks voiceModeRef before
+  // deciding whether to resume listening, so turning voiceMode off here is
+  // enough to prevent the mic from restarting once it's done.
+  //
+  // Once the workspace closes again, resume voice mode automatically if it
+  // was on beforehand — otherwise every coding question would permanently
+  // strand the candidate in text mode. The toggle button is disabled while a
+  // workspace is open (see below), so voiceModeRef can't flip back on mid-open
+  // and re-trigger this; that also means every open_workspace payload from a
+  // still-open workspace (a fresh object each response) is a harmless no-op here.
+  useEffect(() => {
+    if (openWorkspace) {
+      if (voiceModeRef.current) {
+        voiceModeBeforeWorkspaceRef.current = true;
+        shouldListenRef.current = false;
+        micMutedRef.current = true;
+        stopListening();
+        setVoiceMode(false);
+      }
+    } else if (voiceModeBeforeWorkspaceRef.current) {
+      voiceModeBeforeWorkspaceRef.current = false;
+      setVoiceError("");
+      setVoiceMode(true);
+      shouldListenRef.current = true;
+      if (!sending && !aiTyping && !isAiSpeaking && !timeUp) {
+        startListening();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openWorkspace]);
+
   // ── End interview ───────────────────────────────────────────────────────────
 
   const handleEnd = async () => {
@@ -1204,10 +1241,12 @@ export default function InterviewPage() {
             {/* Voice mode toggle */}
             <button
               onClick={toggleVoiceMode}
-              disabled={!micSupported || !ttsSupported}
+              disabled={!micSupported || !ttsSupported || !!openWorkspace}
               title={
                 !micSupported || !ttsSupported
                   ? "Voice not supported in this browser — try Chrome or Edge"
+                  : openWorkspace
+                  ? "Voice mode is unavailable while the coding/system-design workspace is open"
                   : voiceMode
                   ? "Switch back to text mode"
                   : "Switch to voice mode"
