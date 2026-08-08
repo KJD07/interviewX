@@ -68,6 +68,12 @@ class RealInterviewReportSerializer(serializers.ModelSerializer):
         queryset=InterviewSession.objects.all(), required=False, allow_null=True
     )
     rounds = serializers.ListField(child=serializers.DictField(), required=False, default=list)
+    questions = serializers.ListField(
+        child=serializers.CharField(max_length=MAX_QUESTION_LENGTH, allow_blank=False),
+        required=False,
+        default=list,
+        write_only=True,
+    )
 
     class Meta:
         model = RealInterviewReport
@@ -80,6 +86,8 @@ class RealInterviewReportSerializer(serializers.ModelSerializer):
             "email",
             "company_name",
             "role_title",
+            "round_name",
+            "questions",
             "rounds",
             "can_provide_proof",
             "status",
@@ -105,34 +113,56 @@ class RealInterviewReportSerializer(serializers.ModelSerializer):
 
         # had_recent_interview == "yes" -> every other field is required.
         errors = {}
-        for field in ("name", "email", "company_name", "role_title"):
+        for field in ("name", "email", "company_name", "role_title", "round_name"):
             if not (attrs.get(field) or "").strip():
                 errors[field] = "This field is required."
 
+        questions = [
+            q.strip()
+            for q in attrs.get("questions", [])
+            if isinstance(q, str) and q.strip()
+        ][:MAX_QUESTIONS_PER_ROUND]
+
+        round_name = (attrs.get("round_name") or "").strip()
         rounds = attrs.get("rounds") or []
-        if not rounds or not (rounds[0].get("round_name") or "").strip():
-            errors["rounds"] = "At least one round (with a name) is required."
+        if not rounds:
+            rounds = [{"round_name": round_name, "topics": "", "questions": questions}]
         else:
             validated_rounds = []
             for i, r in enumerate(rounds):
-                round_name = (r.get("round_name") or "").strip()
+                current_round_name = (r.get("round_name") or round_name).strip()
                 topics = (r.get("topics") or "").strip()
-                if i == 0 and not round_name:
-                    errors["rounds"] = "The first round's name is required."
+                if i == 0 and not current_round_name:
+                    errors["rounds"] = "At least one round (with a name) is required."
                     break
-                if round_name:
-                    questions = [
+                if current_round_name:
+                    round_questions = [
                         q.strip()
-                        for q in (r.get("questions") or [])
+                        for q in (r.get("questions") or questions)
                         if isinstance(q, str) and q.strip()
                     ][:MAX_QUESTIONS_PER_ROUND]
                     validated_rounds.append(
-                        {"round_name": round_name, "topics": topics, "questions": questions}
+                        {"round_name": current_round_name, "topics": topics, "questions": round_questions}
                     )
-            attrs["rounds"] = validated_rounds
+            rounds = validated_rounds
+
+        attrs["rounds"] = rounds
+        attrs.pop("questions", None)
 
         if "can_provide_proof" not in self.initial_data:
             errors["can_provide_proof"] = "Please confirm whether you can provide proof."
+
+        if not errors:
+            company_name = (attrs.get("company_name") or "").strip()
+            if (
+                RealInterviewReport.objects.filter(
+                    user=self.context["request"].user,
+                    had_recent_interview=RealInterviewReport.HadRecentInterview.YES,
+                    company_name__iexact=company_name,
+                    round_name__iexact=round_name,
+                ).exists()
+            ):
+                errors["round_name"] = "You already submitted this round for this company."
 
         if errors:
             raise serializers.ValidationError(errors)
