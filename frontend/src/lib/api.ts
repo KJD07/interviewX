@@ -140,6 +140,8 @@ export interface RealInterviewReportPayload {
   email?: string;
   company_name?: string;
   role_title?: string;
+  round_name?: string;
+  questions?: string[];
   rounds?: RealInterviewRound[];
   can_provide_proof?: boolean;
   // Which of the user's own completed sessions this was submitted

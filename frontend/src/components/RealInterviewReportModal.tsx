@@ -91,14 +91,7 @@ function ChoiceCard({
 
 // Steps for the "yes, I interviewed recently" path. The "no" path only
 // ever uses step 0 followed by a one-tap confirm-and-submit screen.
-const YES_STEPS = ["Recently interviewed?", "Your details", "Rounds asked", "Proof & submit"];
-
-interface RoundDraft {
-  round_name: string;
-  topics: string;
-  // Raw textarea value, one question per line — split into an array on submit.
-  questionsText: string;
-}
+const YES_STEPS = ["Recently interviewed?", "Your details", "Questions asked", "Proof & submit"];
 
 export default function RealInterviewReportModal({ sessionId, onClose, onSubmitted }: Props) {
   const [hadRecentInterview, setHadRecentInterview] = useState<"" | "yes" | "no">("");
@@ -108,22 +101,13 @@ export default function RealInterviewReportModal({ sessionId, onClose, onSubmitt
   const [email, setEmail] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [roleTitle, setRoleTitle] = useState("");
-  const [rounds, setRounds] = useState<RoundDraft[]>([
-    { round_name: "", topics: "", questionsText: "" },
-  ]);
+  const [roundName, setRoundName] = useState("");
+  const [questionsText, setQuestionsText] = useState("");
   const [canProvideProof, setCanProvideProof] = useState<"" | "yes" | "no">("");
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
-
-  const updateRound = (index: number, field: keyof RoundDraft, value: string) => {
-    setRounds((prev) => prev.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
-  };
-  const addRound = () =>
-    setRounds((prev) => [...prev, { round_name: "", topics: "", questionsText: "" }]);
-  const removeRound = (index: number) =>
-    setRounds((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev));
 
   const validateStep1 = (): boolean => {
     const errs: Record<string, string> = {};
@@ -132,15 +116,14 @@ export default function RealInterviewReportModal({ sessionId, onClose, onSubmitt
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errs.email = "Enter a valid email address.";
     if (!companyName.trim()) errs.companyName = "Company is required.";
     if (!roleTitle.trim()) errs.roleTitle = "Role is required.";
+    if (!roundName.trim()) errs.roundName = "Round name is required.";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
   const validateStep2 = (): boolean => {
-    const errs: Record<string, string> = {};
-    if (!rounds[0]?.round_name.trim()) errs.rounds = "The first round's name is required.";
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
+    setErrors({});
+    return true;
   };
 
   const validateStep3 = (): boolean => {
@@ -177,16 +160,11 @@ export default function RealInterviewReportModal({ sessionId, onClose, onSubmitt
               email: email.trim(),
               company_name: companyName.trim(),
               role_title: roleTitle.trim(),
-              rounds: rounds
-                .filter((r) => r.round_name.trim())
-                .map((r) => ({
-                  round_name: r.round_name.trim(),
-                  topics: r.topics.trim(),
-                  questions: r.questionsText
-                    .split("\n")
-                    .map((q) => q.trim())
-                    .filter(Boolean),
-                })),
+              round_name: roundName.trim(),
+              questions: questionsText
+                .split("\n")
+                .map((q) => q.trim())
+                .filter(Boolean),
               can_provide_proof: canProvideProof === "yes",
               session: sessionId,
             }
@@ -334,67 +312,28 @@ export default function RealInterviewReportModal({ sessionId, onClose, onSubmitt
                   className={inputStyle}
                 />
               </Field>
+              <Field label="Which round?" error={errors.roundName}>
+                <input
+                  type="text"
+                  value={roundName}
+                  onChange={(e) => setRoundName(e.target.value)}
+                  placeholder="e.g. Technical Phone Screen"
+                  className={inputStyle}
+                />
+              </Field>
             </>
           )}
 
-          {/* "Yes" path — step 2: rounds */}
+          {/* "Yes" path — step 2: questions */}
           {step === 2 && hadRecentInterview === "yes" && (
-            <Field label="Rounds (round name & topics asked)" error={errors.rounds}>
-              <div className="space-y-3">
-                {rounds.map((r, i) => (
-                  <div
-                    key={i}
-                    className="rounded-2xl p-3.5 space-y-2"
-                    style={{ background: "var(--page)", border: "1px solid var(--border-mid)" }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium" style={{ color: "var(--ink-dim)" }}>
-                        Round {i + 1} {i === 0 && <span style={{ color: "var(--danger)" }}>*</span>}
-                        {i > 0 && <span className="ml-1" style={{ color: "var(--ink-faint)" }}>(optional)</span>}
-                      </span>
-                      {rounds.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeRound(i)}
-                          className="text-xs font-medium"
-                          style={{ color: "var(--danger)" }}
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                    <input
-                      type="text"
-                      value={r.round_name}
-                      onChange={(e) => updateRound(i, "round_name", e.target.value)}
-                      placeholder="Round name, e.g. Technical Round 1"
-                      className={inputStyle}
-                    />
-                    <textarea
-                      value={r.topics}
-                      onChange={(e) => updateRound(i, "topics", e.target.value)}
-                      placeholder="Topics asked, e.g. Arrays, System Design, SQL joins…"
-                      rows={2}
-                      className={`${inputStyle} resize-none`}
-                    />
-                    <textarea
-                      value={r.questionsText}
-                      onChange={(e) => updateRound(i, "questionsText", e.target.value)}
-                      placeholder="Exact questions you were asked, one per line (optional — verified questions earn extra bonus interviews)"
-                      rows={2}
-                      className={`${inputStyle} resize-none`}
-                    />
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={addRound}
-                  className="text-sm font-semibold transition-opacity hover:opacity-80"
-                  style={{ color: "var(--accent)" }}
-                >
-                  + Add another round
-                </button>
-              </div>
+            <Field label="Questions asked in this round" error={errors.questions} hint="One question per line. Verified questions can earn extra bonus interviews.">
+              <textarea
+                value={questionsText}
+                onChange={(e) => setQuestionsText(e.target.value)}
+                placeholder="Exact questions you were asked, one per line (optional)"
+                rows={6}
+                className={`${inputStyle} resize-none`}
+              />
             </Field>
           )}
 
