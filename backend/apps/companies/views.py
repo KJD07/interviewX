@@ -1,4 +1,4 @@
-from django.db.models import Prefetch
+from django.db.models import Count, Prefetch, Q
 from rest_framework import status
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
@@ -38,7 +38,13 @@ class CompanyListView(APIView):
 
     def get(self, request):
         kind = request.query_params.get("kind", Company.Kind.COMPANY)
-        companies = Company.objects.filter(kind=kind)
+        companies = Company.objects.filter(kind=kind).annotate(
+            question_count=Count(
+                "roles__rounds__questions",
+                filter=Q(roles__rounds__questions__status=InterviewQuestion.Status.APPROVED),
+                distinct=True,
+            )
+        )
         changed_fields = request.user.sync_subscription_state()
         if changed_fields:
             request.user.save(update_fields=changed_fields)

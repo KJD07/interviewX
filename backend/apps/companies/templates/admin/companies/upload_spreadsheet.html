@@ -1,0 +1,15 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+  <h1>Upload spreadsheet</h1>
+  <p>
+    Expected header row: <strong>Company, Role, Round, Question Title, Difficulty, Category, Date, URL</strong>.
+    Rows missing any of these columns are skipped rather than erroring the import.
+    Difficulty and Date are validated as present but not stored; Category is used only to guess the question type.
+  </p>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <input type="submit" value="Upload and seed" class="default">
+  </form>
+{% endblock %}

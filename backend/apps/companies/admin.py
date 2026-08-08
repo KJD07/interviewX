@@ -1,12 +1,26 @@
+from django import forms
 from django.contrib import admin, messages
 from django.db import transaction
 from django.db.models import F
+from django.shortcuts import redirect, render
+from django.urls import path
 from django.utils import timezone
 
 from apps.subscriptions.plans import PAID_PLANS
 from core.question_sourcing import QuestionSourcingError, source_questions_for_round
 
+from .imports import REQUIRED_COLUMNS, SpreadsheetImportError, import_spreadsheet
 from .models import Company, InterviewQuestion, Role, Round
+
+
+class UploadSpreadsheetForm(forms.Form):
+    file = forms.FileField(
+        label="Companies/questions spreadsheet (.xlsx or .csv)",
+        help_text=(
+            "Expected header: " + ", ".join(REQUIRED_COLUMNS) + ". "
+            "Rows missing any of these columns are skipped."
+        ),
+    )
 
 # Bonus interview credits granted once per real-interview-report submission
 # whose candidate-supplied questions are verified (approved), and only if
@@ -40,6 +54,55 @@ class CompanyAdmin(admin.ModelAdmin):
     list_filter = ("kind", "category")
     search_fields = ("name",)
     inlines = [RoleInline]
+    change_list_template = "admin/companies/company/change_list.html"
+
+    def get_urls(self):
+        # Prepended so this doesn't get shadowed by ModelAdmin's own
+        # catch-all "<path:object_id>/change/" pattern.
+        custom_urls = [
+            path(
+                "upload-spreadsheet/",
+                self.admin_site.admin_view(self.upload_spreadsheet_view),
+                name="companies_company_upload_spreadsheet",
+            ),
+        ]
+        return custom_urls + super().get_urls()
+
+    def upload_spreadsheet_view(self, request):
+        if request.method == "POST":
+            form = UploadSpreadsheetForm(request.POST, request.FILES)
+            if form.is_valid():
+                try:
+                    result = import_spreadsheet(form.cleaned_data["file"])
+                except SpreadsheetImportError as exc:
+                    self.message_user(request, str(exc), level=messages.ERROR)
+                else:
+                    self.message_user(
+                        request,
+                        f"Imported {result.questions_created} question(s) "
+                        f"({result.companies_created} new companies, {result.roles_created} new roles, "
+                        f"{result.rounds_created} new rounds) out of {result.rows_seen} row(s) seen. "
+                        f"Skipped {result.rows_skipped} incomplete row(s) and "
+                        f"{result.questions_skipped_duplicate} already-imported question(s).",
+                        level=messages.SUCCESS,
+                    )
+                    if result.skipped_examples:
+                        self.message_user(
+                            request,
+                            "Examples of skipped rows: " + "; ".join(result.skipped_examples),
+                            level=messages.WARNING,
+                        )
+                return redirect("..")
+        else:
+            form = UploadSpreadsheetForm()
+
+        context = {
+            **self.admin_site.each_context(request),
+            "form": form,
+            "opts": self.model._meta,
+            "title": "Upload spreadsheet",
+        }
+        return render(request, "admin/companies/upload_spreadsheet.html", context)
 
 
 @admin.register(Role)

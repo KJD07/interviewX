@@ -100,6 +100,7 @@ export interface Company {
   is_free?: boolean;
   kind?: "company" | "skill";
   category?: string;
+  question_count?: number;
 }
 
 export interface Round {

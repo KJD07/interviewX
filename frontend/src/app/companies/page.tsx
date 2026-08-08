@@ -385,7 +385,7 @@ export default function CompaniesPage() {
                       <ListCard
                         key={c.id}
                         title={c.name}
-                        subtitle={`Tone: ${c.tone_style}`}
+                        subtitle={`Tone: ${c.tone_style} · ${c.question_count ?? 0} question${c.question_count === 1 ? "" : "s"}`}
                         onClick={() => handleSelectCompany(c.id)}
                         right={
                           <div className="flex items-center gap-2">

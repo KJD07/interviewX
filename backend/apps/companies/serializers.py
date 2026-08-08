@@ -36,6 +36,10 @@ class CompanySerializer(serializers.ModelSerializer):
 class CompanyListSerializer(serializers.ModelSerializer):
     """Flat serializer for list endpoint — no nested roles (avoids large payloads)."""
 
+    # Populated via annotate() in CompanyListView; counts only approved
+    # questions across all of the company's roles/rounds.
+    question_count = serializers.IntegerField(read_only=True, default=0)
+
     class Meta:
         model = Company
-        fields = ["id", "name", "tone_style", "description", "is_free", "kind", "category"]
+        fields = ["id", "name", "tone_style", "description", "is_free", "kind", "category", "question_count"]
