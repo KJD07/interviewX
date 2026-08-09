@@ -333,7 +333,7 @@ export default function CompaniesPage() {
                   Buy more interviews
                 </button>
                 <button
-                  onClick={() => router.push("/upgrade")}
+                  onClick={() => router.push("/pricing")}
                   className="px-3.5 py-1.5 rounded-full text-xs font-semibold"
                   style={{ background: "transparent", color: "var(--accent)", border: "1px solid var(--accent)" }}
                 >

@@ -123,7 +123,7 @@ export default function Sidebar() {
               {plan.label}
             </span>
             <Link
-              href="/upgrade"
+              href="/pricing"
               className="text-xs underline"
               style={{ color: "var(--hero-text)", opacity: 0.75 }}
             >

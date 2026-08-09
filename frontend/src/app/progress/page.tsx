@@ -292,7 +292,7 @@ function LockedTeaser({ router }: { router: ReturnType<typeof useRouter> }) {
           consistency score — available on Pro, Premium, and Max.
         </p>
         <button
-          onClick={() => router.push("/upgrade")}
+          onClick={() => router.push("/pricing")}
           className="mt-4 px-5 py-2 rounded-full text-sm font-semibold"
           style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
         >

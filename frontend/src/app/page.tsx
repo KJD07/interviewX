@@ -7,6 +7,7 @@ import { FaLinkedin } from "react-icons/fa6";
 import { useAuth } from "@/context/AuthContext";
 import MarketingNav from "@/components/MarketingNav";
 import { ScrollReveal, GlassCard } from "@/components/ScrollReveal";
+import LiveCodeFeature from "@/components/LiveCodeFeature";
 
 const FEATURES = [
   {
@@ -159,6 +160,9 @@ export default function Home() {
         </ScrollReveal>
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <ScrollReveal className="col-span-1 sm:col-span-2 lg:col-span-3">
+            <LiveCodeFeature />
+          </ScrollReveal>
           {FEATURES.map((f, i) => (
             <ScrollReveal key={f.title} delay={(i % 3) * 0.08}>
               <GlassCard className="h-full">
@@ -216,6 +220,7 @@ export default function Home() {
           <span className="font-display text-base font-semibold text-[var(--ink)]">EvaluLabs</span>
           <div className="flex items-center gap-6 text-sm text-[var(--ink-dim)]">
             <Link href="/about" className="hover:text-[var(--ink)]">About</Link>
+            <Link href="/contact" className="hover:text-[var(--ink)]">Contact Us</Link>
             <a
               href="https://www.linkedin.com/company/evalulabs/"
               target="_blank"

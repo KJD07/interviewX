@@ -159,7 +159,7 @@ export default function DashboardPage() {
                     <span>+{bonusInterviews} bonus {bonusInterviews === 1 ? "interview" : "interviews"}.{" "}</span>
                   )}
                   <button
-                    onClick={() => router.push("/upgrade")}
+                    onClick={() => router.push("/pricing")}
                     className="underline"
                     style={{ color: "var(--accent)" }}
                   >
@@ -184,7 +184,7 @@ export default function DashboardPage() {
             <div className="flex items-center gap-3">
               {!isPro ? (
                 <button
-                  onClick={() => router.push("/upgrade")}
+                  onClick={() => router.push("/pricing")}
                   className="px-5 py-2.5 rounded-full text-sm font-semibold"
                   style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)" }}
                 >
@@ -192,7 +192,7 @@ export default function DashboardPage() {
                 </button>
               ) : (
                 <button
-                  onClick={() => router.push("/upgrade")}
+                  onClick={() => router.push("/pricing")}
                   className="px-5 py-2.5 rounded-full text-sm font-semibold"
                   style={{ background: "transparent", color: "var(--ink-dim)", border: "1px solid var(--ink-faint)" }}
                 >
@@ -305,7 +305,7 @@ export default function DashboardPage() {
                     View result
                   </button>
                   <button
-                    onClick={() => router.push("/upgrade")}
+                    onClick={() => router.push("/pricing")}
                     className="px-5 py-2.5 rounded-full text-sm font-semibold"
                     style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)" }}
                   >
