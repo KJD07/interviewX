@@ -124,7 +124,10 @@ class RealInterviewReport(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["user", "company_name", "round_name"],
-                condition=Q(had_recent_interview=RealInterviewReport.HadRecentInterview.YES),
+                # Literal rather than HadRecentInterview.YES: this runs while
+                # the enclosing class body is still executing, so neither the
+                # model nor its nested choices class is resolvable yet.
+                condition=Q(had_recent_interview="yes"),
                 name="unique_real_report_per_user_company_round",
             ),
         ]
