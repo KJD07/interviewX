@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
 
 from apps.companies.models import Round
 
@@ -91,6 +92,7 @@ class RealInterviewReport(models.Model):
     email = models.EmailField(blank=True)
     company_name = models.CharField(max_length=200, blank=True)
     role_title = models.CharField(max_length=200, blank=True)
+    round_name = models.CharField(max_length=200, blank=True)
     # [{"round_name": "...", "topics": "...", "questions": ["..."]}, ...] —
     # first entry required when had_recent_interview == "yes", rest
     # optional. "questions" holds the literal questions the candidate was
@@ -119,6 +121,16 @@ class RealInterviewReport(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "company_name", "round_name"],
+                # Literal rather than HadRecentInterview.YES: this runs while
+                # the enclosing class body is still executing, so neither the
+                # model nor its nested choices class is resolvable yet.
+                condition=Q(had_recent_interview="yes"),
+                name="unique_real_report_per_user_company_round",
+            ),
+        ]
 
     def __str__(self) -> str:
         if self.had_recent_interview == self.HadRecentInterview.NO:
