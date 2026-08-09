@@ -3,7 +3,7 @@ import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata: Metadata = {
-  title: "EvaluLabs — AI Interview Practice",
+  title: "EvaluLabs | AI Interview Practice",
   description: "Practice real interviews with an AI interviewer.",
 };
 

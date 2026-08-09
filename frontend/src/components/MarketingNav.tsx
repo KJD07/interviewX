@@ -9,7 +9,6 @@ import { useAuth } from "@/context/AuthContext";
 const LINKS = [
   { href: "/", label: "Home" },
   { href: "/about", label: "About" },
-  { href: "/career", label: "Career" },
 ];
 
 export default function MarketingNav() {

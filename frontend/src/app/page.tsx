@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { FaLinkedin } from "react-icons/fa6";
 import { useAuth } from "@/context/AuthContext";
 import MarketingNav from "@/components/MarketingNav";
 import { ScrollReveal, GlassCard } from "@/components/ScrollReveal";
@@ -10,7 +11,7 @@ import { ScrollReveal, GlassCard } from "@/components/ScrollReveal";
 const FEATURES = [
   {
     title: "Questions from real insiders",
-    body: "Every question is curated from professionals actually working at that company, or candidates recently interviewed there — not scraped or guessed.",
+    body: "Every question is curated from professionals actually working at that company, or candidates recently interviewed there, not scraped or guessed.",
     icon: "◆",
   },
   {
@@ -20,7 +21,7 @@ const FEATURES = [
   },
   {
     title: "Interview-grade pressure",
-    body: "Our AI interviewer paces, probes, and pushes back the way a real panel does — so the pressure you feel here is the pressure you'll feel there.",
+    body: "Our AI interviewer paces, probes, and pushes back the way a real panel does, so the pressure you feel here is the pressure you'll feel there.",
     icon: "○",
   },
   {
@@ -30,7 +31,7 @@ const FEATURES = [
   },
   {
     title: "Dimension-level scoring",
-    body: "See exactly where you stand — communication, technical depth, structure, and confidence — after every session.",
+    body: "See exactly where you stand on communication, technical depth, structure, and confidence after every session.",
     icon: "△",
   },
   {
@@ -42,9 +43,9 @@ const FEATURES = [
 
 const STEPS = [
   { n: "01", title: "Pick a company", body: "Choose from real companies and roles, from entry-level to FAANG-scale." },
-  { n: "02", title: "Face verified questions", body: "Answer questions sourced from insiders and recent hires — vetted with proof, not guesswork." },
+  { n: "02", title: "Face verified questions", body: "Answer questions sourced from insiders and recent hires, vetted with proof, not guesswork." },
   { n: "03", title: "Feel the pressure", body: "Our AI interviewer runs the session with the pace and scrutiny of a real panel." },
-  { n: "04", title: "Get scored & improve", body: "Instant, rubric-based feedback — and a readiness score that climbs with every session." },
+  { n: "04", title: "Get scored & improve", body: "Instant, rubric-based feedback. A readiness score that climbs with every session." },
 ];
 
 export default function Home() {
@@ -88,7 +89,7 @@ export default function Home() {
           className="mt-6 max-w-2xl text-lg text-[var(--ink-dim)]"
         >
           Our question bank is curated by professionals currently working at these
-          companies and candidates recently interviewed there — every contributor
+          companies and candidates recently interviewed there, every contributor
           verified with a work email or offer letter. Then our AI interviewer puts
           you through the same pressure as the real room, so nothing about interview
           day catches you off guard.
@@ -198,7 +199,7 @@ export default function Home() {
               Stop guessing what they'll ask. Find out.
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-[var(--hero-text)] opacity-80">
-              Verified questions, real pressure, instant feedback — start your first session in under a minute.
+              Verified questions, real pressure, instant feedback. Start your first session in under a minute.
             </p>
             <button
               onClick={() => router.push(user ? "/dashboard" : "/register")}
@@ -213,10 +214,17 @@ export default function Home() {
       <footer className="border-t border-[var(--border)] px-6 py-10">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
           <span className="font-display text-base font-semibold text-[var(--ink)]">EvaluLabs</span>
-          <div className="flex gap-6 text-sm text-[var(--ink-dim)]">
+          <div className="flex items-center gap-6 text-sm text-[var(--ink-dim)]">
             <Link href="/about" className="hover:text-[var(--ink)]">About</Link>
-            <Link href="/career" className="hover:text-[var(--ink)]">Career</Link>
-            <Link href="/login" className="hover:text-[var(--ink)]">Sign in</Link>
+            <a
+              href="https://www.linkedin.com/company/evalulabs/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="EvaluLabs on LinkedIn"
+              className="hover:text-[var(--ink)]"
+            >
+              <FaLinkedin size={18} aria-hidden="true" />
+            </a>
           </div>
           <span className="text-xs text-[var(--ink-faint)]">© {new Date().getFullYear()} EvaluLabs</span>
         </div>

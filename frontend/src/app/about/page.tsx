@@ -5,21 +5,21 @@ import MarketingNav from "@/components/MarketingNav";
 import { ScrollReveal, GlassCard } from "@/components/ScrollReveal";
 
 const VALUES = [
-  { title: "Sourced, not scraped", body: "Every question comes from someone who actually sat in that interview — a current employee or a recently interviewed candidate. Nothing is pulled off generic forums." },
+  { title: "Sourced, not scraped", body: "Every question comes from someone who actually sat in that interview - a current employee or a recently interviewed candidate. Nothing is pulled off generic forums." },
   { title: "Verified, not anonymous", body: "Contributors prove who they are with a company work email or offer letter before a single question of theirs goes live." },
-  { title: "Pressure, not a quiz", body: "Our AI interviewer doesn't wait patiently for you to finish thinking. It paces, follows up, and pushes back — the way a real panel does." },
+  { title: "Pressure, not a quiz", body: "Our AI interviewer doesn't wait patiently for you to finish thinking. It paces, follows up, and pushes back - the way a real panel does." },
 ];
 
 const VERIFY_STEPS = [
   { n: "01", title: "Contributor applies", body: "A current employee or a candidate who recently interviewed submits their questions." },
-  { n: "02", title: "Proof is checked", body: "We verify identity with a company work email or a valid offer letter — no exceptions." },
+  { n: "02", title: "Proof is checked", body: "We verify identity with a company work email or a valid offer letter - no exceptions." },
   { n: "03", title: "Questions are reviewed", body: "Verified submissions are checked for accuracy before they enter the live question bank." },
   { n: "04", title: "You get the real thing", body: "You practice with what was actually asked, not a generic guess at it." },
 ];
 
 const STATS = [
   { value: "100%", label: "Questions from verified contributors" },
-  { value: "2", label: "Accepted proofs — work email or offer letter" },
+  { value: "2", label: "Accepted proofs - work email or offer letter" },
   { value: "24/7", label: "AI interviewer available whenever you're ready" },
 ];
 
@@ -50,7 +50,7 @@ export default function About() {
         >
           Most prep platforms guess at what a company might ask. We don't. Our question
           bank is curated by people who actually work there, or who were interviewed
-          there recently — every one of them verified with a work email or an offer
+          there recently - every one of them verified with a work email or an offer
           letter. Then our AI interviewer puts you through the same pressure as the
           real room, so nothing on interview day feels unfamiliar.
         </motion.p>
