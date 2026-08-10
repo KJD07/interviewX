@@ -39,7 +39,7 @@ export interface User {
   id: number;
   email: string;
   username: string;
-  subscription_plan: "free" | "premium";
+  subscription_plan: "free" | "pro" | "premium" | "max";
   monthly_limit?: number | null;
   interviews_this_month?: number;
   bonus_interviews?: number;
@@ -97,6 +97,7 @@ export interface Company {
   id: number;
   name: string;
   tone_style: string;
+  description?: string;
   is_free?: boolean;
   kind?: "company" | "skill";
   category?: string;
