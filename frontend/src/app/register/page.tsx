@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -17,46 +17,170 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const inputStyle = useMemo(
+    () => ({
+      background: "var(--surface)",
+      border: "1px solid var(--border-mid)",
+      color: "var(--ink)",
+    }),
+    []
+  );
+
+  const labelStyle = useMemo(
+    () => ({ color: "var(--ink-dim)" }),
+    []
+  );
+
+  const buttonStyle = useMemo(
+    () => ({ background: "var(--accent)", color: "var(--accent-ink)" }),
+    []
+  );
+
+  const emailPrefix = useMemo(
+    () => email.trim().split("@")[0].toLowerCase(),
+    [email]
+  );
+  const passwordLower = useMemo(() => password.toLowerCase(), [password]);
+  const usernameLower = useMemo(
+    () => username.trim().toLowerCase(),
+    [username]
+  );
+
+  const passwordMinLength = useMemo(() => password.length >= 8, [password]);
+  const passwordNotNumeric = useMemo(
+    () => (password.length > 0 ? !/^[0-9]+$/.test(password) : true),
+    [password]
+  );
+  const passwordNotSimilarToUsername = useMemo(
+    () =>
+      usernameLower.length > 0
+        ? !passwordLower.includes(usernameLower)
+        : true,
+    [passwordLower, usernameLower]
+  );
+  const passwordNotSimilarToEmail = useMemo(
+    () =>
+      emailPrefix.length > 0 ? !passwordLower.includes(emailPrefix) : true,
+    [emailPrefix, passwordLower]
+  );
+  const passwordsMatch = useMemo(
+    () => (password2.length > 0 ? password === password2 : false),
+    [password, password2]
+  );
+  const showPasswordRules = useMemo(
+    () => password.length > 0 || password2.length > 0,
+    [password, password2]
+  );
+  const canSubmit = useMemo(
+    () =>
+      email.trim() !== "" &&
+      username.trim() !== "" &&
+      passwordMinLength &&
+      passwordNotNumeric &&
+      password2.length > 0 &&
+      passwordsMatch &&
+      passwordNotSimilarToUsername &&
+      passwordNotSimilarToEmail,
+    [
+      email,
+      username,
+      passwordMinLength,
+      passwordNotNumeric,
+      password2,
+      passwordsMatch,
+      passwordNotSimilarToUsername,
+      passwordNotSimilarToEmail,
+    ]
+  );
 
   useEffect(() => {
     if (user) router.replace("/");
   }, [user, router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setFieldErrors({});
+  const handleGoogleStart = useCallback(() => setSubmitting(true), []);
+  const handleGoogleError = useCallback((message: string) => setError(message), []);
 
-    if (password !== password2) {
-      setFieldErrors({ password2: "Passwords don't match." });
-      return;
-    }
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setError("");
+      setFieldErrors({});
 
-    setSubmitting(true);
-    try {
-      const result = await register(email, username, password, password2);
-      router.push(`/verify-email?email=${encodeURIComponent(result.email)}`);
-    } catch (err) {
-      if (err instanceof ApiError) {
-        // Django may return field-level errors as a JSON object
-        setError(err.detail);
-      } else {
-        setError("Something went wrong. Check your connection and try again.");
+      if (!passwordMinLength) {
+        setFieldErrors({ password: "Password must be at least 8 characters." });
+        return;
       }
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
-  const inputStyle = {
-    background: "var(--surface)",
-    border: "1px solid var(--border-mid)",
-    color: "var(--ink)",
-  };
+      if (!passwordNotNumeric) {
+        setFieldErrors({ password: "Password cannot be only numbers." });
+        return;
+      }
 
-  const labelStyle = {
-    color: "var(--ink-dim)",
-  };
+      if (!passwordNotSimilarToUsername || !passwordNotSimilarToEmail) {
+        setFieldErrors({
+          password:
+            "Password should not be too similar to your username or email.",
+        });
+        return;
+      }
+
+      if (!passwordsMatch) {
+        setFieldErrors({ password2: "Passwords don't match." });
+        return;
+      }
+
+      setSubmitting(true);
+      try {
+        const result = await register(email, username, password, password2);
+        router.push(`/verify-email?email=${encodeURIComponent(result.email)}`);
+      } catch (err) {
+        if (err instanceof ApiError) {
+          const body = err.body;
+          if (body && typeof body === "object") {
+            const fieldErrors: Record<string, string> = {};
+            let genericError = err.detail;
+            for (const key of Object.keys(body)) {
+              const value = (body as any)[key];
+              if (Array.isArray(value)) {
+                fieldErrors[key] = value.join(" ");
+              } else if (typeof value === "string") {
+                fieldErrors[key] = value;
+              }
+            }
+            if (Object.keys(fieldErrors).length > 0) {
+              setFieldErrors(fieldErrors);
+              genericError =
+                fieldErrors.detail ||
+                fieldErrors.non_field_errors ||
+                genericError;
+            }
+            setError(genericError);
+          } else {
+            setError(err.detail);
+          }
+        } else {
+          setError("Something went wrong. Check your connection and try again.");
+        }
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [
+      email,
+      username,
+      password,
+      password2,
+      passwordMinLength,
+      passwordNotNumeric,
+      passwordNotSimilarToEmail,
+      passwordNotSimilarToUsername,
+      passwordsMatch,
+      register,
+      router,
+    ]
+  );
+
+
 
   return (
     <main
@@ -77,7 +201,7 @@ export default function RegisterPage() {
         </div>
 
         <div className="mb-6">
-          <GoogleSignInButton onError={setError} onStart={() => setSubmitting(true)} />
+          <GoogleSignInButton onError={handleGoogleError} onStart={handleGoogleStart} />
         </div>
 
         <div className="flex items-center gap-3 mb-6">
@@ -106,6 +230,11 @@ export default function RegisterPage() {
               style={inputStyle}
               placeholder="you@example.com"
             />
+            {fieldErrors.email && (
+              <p className="mt-1 text-xs" style={{ color: "var(--danger)" }}>
+                {fieldErrors.email}
+              </p>
+            )}
           </div>
 
           <div>
@@ -127,6 +256,11 @@ export default function RegisterPage() {
               style={inputStyle}
               placeholder="rahul_dev"
             />
+            {fieldErrors.username && (
+              <p className="mt-1 text-xs" style={{ color: "var(--danger)" }}>
+                {fieldErrors.username}
+              </p>
+            )}
           </div>
 
           <div>
@@ -148,6 +282,40 @@ export default function RegisterPage() {
               style={inputStyle}
               placeholder="Min 8 characters"
             />
+            {showPasswordRules && (
+              <div className="mt-3 space-y-1 text-xs">
+                <p
+                  style={{
+                    color: passwordMinLength ? "var(--success)" : "var(--danger)",
+                  }}
+                >
+                  • At least 8 characters
+                </p>
+                <p
+                  style={{
+                    color: passwordNotNumeric ? "var(--success)" : "var(--danger)",
+                  }}
+                >
+                  • Cannot be only numbers
+                </p>
+                <p
+                  style={{
+                    color:
+                      passwordNotSimilarToUsername && passwordNotSimilarToEmail
+                        ? "var(--success)"
+                        : "var(--danger)",
+                  }}
+                >
+                  • Should not be too similar to username or email
+                </p>
+                
+              </div>
+            )}
+            {fieldErrors.password && (
+              <p className="mt-1 text-xs" style={{ color: "var(--danger)" }}>
+                {fieldErrors.password}
+              </p>
+            )}
           </div>
 
           <div>
@@ -174,6 +342,11 @@ export default function RegisterPage() {
               }}
               placeholder="Repeat password"
             />
+            {password2.length > 0 && (
+              <p className="mt-2 text-xs" style={{ color: passwordsMatch ? "var(--success)" : "var(--danger)" }}>
+                • Passwords match
+              </p>
+            )}
             {fieldErrors.password2 && (
               <p className="mt-1 text-xs" style={{ color: "var(--danger)" }}>
                 {fieldErrors.password2}
@@ -196,9 +369,9 @@ export default function RegisterPage() {
 
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || !canSubmit}
             className="w-full rounded-full py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
-            style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
+            style={buttonStyle}
           >
             {submitting ? "Creating account…" : "Create account"}
           </button>

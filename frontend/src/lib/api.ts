@@ -192,7 +192,8 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     public detail: string,
-    public code?: string
+    public code?: string,
+    public body?: unknown
   ) {
     super(detail);
   }
@@ -244,12 +245,15 @@ async function request<T>(
   if (!res.ok) {
     let detail = `HTTP ${res.status}`;
     let code: string | undefined;
+    let body: unknown;
     try {
-      const body = await res.json();
-      detail = body.detail || detail;
-      code = body.code;
+      body = await res.json();
+      if (body && typeof body === "object") {
+        detail = (body as any).detail || detail;
+        code = (body as any).code;
+      }
     } catch {}
-    throw new ApiError(res.status, detail, code);
+    throw new ApiError(res.status, detail, code, body);
   }
 
   // 204 No Content
