@@ -18,11 +18,11 @@ infer question_type via keyword matching (see infer_question_type).
 
 from __future__ import annotations
 
-import csv
-import io
 from dataclasses import dataclass, field
 
 from django.db import transaction
+
+from core.spreadsheet import SpreadsheetError, clean as _clean, read_rows, require_columns
 
 from .models import Company, InterviewQuestion, Role, Round
 
@@ -43,10 +43,11 @@ REQUIRED_COLUMNS = [
 DEFAULT_TONE_STYLE = "casual_friendly"
 
 
-class SpreadsheetImportError(Exception):
-    """File-level problem (bad header, unreadable/unsupported file) that
-    aborts the whole import — distinct from per-row issues, which are
-    collected in ImportResult instead of raised."""
+# File-level problem (bad header, unreadable/unsupported file) that aborts the
+# whole import — distinct from per-row issues, which are collected in
+# ImportResult instead of raised. Kept as an alias so the admin page's existing
+# `except SpreadsheetImportError` still catches what the shared reader raises.
+SpreadsheetImportError = SpreadsheetError
 
 
 @dataclass
@@ -75,62 +76,12 @@ def infer_question_type(category: str) -> str:
     return "other"
 
 
-def _read_xlsx(uploaded_file) -> list[dict[str, object]]:
-    import openpyxl
-
-    wb = openpyxl.load_workbook(uploaded_file, read_only=True, data_only=True)
-    sheet = wb.active
-    rows_iter = sheet.iter_rows(values_only=True)
-    try:
-        header = [str(c).strip() if c is not None else "" for c in next(rows_iter)]
-    except StopIteration:
-        raise SpreadsheetImportError("The uploaded file has no rows.")
-
-    rows = []
-    for raw_row in rows_iter:
-        if raw_row is None or all(v is None for v in raw_row):
-            continue
-        rows.append({header[i]: raw_row[i] for i in range(len(header)) if i < len(raw_row)})
-    return rows
-
-
-def _read_csv(uploaded_file) -> list[dict[str, object]]:
-    raw = uploaded_file.read()
-    text = raw.decode("utf-8-sig") if isinstance(raw, bytes) else raw
-    reader = csv.DictReader(io.StringIO(text))
-    return list(reader)
-
-
-def _read_rows(uploaded_file) -> list[dict[str, object]]:
-    name = (uploaded_file.name or "").lower()
-    if name.endswith(".xlsx"):
-        return _read_xlsx(uploaded_file)
-    if name.endswith(".csv"):
-        return _read_csv(uploaded_file)
-    raise SpreadsheetImportError(
-        f"Unsupported file type: {uploaded_file.name!r}. Upload a .xlsx or .csv file."
-    )
-
-
-def _clean(value: object) -> str:
-    if value is None:
-        return ""
-    return str(value).strip()
-
-
 def import_spreadsheet(uploaded_file) -> ImportResult:
     """Entry point: parse the uploaded file and seed Company/Role/Round/
     InterviewQuestion rows, skipping any row missing a required field and
     any question that's already been imported for its round."""
-    rows = _read_rows(uploaded_file)
-
-    if rows:
-        missing_columns = [c for c in REQUIRED_COLUMNS if c not in rows[0]]
-        if missing_columns:
-            raise SpreadsheetImportError(
-                f"Missing required column(s): {', '.join(missing_columns)}. "
-                f"Expected header: {', '.join(REQUIRED_COLUMNS)}"
-            )
+    rows = read_rows(uploaded_file)
+    require_columns(rows, REQUIRED_COLUMNS)
 
     result = ImportResult()
 

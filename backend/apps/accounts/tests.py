@@ -177,6 +177,101 @@ class SponsorshipTests(TestCase):
         self.assertEqual(user.sponsorship_interviews_used, 0)
         self.assertEqual(user.sponsorship_campaign_id, campaign.id)
 
+    def _add_member(self, campaign, email):
+        from apps.subscriptions.models import SponsorshipMember
+
+        return SponsorshipMember.objects.create(campaign=campaign, email=email)
+
+    def test_attaches_via_uploaded_email_on_a_non_matching_domain(self):
+        campaign = self._make_campaign(email_domain="")
+        self._add_member(campaign, "candidate@gmail.com")
+        user = self._make_user(email="candidate@gmail.com")
+
+        changed = user.sync_subscription_state()
+
+        self.assertIn("sponsorship_campaign", changed)
+        self.assertEqual(user.sponsorship_campaign_id, campaign.id)
+
+    def test_uploaded_email_is_matched_case_insensitively(self):
+        campaign = self._make_campaign(email_domain="")
+        self._add_member(campaign, "Candidate@Gmail.com")
+        user = self._make_user(email="candidate@gmail.com")
+
+        user.sync_subscription_state()
+
+        self.assertEqual(user.sponsorship_campaign_id, campaign.id)
+
+    def test_uploaded_email_wins_over_a_domain_campaign(self):
+        domain_campaign = self._make_campaign(
+            name="Thapar blanket", email_domain="thapar.edu", granted_plan="pro"
+        )
+        list_campaign = self._make_campaign(
+            name="Thapar toppers", email_domain="", granted_plan="max"
+        )
+        self._add_member(list_campaign, "candidate@thapar.edu")
+        user = self._make_user(email="candidate@thapar.edu")
+
+        user.sync_subscription_state()
+
+        self.assertEqual(user.sponsorship_campaign_id, list_campaign.id)
+        self.assertNotEqual(user.sponsorship_campaign_id, domain_campaign.id)
+
+    def test_email_uploaded_before_the_user_registers_attaches_on_first_sync(self):
+        campaign = self._make_campaign(email_domain="")
+        self._add_member(campaign, "future@gmail.com")
+
+        # Registration happens after the upload — no signup hook exists, the
+        # user is picked up on their first authenticated request.
+        user = self._make_user(email="future@gmail.com")
+        user.sync_subscription_state()
+
+        self.assertEqual(user.sponsorship_campaign_id, campaign.id)
+
+    def test_no_attach_when_the_member_campaign_has_lapsed(self):
+        campaign = self._make_campaign(
+            email_domain="", sponsor_covers_until=timezone.now() - timedelta(days=1)
+        )
+        self._add_member(campaign, "candidate@gmail.com")
+        user = self._make_user(email="candidate@gmail.com")
+
+        changed = user.sync_subscription_state()
+
+        self.assertNotIn("sponsorship_campaign", changed)
+        self.assertIsNone(user.sponsorship_campaign_id)
+
+    def test_no_attach_when_the_member_campaign_is_inactive(self):
+        campaign = self._make_campaign(email_domain="", is_active=False)
+        self._add_member(campaign, "candidate@gmail.com")
+        user = self._make_user(email="candidate@gmail.com")
+
+        user.sync_subscription_state()
+
+        self.assertIsNone(user.sponsorship_campaign_id)
+
+    def test_uploaded_email_grants_the_campaign_plan_and_limit(self):
+        from apps.subscriptions.plans import effective_monthly_limit, effective_plan
+
+        campaign = self._make_campaign(
+            email_domain="", granted_plan="max", interview_limit=7
+        )
+        self._add_member(campaign, "candidate@gmail.com")
+        user = self._make_user(email="candidate@gmail.com", subscription_plan="free")
+
+        user.sync_subscription_state()
+
+        self.assertEqual(effective_plan(user), "max")
+        self.assertEqual(effective_monthly_limit(user), 7)
+        # The user's own plan field is never touched by a campaign.
+        self.assertEqual(user.subscription_plan, "free")
+
+    def test_a_blank_domain_campaign_does_not_cover_everyone(self):
+        self._make_campaign(email_domain="")
+        user = self._make_user(email="stranger@elsewhere.com")
+
+        user.sync_subscription_state()
+
+        self.assertIsNone(user.sponsorship_campaign_id)
+
     def test_start_interview_blocked_after_sponsorship_cap_regardless_of_bonus(self):
         from apps.companies.models import Company, Role, Round
 

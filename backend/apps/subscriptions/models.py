@@ -52,11 +52,17 @@ class PaymentOrder(models.Model):
 
 class SponsorshipCampaign(models.Model):
     """
-    A college/institution partnership: every user who signs up (or already
-    exists) with an email on `email_domain` gets `granted_plan`'s feature set
-    while `sponsor_covers_until` is in the future, capped at `interview_limit`
-    interviews per `cycle_days`. Created and managed entirely through the
-    Django admin — there is no public-facing signup flow or API for this.
+    A college/institution partnership: every covered user gets `granted_plan`'s
+    feature set while `sponsor_covers_until` is in the future, capped at
+    `interview_limit` interviews per `cycle_days`. Created and managed entirely
+    through the Django admin — there is no public-facing signup flow or API.
+
+    Coverage is defined two ways, and a campaign may use either or both:
+      * `email_domain` — everyone on that domain (e.g. thapar.edu)
+      * `SponsorshipMember` rows — an explicit list of individual emails,
+        bulk-uploaded from a spreadsheet on the campaign's admin page.
+    An explicit member row wins over a domain match (see
+    `User.sync_subscription_state()`).
 
     Attachment/expiry/rollover is evaluated lazily in
     `User.sync_subscription_state()`, the same on-request pattern used for
@@ -68,8 +74,12 @@ class SponsorshipCampaign(models.Model):
     name = models.CharField(max_length=200)
     email_domain = models.CharField(
         max_length=255,
-        unique=True,
-        help_text="e.g. thapar.edu — students with this email domain are covered.",
+        blank=True,
+        default="",
+        help_text=(
+            "e.g. thapar.edu — everyone with this email domain is covered. "
+            "Leave blank for a campaign that covers only the uploaded email list."
+        ),
     )
     granted_plan = models.CharField(max_length=20, choices=GRANTED_PLAN_CHOICES)
     interview_limit = models.PositiveIntegerField(
@@ -91,4 +101,39 @@ class SponsorshipCampaign(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.name} ({self.email_domain})"
+        return f"{self.name} ({self.email_domain or 'email list'})"
+
+
+class SponsorshipMember(models.Model):
+    """One email explicitly covered by a campaign, independent of its domain.
+
+    Deliberately keyed on the raw email rather than a User FK: the list is
+    uploaded before the students sign up, so most rows have no account yet.
+    Matching happens by email on each request in
+    `User.sync_subscription_state()`, which means a member who registers later
+    is picked up on their first authenticated request with no signup hook and
+    no pending/attached state to keep in sync.
+    """
+
+    campaign = models.ForeignKey(
+        SponsorshipCampaign,
+        on_delete=models.CASCADE,
+        related_name="members",
+    )
+    email = models.EmailField(db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["email"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["campaign", "email"], name="unique_email_per_campaign"
+            )
+        ]
+
+    def save(self, *args, **kwargs):
+        self.email = self.email.strip().lower()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.email} → {self.campaign.name}"

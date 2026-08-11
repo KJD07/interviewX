@@ -70,19 +70,37 @@ class User(AbstractUser):
             )
             changed += ["interviews_this_month", "current_cycle_start"]
 
-        from apps.subscriptions.models import SponsorshipCampaign
+        from apps.subscriptions.models import SponsorshipCampaign, SponsorshipMember
 
         if self.sponsorship_campaign_id is None:
-            domain = self.email.rsplit("@", 1)[-1].lower() if self.email else ""
-            campaign = (
-                SponsorshipCampaign.objects.filter(
-                    email_domain=domain,
-                    is_active=True,
-                    sponsor_covers_until__gt=now,
-                ).first()
-                if domain
+            email = (self.email or "").strip().lower()
+            # An explicitly uploaded email wins over a domain-wide campaign, so
+            # a named list can grant a different tier/limit than the blanket
+            # deal covering the same college.
+            member = (
+                SponsorshipMember.objects.filter(
+                    email=email,
+                    campaign__is_active=True,
+                    campaign__sponsor_covers_until__gt=now,
+                )
+                .select_related("campaign")
+                .first()
+                if email
                 else None
             )
+            if member:
+                campaign = member.campaign
+            else:
+                domain = email.rsplit("@", 1)[-1] if email else ""
+                campaign = (
+                    SponsorshipCampaign.objects.filter(
+                        email_domain=domain,
+                        is_active=True,
+                        sponsor_covers_until__gt=now,
+                    ).first()
+                    if domain
+                    else None
+                )
             if campaign:
                 self.sponsorship_campaign = campaign
                 self.sponsorship_cycle_start = now
