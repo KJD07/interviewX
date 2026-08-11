@@ -1,0 +1,25 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+  <h1>Upload covered emails</h1>
+  <p>
+    Adding to campaign <strong>{{ campaign.name }}</strong> —
+    {{ campaign.get_granted_plan_display }}, {{ campaign.interview_limit }} interview(s)
+    per {{ campaign.cycle_days }} day(s), covered until {{ campaign.sponsor_covers_until }}.
+  </p>
+  <p>
+    Expected header row: <strong>Email</strong> (one address per row).
+    Blank or malformed addresses are skipped rather than erroring the import, and
+    emails already on this campaign are ignored, so the same file can be uploaded twice safely.
+  </p>
+  <p>
+    Uploaded people don't need an account yet — an address is picked up automatically
+    the first time that user signs in. To change how many interviews they get or how long
+    coverage lasts, edit the campaign itself; those settings are not read from the file.
+  </p>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <input type="submit" value="Upload emails" class="default">
+  </form>
+{% endblock %}

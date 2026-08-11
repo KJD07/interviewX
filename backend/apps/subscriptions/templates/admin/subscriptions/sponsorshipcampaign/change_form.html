@@ -1,0 +1,10 @@
+{% extends "admin/change_form.html" %}
+
+{% block object-tools-items %}
+  {% if original %}
+    <li>
+      <a href="{% url 'admin:subscriptions_sponsorshipcampaign_upload_emails' original.pk %}" class="addlink">Upload emails</a>
+    </li>
+  {% endif %}
+  {{ block.super }}
+{% endblock %}
