@@ -199,6 +199,21 @@ export class ApiError extends Error {
   }
 }
 
+// DRF error bodies come in two shapes: {"detail": "..."} for most view-level
+// errors, or {"field": ["msg", ...], ...} for serializer validation errors —
+// the latter has no "detail" key, so without this the UI fell back to a bare
+// status code for every validation error (e.g. registering with a taken email).
+function extractDetail(body: unknown): string | undefined {
+  if (!body || typeof body !== "object") return undefined;
+  const obj = body as Record<string, unknown>;
+  if (typeof obj.detail === "string" && obj.detail) return obj.detail;
+  for (const value of Object.values(obj)) {
+    if (Array.isArray(value) && typeof value[0] === "string") return value[0];
+    if (typeof value === "string" && value) return value;
+  }
+  return undefined;
+}
+
 async function request<T>(
   path: string,
   options: RequestInit = {},
@@ -243,16 +258,18 @@ async function request<T>(
   }
 
   if (!res.ok) {
-    let detail = `HTTP ${res.status}`;
     let code: string | undefined;
     let body: unknown;
     try {
       body = await res.json();
-      if (body && typeof body === "object") {
-        detail = (body as any).detail || detail;
-        code = (body as any).code;
-      }
     } catch {}
+    if (body && typeof body === "object") {
+      code = (body as any).code;
+    }
+    // Only reached when the backend sent nothing usable (network-level
+    // failure, non-JSON body, or an empty error payload) — surface the raw
+    // status rather than inventing wording the backend never sent.
+    const detail = extractDetail(body) || `Request failed (${res.status})`;
     throw new ApiError(res.status, detail, code, body);
   }
 
