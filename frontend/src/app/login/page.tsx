@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -61,7 +61,10 @@ export default function LoginPage() {
         </div>
 
         <div className="mb-6">
-          <GoogleSignInButton onError={setError} onStart={() => setSubmitting(true)} />
+          <GoogleSignInButton
+            onError={useCallback((msg: string) => setError(msg), [setError])}
+            onStart={useCallback(() => setSubmitting(true), [setSubmitting])}
+          />
         </div>
 
         <div className="flex items-center gap-3 mb-6">
