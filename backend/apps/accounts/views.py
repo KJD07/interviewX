@@ -24,6 +24,9 @@ from .serializers import (
 )
 
 User = get_user_model()
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def _token_response(user) -> dict:
@@ -46,7 +49,12 @@ def _token_response(user) -> dict:
 
 def _issue_otp(user) -> None:
     otp = EmailOTP.generate_for_user(user)
-    send_otp_email(user, otp.code)
+    try:
+        send_otp_email(user, otp.code)
+        logger.info("Issued email OTP for %s (code=%s)", user.email, otp.code)
+    except Exception:
+        logger.exception("Failed to send OTP email to %s", user.email)
+        raise
 
 
 class RegisterView(APIView):
@@ -105,15 +113,18 @@ class VerifyEmailView(APIView):
 
         otp = EmailOTP.objects.filter(user=user, is_used=False).order_by("-created_at").first()
         if not otp:
+            logger.warning("Verify attempt for %s: no active OTP", email)
             return Response(
                 {"detail": "No active code found. Request a new one."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         if otp.is_expired:
+            logger.warning("Verify attempt for %s: expired OTP", email)
             return Response({"detail": "Code expired. Request a new one."}, status=status.HTTP_400_BAD_REQUEST)
 
         if otp.attempts >= EmailOTP.MAX_ATTEMPTS:
+            logger.warning("Verify attempt for %s: too many incorrect attempts", email)
             return Response(
                 {"detail": "Too many incorrect attempts. Request a new code."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -123,6 +134,7 @@ class VerifyEmailView(APIView):
             otp.attempts += 1
             otp.save(update_fields=["attempts"])
             remaining = EmailOTP.MAX_ATTEMPTS - otp.attempts
+            logger.warning("Incorrect OTP submitted for %s (attempts=%d)", email, otp.attempts)
             return Response(
                 {"detail": f"Incorrect code. {remaining} attempt(s) left."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -132,6 +144,7 @@ class VerifyEmailView(APIView):
         otp.save(update_fields=["is_used"])
         user.is_email_verified = True
         user.save(update_fields=["is_email_verified"])
+        logger.info("Email verified for %s", email)
 
         return Response(_token_response(user), status=status.HTTP_200_OK)
 
@@ -154,10 +167,9 @@ class ResendOTPView(APIView):
         except User.DoesNotExist:
             # Don't leak whether an email is registered.
             return Response({"detail": "If that account exists, a new code has been sent."})
-
         if user.is_email_verified:
             return Response({"detail": "This account is already verified. Please log in."})
-
+        logger.info("Resend OTP requested for %s", email)
         _issue_otp(user)
         return Response({"detail": "A new verification code has been sent."})
 
@@ -188,9 +200,9 @@ class ForgotPasswordView(APIView):
         if user.auth_provider == "google" and not user.has_usable_password():
             # Nothing to reset — don't leak this, just don't send a code.
             return generic_response
-
         otp = PasswordResetOTP.generate_for_user(user)
         send_password_reset_email(user, otp.code)
+        logger.info("Password-reset OTP issued for %s (code=%s)", user.email, otp.code)
         return generic_response
 
 
@@ -240,6 +252,7 @@ class ResetPasswordView(APIView):
             otp.attempts += 1
             otp.save(update_fields=["attempts"])
             remaining = PasswordResetOTP.MAX_ATTEMPTS - otp.attempts
+            logger.warning("Incorrect password-reset OTP for %s (attempts=%d)", email, otp.attempts)
             return Response(
                 {"detail": f"Incorrect code. {remaining} attempt(s) left."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -247,6 +260,8 @@ class ResetPasswordView(APIView):
 
         otp.is_used = True
         otp.save(update_fields=["is_used"])
+
+        logger.info("Password reset completed for %s", email)
 
         user.set_password(new_password)
         user.save(update_fields=["password"])
@@ -290,6 +305,7 @@ class LoginView(APIView):
             )
 
         if not user.is_email_verified:
+            logger.info("Login attempt for unverified email %s: issuing OTP", user.email)
             _issue_otp(user)
             return Response(
                 {
