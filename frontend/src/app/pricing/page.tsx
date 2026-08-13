@@ -128,7 +128,7 @@ export default function Pricing() {
       )}
 
       <section className="mx-auto max-w-6xl px-6 pb-28">
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 lg:items-stretch">
           <ScrollReveal>
             <GlassCard hover={false} className="flex h-full flex-col bg-white/30">
               <h3 className="font-display text-lg font-semibold text-[var(--ink)]">{PLANS.free.label}</h3>
@@ -156,69 +156,61 @@ export default function Pricing() {
 
           {PAID_PLAN_IDS.map((planId, i) => {
             const plan = PLANS[planId];
-            const isMax = planId === "max";
+            const isBestValue = planId === "premium";
             const isCurrent = user != null && currentPlan === planId;
+            const card = (
+              <GlassCard
+                hover={false}
+                className={`flex h-full flex-col bg-white/30 ${
+                  isBestValue
+                    ? "border-2 border-[#3b82f6] shadow-[0_0_20px_4px_rgba(59,130,246,0.6),0_0_45px_12px_rgba(59,130,246,0.3)]"
+                    : ""
+                }`}
+              >
+                <h3 className="font-display text-lg font-semibold text-[var(--ink)]">{plan.label}</h3>
+                <div className="mt-3 mb-6">
+                  <span className="font-display text-3xl font-semibold text-[var(--ink)]">
+                    ₹{plan.priceRupees}
+                  </span>
+                  <span className="ml-1 text-sm text-[var(--ink-dim)]">/month</span>
+                </div>
+                <ul className="mb-8 flex-1 space-y-3">
+                  {plan.features.map((f) => (
+                    <li key={f} className="flex items-start gap-2 text-sm text-[var(--ink-dim)]">
+                      <span className="text-[var(--accent-dim)]">✓</span>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  onClick={() => handleUpgrade(planId)}
+                  disabled={loadingPlan !== null || isCurrent}
+                  className={`w-full rounded-full py-3 text-sm font-semibold transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100 ${
+                    isBestValue
+                      ? "bg-[#3b82f6] text-white shadow-[0_0_14px_2px_rgba(59,130,246,0.6)] hover:shadow-[0_0_20px_4px_rgba(59,130,246,0.75)]"
+                      : "border border-[var(--border-mid)] text-[var(--ink)] hover:bg-[var(--surface-2)]"
+                  }`}
+                >
+                  {isCurrent
+                    ? "Current plan"
+                    : loadingPlan === planId
+                    ? "Opening checkout…"
+                    : `Choose ${plan.label}`}
+                </button>
+              </GlassCard>
+            );
             return (
               <ScrollReveal key={planId} delay={(i + 1) * 0.08}>
-                <GlassCard
-                  hover={false}
-                  className={`flex h-full flex-col ${isMax ? "bg-[var(--hero-bg)]" : "bg-white/30"}`}
-                >
-                  {isMax && (
-                    <span className="mb-3 self-start rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-[var(--hero-text)]">
+                {isBestValue ? (
+                  <div className="relative z-10 lg:translate-y-4">
+                    <span className="absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#3b82f6] px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white shadow-[0_0_12px_3px_rgba(59,130,246,0.8)]">
                       Best value
                     </span>
-                  )}
-                  <h3
-                    className={`font-display text-lg font-semibold ${
-                      isMax ? "text-[var(--hero-text)]" : "text-[var(--ink)]"
-                    }`}
-                  >
-                    {plan.label}
-                  </h3>
-                  <div className="mt-3 mb-6">
-                    <span
-                      className={`font-display text-3xl font-semibold ${
-                        isMax ? "text-[var(--hero-text)]" : "text-[var(--ink)]"
-                      }`}
-                    >
-                      ₹{plan.priceRupees}
-                    </span>
-                    <span
-                      className={`ml-1 text-sm ${isMax ? "text-[var(--hero-text)] opacity-80" : "text-[var(--ink-dim)]"}`}
-                    >
-                      /month
-                    </span>
+                    {card}
                   </div>
-                  <ul className="mb-8 flex-1 space-y-3">
-                    {plan.features.map((f) => (
-                      <li
-                        key={f}
-                        className={`flex items-start gap-2 text-sm ${
-                          isMax ? "text-[var(--hero-text)] opacity-90" : "text-[var(--ink-dim)]"
-                        }`}
-                      >
-                        <span className={isMax ? "opacity-90" : "text-[var(--accent-dim)]"}>✓</span>
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                  <button
-                    onClick={() => handleUpgrade(planId)}
-                    disabled={loadingPlan !== null || isCurrent}
-                    className={`w-full rounded-full py-3 text-sm font-semibold transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100 ${
-                      isMax
-                        ? "bg-[var(--page)] text-[var(--ink)]"
-                        : "border border-[var(--border-mid)] text-[var(--ink)] hover:bg-[var(--surface-2)]"
-                    }`}
-                  >
-                    {isCurrent
-                      ? "Current plan"
-                      : loadingPlan === planId
-                      ? "Opening checkout…"
-                      : `Choose ${plan.label}`}
-                  </button>
-                </GlassCard>
+                ) : (
+                  card
+                )}
               </ScrollReveal>
             );
           })}
