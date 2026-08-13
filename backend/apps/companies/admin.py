@@ -51,10 +51,22 @@ class InterviewQuestionInline(admin.TabularInline):
 @admin.register(Company)
 class CompanyAdmin(admin.ModelAdmin):
     list_display = ("name", "kind", "category", "tone_style", "is_free")
-    list_filter = ("kind", "category")
+    list_editable = ("is_free",)
+    list_filter = ("kind", "category", "is_free")
     search_fields = ("name",)
     inlines = [RoleInline]
+    actions = ["mark_free", "mark_paid_only"]
     change_list_template = "admin/companies/company/change_list.html"
+
+    @admin.action(description="Mark selected as available on free plan")
+    def mark_free(self, request, queryset):
+        updated = queryset.update(is_free=True)
+        self.message_user(request, f"Marked {updated} compan(y/ies) as free-plan accessible.")
+
+    @admin.action(description="Remove selected from free plan (paid-only)")
+    def mark_paid_only(self, request, queryset):
+        updated = queryset.update(is_free=False)
+        self.message_user(request, f"Removed {updated} compan(y/ies) from the free plan.")
 
     def get_urls(self):
         # Prepended so this doesn't get shadowed by ModelAdmin's own
