@@ -14,19 +14,19 @@ PLANS = {
     "pro": {
         "label": "Pro",
         "amount_paise": 19900,  # ₹199
-        "monthly_limit": 20,
+        "monthly_limit": 15,
         "has_insights": True,
     },
     "premium": {
         "label": "Premium",
         "amount_paise": 29900,  # ₹299
-        "monthly_limit": 50,
+        "monthly_limit": 30,
         "has_insights": True,
     },
     "max": {
         "label": "Max",
         "amount_paise": 59900,  # ₹599
-        "monthly_limit": None,  # unlimited
+        "monthly_limit": 50,
         "has_insights": True,
     },
 }

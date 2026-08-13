@@ -253,8 +253,8 @@ class CreateTopupOrderView(APIView):
     POST /api/subscriptions/topup/create-order/
     Body: {"pack": "spark" | "boost" | "power"}
     Creates a Razorpay order for a one-off interview credit top-up.
-    Available to any authenticated user except those already on Max
-    (unlimited plan — a top-up would be meaningless there).
+    Available to any authenticated user, on any plan, to go past their
+    monthly limit without waiting for the next billing cycle.
     """
 
     permission_classes = [IsAuthenticated]
@@ -264,12 +264,6 @@ class CreateTopupOrderView(APIView):
         if pack not in TOPUP_PACKS:
             return Response(
                 {"detail": f"Invalid pack. Choose one of: {', '.join(TOPUP_PACKS)}."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        if request.user.subscription_plan == "max":
-            return Response(
-                {"detail": "Max plan already includes unlimited interviews."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

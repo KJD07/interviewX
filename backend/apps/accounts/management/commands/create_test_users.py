@@ -33,7 +33,7 @@ TEST_USERS = [
     ("test_free_maxed", "test.free.maxed@evalulabs.dev", "free", 2),  # limit reached
     ("test_pro", "test.pro@evalulabs.dev", "pro", 5),
     ("test_premium", "test.premium@evalulabs.dev", "premium", 12),
-    ("test_max", "test.max@evalulabs.dev", "max", 37),  # unlimited, should never block
+    ("test_max", "test.max@evalulabs.dev", "max", 37),
 ]
 
 

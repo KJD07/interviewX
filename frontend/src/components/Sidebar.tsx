@@ -58,7 +58,6 @@ export default function Sidebar() {
   const pathname = usePathname();
   const plan = planOf(user?.subscription_plan);
   const [showTopup, setShowTopup] = useState(false);
-  const isMax = user?.subscription_plan === "max";
   const bonusInterviews = user?.bonus_interviews ?? 0;
 
   const NAV_ITEMS = [
@@ -137,15 +136,13 @@ export default function Sidebar() {
             </p>
           )}
 
-          {!isMax && (
-            <button
-              onClick={() => setShowTopup(true)}
-              className="text-xs mt-1.5 underline block"
-              style={{ color: "var(--hero-text)", opacity: 0.75 }}
-            >
-              + Buy more interviews
-            </button>
-          )}
+          <button
+            onClick={() => setShowTopup(true)}
+            className="text-xs mt-1.5 underline block"
+            style={{ color: "var(--hero-text)", opacity: 0.75 }}
+          >
+            + Buy more interviews
+          </button>
         </div>
 
         <div className="flex items-center justify-between px-1">

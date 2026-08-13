@@ -12,12 +12,10 @@ declare global {
 }
 
 export default function TopupModal({ onClose }: { onClose: () => void }) {
-  const { user, refreshUser } = useAuth();
+  const { refreshUser } = useAuth();
   const [loadingPack, setLoadingPack] = useState<TopupPackId | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState<string | null>(null);
-
-  const isMax = user?.subscription_plan === "max";
 
   const handleBuy = async (pack: TopupPackId) => {
     setLoadingPack(pack);
@@ -103,11 +101,7 @@ export default function TopupModal({ onClose }: { onClose: () => void }) {
           Top up any time this month. Credits roll over and never expire.
         </p>
 
-        {isMax ? (
-          <p className="text-sm py-4 text-center" style={{ color: "var(--ink-dim)" }}>
-            You're on Max — interviews are already unlimited.
-          </p>
-        ) : success ? (
+        {success ? (
           <div className="py-4 text-center">
             <p className="text-sm mb-4" style={{ color: "var(--ink)" }}>{success}</p>
             <button
