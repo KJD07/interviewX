@@ -525,6 +525,108 @@ export const subscriptions = {
     }),
 };
 
+// ── Enterprise (org dashboard) endpoints ────────────────────────────────────
+
+export interface OrgQuestion {
+  id: number;
+  question_text: string;
+  question_type: string;
+  ideal_answer: string;
+  starter_code: string;
+  language: string;
+}
+
+export interface OrgRound {
+  id: number;
+  title: string;
+  order: number;
+  round_type: string;
+  questions: OrgQuestion[];
+}
+
+export interface OrgRole {
+  id: number;
+  title: string;
+  rounds: OrgRound[];
+}
+
+export interface Organization {
+  id: number;
+  name: string;
+  candidate_quota: number;
+  candidates_used: number;
+  contract_ends: string;
+  is_active: boolean;
+}
+
+export interface OrgDashboard {
+  organization: Organization;
+  role: "admin" | "recruiter";
+  question_bank: OrgRole[];
+  invite_counts: Record<string, number>;
+}
+
+export interface OrgQuestionUploadResult {
+  rows_seen: number;
+  rows_skipped: number;
+  skipped_examples: string[];
+  roles_created: number;
+  rounds_created: number;
+  questions_created: number;
+  questions_skipped_duplicate: number;
+}
+
+export interface OrgCandidateInvite {
+  id: number;
+  candidate_email: string;
+  round: number;
+  round_title: string;
+  role_title: string;
+  token: string;
+  status: "pending" | "started" | "completed" | "expired";
+  session: number | null;
+  created_at: string;
+  expires_at: string;
+}
+
+export const organizations = {
+  dashboard: () => request<OrgDashboard>("/api/enterprise/dashboard/"),
+
+  // Bypasses the shared request() wrapper: it always sets
+  // Content-Type: application/json, which breaks a multipart file upload
+  // (the browser needs to set its own boundary on the Content-Type header).
+  uploadQuestions: async (file: File): Promise<OrgQuestionUploadResult> => {
+    const access = tokens.getAccess();
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch(`${API_URL}/api/enterprise/question-bank/upload/`, {
+      method: "POST",
+      headers: access ? { Authorization: `Bearer ${access}` } : {},
+      body: form,
+    });
+    const body = await res.json().catch(() => undefined);
+    if (!res.ok) {
+      throw new ApiError(res.status, extractDetail(body) || `Request failed (${res.status})`, undefined, body);
+    }
+    return body;
+  },
+
+  invites: {
+    list: () => request<OrgCandidateInvite[]>("/api/enterprise/invites/"),
+
+    create: (round: number, candidate_email: string, expires_at: string) =>
+      request<OrgCandidateInvite>("/api/enterprise/invites/", {
+        method: "POST",
+        body: JSON.stringify({ round, candidate_email, expires_at }),
+      }),
+
+    start: (token: string) =>
+      request<StartInterviewResponse>(`/api/enterprise/invites/${token}/start/`, {
+        method: "POST",
+      }),
+  },
+};
+
 // ── Review endpoints ────────────────────────────────────────────────────────
 
 export interface ReviewPayload {

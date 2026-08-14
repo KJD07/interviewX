@@ -38,7 +38,10 @@ class CompanyListView(APIView):
 
     def get(self, request):
         kind = request.query_params.get("kind", Company.Kind.COMPANY)
-        companies = Company.objects.filter(kind=kind).annotate(
+        # organization__isnull=True is a hard safety net, independent of kind:
+        # an org's private question bank (kind="enterprise") must never appear
+        # here even if a caller passes ?kind=enterprise directly.
+        companies = Company.objects.filter(kind=kind, organization__isnull=True).annotate(
             question_count=Count(
                 "roles__rounds__questions",
                 filter=Q(roles__rounds__questions__status=InterviewQuestion.Status.APPROVED),
@@ -74,6 +77,11 @@ class CompanyDetailView(APIView):
             ).get(pk=company_id)
         except Company.DoesNotExist:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        if company.organization_id:
+            # Org-private question bank — never served through this public
+            # endpoint, regardless of plan. Report as not found rather than
+            # 403 so its existence isn't leaked.
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         changed_fields = request.user.sync_subscription_state()
         if changed_fields:
             request.user.save(update_fields=changed_fields)
@@ -95,6 +103,8 @@ class RoleListView(APIView):
         try:
             company = Company.objects.get(pk=company_id)
         except Company.DoesNotExist:
+            return Response({"detail": "Company not found."}, status=status.HTTP_404_NOT_FOUND)
+        if company.organization_id:
             return Response({"detail": "Company not found."}, status=status.HTTP_404_NOT_FOUND)
         changed_fields = request.user.sync_subscription_state()
         if changed_fields:
@@ -124,6 +134,8 @@ class RoundListView(APIView):
             role = Role.objects.select_related("company").get(pk=role_id, company_id=company_id)
         except Role.DoesNotExist:
             return Response({"detail": "Role not found."}, status=status.HTTP_404_NOT_FOUND)
+        if role.company.organization_id:
+            return Response({"detail": "Role not found."}, status=status.HTTP_404_NOT_FOUND)
         changed_fields = request.user.sync_subscription_state()
         if changed_fields:
             request.user.save(update_fields=changed_fields)
@@ -152,6 +164,8 @@ class RoundDetailView(APIView):
                 role__company_id=company_id,
             )
         except Round.DoesNotExist:
+            return Response({"detail": "Round not found."}, status=status.HTTP_404_NOT_FOUND)
+        if round_.role.company.organization_id:
             return Response({"detail": "Round not found."}, status=status.HTTP_404_NOT_FOUND)
         changed_fields = request.user.sync_subscription_state()
         if changed_fields:

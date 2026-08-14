@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "apps.interviews",
     "apps.subscriptions",
     "apps.reviews",
+    "apps.enterprise",
 ]
 
 MIDDLEWARE = [
@@ -126,6 +127,27 @@ STORAGES = {
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
 }
 WHITENOISE_USE_FINDERS = True
+
+# Local-disk fallback for MEDIA (used by apps.enterprise.ProctoringEvent.clip)
+# so uploads work out of the box in dev. Not durable/scalable across
+# containers — set AWS_STORAGE_BUCKET_NAME below for anything beyond local
+# dev, since this single-container deploy has no shared volume.
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
+# --- Object storage for proctoring clips (apps.enterprise) ---
+# Only flagged moments are ever uploaded here (see ProctoringEvent docstring),
+# never full-session recordings, to keep stored biometric data minimal.
+# Unset in dev by default; switches STORAGES["default"] to S3 once configured.
+AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME", "")
+if AWS_STORAGE_BUCKET_NAME:
+    STORAGES["default"] = {"BACKEND": "storages.backends.s3.S3Storage"}
+    AWS_S3_REGION_NAME = os.environ.get("AWS_S3_REGION_NAME", "")
+    AWS_S3_ENDPOINT_URL = os.environ.get("AWS_S3_ENDPOINT_URL", "")  # for S3-compatible providers
+    AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID", "")
+    AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY", "")
+    AWS_DEFAULT_ACL = None
+    AWS_QUERYSTRING_AUTH = True  # signed URLs — clips contain candidate video, never public
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

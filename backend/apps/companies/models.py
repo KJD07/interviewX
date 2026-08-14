@@ -6,6 +6,7 @@ class Company(models.Model):
     class Kind(models.TextChoices):
         COMPANY = "company", "Company"
         SKILL = "skill", "Skill"
+        ENTERPRISE = "enterprise", "Enterprise (org-private)"
 
     name = models.CharField(max_length=100)
     tone_style = models.CharField(
@@ -27,6 +28,18 @@ class Company(models.Model):
         max_length=100,
         blank=True,
         help_text="Grouping label for skills (e.g. 'Frontend', 'Backend', 'DevOps'). Unused for companies.",
+    )
+    organization = models.ForeignKey(
+        "enterprise.Organization",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="companies",
+        help_text=(
+            "Set only for kind='enterprise' rows: the org this private question "
+            "bank belongs to. Public companies/skills endpoints always exclude "
+            "rows with this set — see apps.companies.views."
+        ),
     )
 
     class Meta:
