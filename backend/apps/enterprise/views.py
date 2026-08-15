@@ -22,6 +22,7 @@ from apps.interviews.views import (
 )
 from core.openrouter_client import build_interview_system_prompt, chat_completion, extract_workspace_action
 
+from .emails import send_candidate_invite_email
 from .imports import OrgImportError, get_or_create_org_company, import_org_questions
 from .models import Organization, OrgCandidateInvite, OrganizationMember
 from .serializers import OrganizationSerializer, OrgCandidateInviteSerializer, OrgRoleSerializer
@@ -151,7 +152,8 @@ class OrgCandidateInviteListCreateView(APIView):
             data=request.data, context={"organization": membership.organization}
         )
         serializer.is_valid(raise_exception=True)
-        serializer.save(organization=membership.organization)
+        invite = serializer.save(organization=membership.organization)
+        send_candidate_invite_email(invite)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 

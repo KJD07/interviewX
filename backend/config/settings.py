@@ -238,6 +238,11 @@ else:
 
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "EvaluLabs <no-reply@evalulabs.local>")
 
+# Base URL of the deployed frontend, used to build links inside outgoing
+# emails (e.g. org candidate invites). Falls back to the first CORS origin
+# so local dev keeps working with zero setup.
+FRONTEND_URL = os.environ.get("FRONTEND_URL") or CORS_ALLOWED_ORIGINS[0]
+
 # --- Google Sign-In ---
 # The OAuth "Web application" client ID from Google Cloud Console. The
 # frontend uses this same ID to render the Google button; the backend uses
