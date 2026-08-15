@@ -9,7 +9,6 @@ from .views import (
     ResendOTPView,
     ResetPasswordView,
     VerifyEmailView,
-    _TempNetworkDiagView,
 )
 
 urlpatterns = [
@@ -21,5 +20,4 @@ urlpatterns = [
     path("me/", MeView.as_view(), name="auth-me"),
     path("forgot-password/", ForgotPasswordView.as_view(), name="auth-forgot-password"),
     path("reset-password/", ResetPasswordView.as_view(), name="auth-reset-password"),
-    path("_diag/", _TempNetworkDiagView.as_view(), name="auth-temp-diag"),
 ]

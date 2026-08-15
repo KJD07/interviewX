@@ -416,39 +416,3 @@ class MeView(APIView):
                 "auth_provider": user.auth_provider,
             }
         )
-
-
-class _TempNetworkDiagView(APIView):
-    """TEMPORARY — diagnoses whether outbound SMTP is blocked at the
-    Railway network level vs. blocked specifically by spacemail. Not part
-    of the product; remove after diagnosis."""
-
-    permission_classes = [AllowAny]
-
-    def get(self, request):
-        import socket
-        import time
-
-        if request.query_params.get("token") != "diag-9f3a1c-temp":
-            return Response(status=status.HTTP_404_NOT_FOUND)
-
-        targets = [
-            ("spacemail:587", "mail.spacemail.com", 587),
-            ("spacemail:465", "mail.spacemail.com", 465),
-            ("spacemail:25", "mail.spacemail.com", 25),
-            ("gmail:587", "smtp.gmail.com", 587),
-            ("gmail:465", "smtp.gmail.com", 465),
-        ]
-        results = {}
-        for label, host, port in targets:
-            start = time.monotonic()
-            try:
-                with socket.create_connection((host, port), timeout=6):
-                    results[label] = {"ok": True, "seconds": round(time.monotonic() - start, 2)}
-            except Exception as e:
-                results[label] = {
-                    "ok": False,
-                    "error": f"{type(e).__name__}: {e}",
-                    "seconds": round(time.monotonic() - start, 2),
-                }
-        return Response(results)
