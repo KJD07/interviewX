@@ -233,6 +233,11 @@ if os.environ.get("EMAIL_HOST"):
     EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True") == "True"
     EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
     EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+    # Without this, a stalled SMTP handshake blocks the request thread
+    # indefinitely (smtplib's default socket timeout is None) — e.g. an
+    # invite-creation request that hangs forever on send_mail with no
+    # error surfaced to the frontend.
+    EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT", "10"))
 else:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
