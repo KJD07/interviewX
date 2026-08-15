@@ -224,9 +224,18 @@ RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
 # --- Email (OTP verification) ---
 # Defaults to printing emails to the console so OTPs are visible in
 # `docker compose logs -f backend` during local dev with zero setup.
-# Set EMAIL_HOST/EMAIL_HOST_USER/EMAIL_HOST_PASSWORD in .env to send real
-# email (e.g. Gmail SMTP, SendGrid, Postmark, etc.) in production.
-if os.environ.get("EMAIL_HOST"):
+#
+# Railway blocks outbound SMTP traffic from containers (confirmed via a
+# diagnostic socket test — connections to both mail.spacemail.com and
+# smtp.gmail.com failed/timed out on every SMTP port), so production must
+# use Resend's HTTP API (port 443) rather than EMAIL_HOST/SMTP. SMTP is
+# left in place for local/non-Railway deploys that can still use it.
+EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT", "10"))
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+
+if RESEND_API_KEY:
+    EMAIL_BACKEND = "core.resend_email_backend.ResendEmailBackend"
+elif os.environ.get("EMAIL_HOST"):
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
     EMAIL_HOST = os.environ.get("EMAIL_HOST")
     EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
@@ -237,7 +246,6 @@ if os.environ.get("EMAIL_HOST"):
     # indefinitely (smtplib's default socket timeout is None) — e.g. an
     # invite-creation request that hangs forever on send_mail with no
     # error surfaced to the frontend.
-    EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT", "10"))
 else:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
