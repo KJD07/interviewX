@@ -32,8 +32,9 @@ from .serializers import (
     ProctoringEventSerializer,
 )
 
-# Clips are short, triggered captures (a few seconds), not full-session
-# recordings — this cap just guards against a runaway/misbehaving client.
+# Clips are short, triggered captures (up to 15s from the flagged moment),
+# not full-session recordings — this cap just guards against a
+# runaway/misbehaving client.
 MAX_PROCTORING_CLIP_BYTES = 15 * 1024 * 1024
 
 

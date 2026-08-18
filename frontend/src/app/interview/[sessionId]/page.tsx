@@ -326,8 +326,16 @@ export default function InterviewPage() {
   const sessionId = Number(params.sessionId);
 
   const [session, setSession] = useState<InterviewSession | null>(null);
-  const { consentNeeded: proctoringConsentNeeded, acceptConsent: acceptProctoring, declineConsent: declineProctoring } =
-    useProctoring(session);
+  const {
+    consentNeeded: proctoringConsentNeeded,
+    acceptConsent: acceptProctoring,
+    declineConsent: declineProctoring,
+    warning: proctoringWarning,
+    limitReached: proctoringLimitReached,
+    blocked: proctoringBlocked,
+    blockedReason: proctoringBlockedReason,
+    disconnectSecondsLeft: proctoringDisconnectSecondsLeft,
+  } = useProctoring(session);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [aiTyping, setAiTyping] = useState(false);
@@ -934,6 +942,28 @@ export default function InterviewPage() {
     autoEndInterviewRef.current = autoEndInterview;
   }, [autoEndInterview]);
 
+  // ── Auto-end (repeated proctoring violations) ───────────────────────────────
+  useEffect(() => {
+    if (proctoringLimitReached) {
+      autoEndInterviewRef.current(
+        "Repeated suspicious activity was detected and this interview was ended automatically."
+      );
+    }
+  }, [proctoringLimitReached]);
+
+  // ── Auto-end (camera declined, unavailable, or disconnected too long) ──────
+  // Camera access is mandatory for a proctored interview — no "continue
+  // without camera" path. proctoringBlockedReason carries which of those
+  // specifically happened (declined / never available / disconnected and
+  // didn't reconnect within the grace period).
+  useEffect(() => {
+    if (proctoringBlocked) {
+      autoEndInterviewRef.current(
+        proctoringBlockedReason || "Camera access is required for this proctored interview."
+      );
+    }
+  }, [proctoringBlocked, proctoringBlockedReason]);
+
   // Cancel a pending exit warning — called when the candidate comes back
   // (re-enters full-screen / tab becomes visible again) before time runs out.
   const cancelExitWarning = useCallback(() => {
@@ -1150,8 +1180,9 @@ export default function InterviewPage() {
               <p className="text-sm mb-6" style={{ color: "var(--ink-dim)" }}>
                 As part of this employer&apos;s hiring process, your camera captures a short
                 clip only around moments flagged as unusual (e.g. losing focus, no face
-                visible, or another person appearing on camera) — it does not record
-                continuously. You can decline and continue without camera access.
+                visible, another person appearing on camera, or a phone in view) — it does
+                not record continuously. Camera access is required to take this interview;
+                declining or a camera failure will end the interview automatically.
               </p>
               <button
                 onClick={acceptProctoring}
@@ -1165,8 +1196,43 @@ export default function InterviewPage() {
                 className="w-full py-2 mt-2 rounded-full text-sm font-medium hover:underline"
                 style={{ color: "var(--ink-dim)" }}
               >
-                Continue without camera
+                Decline (ends the interview)
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Proctoring violation warning (non-blocking, self-dismissing) ── */}
+        {proctoringWarning && (
+          <div
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-[80] px-4 py-3 rounded-lg text-sm font-medium shadow-lg fade-up"
+            style={{ background: "var(--danger)", color: "#fff" }}
+            role="alert"
+          >
+            ⚠ {proctoringWarning} This moment is being recorded.
+          </div>
+        )}
+
+        {/* ── Camera disconnected (grace period to reconnect before auto-end) ── */}
+        {proctoringDisconnectSecondsLeft !== null && (
+          <div
+            className="fixed inset-0 z-[70] flex items-center justify-center px-4"
+            style={{ background: "rgba(6, 10, 20, 0.7)" }}
+          >
+            <div
+              className="w-full max-w-sm rounded-xl p-6 text-center fade-up"
+              style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
+            >
+              <h2 className="font-display text-base font-bold mb-2" style={{ color: "var(--danger)" }}>
+                Camera disconnected
+              </h2>
+              <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
+                Reconnect your camera within{" "}
+                <span style={{ color: "var(--danger)", fontWeight: 600 }}>
+                  {proctoringDisconnectSecondsLeft}s
+                </span>{" "}
+                or the interview will end automatically. This has been flagged as a violation.
+              </p>
             </div>
           </div>
         )}

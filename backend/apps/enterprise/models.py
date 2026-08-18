@@ -139,6 +139,7 @@ class ProctoringEvent(models.Model):
         GAZE_AWAY = "gaze_away", "Looking away"
         TAB_SWITCH = "tab_switch", "Tab switch / left fullscreen"
         LOW_LIGHT = "low_light", "Low light / camera obscured"
+        PHONE_DETECTED = "phone_detected", "Phone or device detected on camera"
         OTHER = "other", "Other"
 
     session = models.ForeignKey(

@@ -102,6 +102,7 @@ export type ProctoringEventType =
   | "gaze_away"
   | "tab_switch"
   | "low_light"
+  | "phone_detected"
   | "other";
 
 export interface Company {
