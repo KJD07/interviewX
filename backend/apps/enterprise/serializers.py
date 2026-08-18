@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from apps.companies.models import InterviewQuestion, Role, Round
 
-from .models import Organization, OrgCandidateInvite
+from .models import Organization, OrgCandidateInvite, ProctoringEvent
 
 
 class OrganizationSerializer(serializers.ModelSerializer):
@@ -54,3 +54,10 @@ class OrgCandidateInviteSerializer(serializers.ModelSerializer):
         if round_obj.role.company.organization_id != organization.id:
             raise serializers.ValidationError("This round doesn't belong to your organization.")
         return round_obj
+
+
+class ProctoringEventSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProctoringEvent
+        fields = ["id", "event_type", "confidence", "note", "clip", "occurred_at"]
+        read_only_fields = ["id", "occurred_at"]

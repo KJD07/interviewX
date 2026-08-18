@@ -7,6 +7,7 @@ import { interviews, ApiError } from "@/lib/api";
 import type { InterviewSession, WorkspacePayload } from "@/lib/api";
 import CodeWorkspace from "@/components/interview/CodeWorkspace";
 import SystemDesignWorkspace from "@/components/interview/SystemDesignWorkspace";
+import { useProctoring } from "@/hooks/useProctoring";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -325,6 +326,8 @@ export default function InterviewPage() {
   const sessionId = Number(params.sessionId);
 
   const [session, setSession] = useState<InterviewSession | null>(null);
+  const { consentNeeded: proctoringConsentNeeded, acceptConsent: acceptProctoring, declineConsent: declineProctoring } =
+    useProctoring(session);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [aiTyping, setAiTyping] = useState(false);
@@ -1126,6 +1129,43 @@ export default function InterviewPage() {
                 style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
               >
                 Start full-screen interview
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Proctoring consent (org-invited candidates only) ── */}
+        {proctoringConsentNeeded && session && session.status === "in_progress" && (
+          <div
+            className="fixed inset-0 z-[65] flex items-center justify-center px-4"
+            style={{ background: "rgba(6, 10, 20, 0.7)" }}
+          >
+            <div
+              className="w-full max-w-sm rounded-xl p-6 text-center fade-up"
+              style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
+            >
+              <h2 className="font-display text-base font-bold mb-2" style={{ color: "var(--ink)" }}>
+                This interview is proctored
+              </h2>
+              <p className="text-sm mb-6" style={{ color: "var(--ink-dim)" }}>
+                As part of this employer&apos;s hiring process, your camera captures a short
+                clip only around moments flagged as unusual (e.g. losing focus, no face
+                visible, or another person appearing on camera) — it does not record
+                continuously. You can decline and continue without camera access.
+              </p>
+              <button
+                onClick={acceptProctoring}
+                className="w-full py-2.5 rounded-full text-sm font-semibold transition-opacity"
+                style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
+              >
+                Allow camera & continue
+              </button>
+              <button
+                onClick={declineProctoring}
+                className="w-full py-2 mt-2 rounded-full text-sm font-medium hover:underline"
+                style={{ color: "var(--ink-dim)" }}
+              >
+                Continue without camera
               </button>
             </div>
           </div>

@@ -91,7 +91,18 @@ export interface InterviewSession {
   started_at: string;
   ended_at: string | null;
   time_expired: boolean;
+  // True only for sessions started via an org candidate invite
+  // (apps.enterprise.OrgCandidateInvite) — gates webcam-based proctoring.
+  is_proctored?: boolean;
 }
+
+export type ProctoringEventType =
+  | "no_face"
+  | "multiple_faces"
+  | "gaze_away"
+  | "tab_switch"
+  | "low_light"
+  | "other";
 
 export interface Company {
   id: number;
@@ -444,6 +455,35 @@ export const interviews = {
     request<InterviewSession>(`/api/interviews/${session_id}/end/`, {
       method: "POST",
     }),
+
+  // Enterprise-only: reports a flagged proctoring moment (and optionally a
+  // short clip) for an org-invite session. The backend 404s this for any
+  // non-org-linked session, so it's a no-op to call for a consumer session.
+  // Bypasses the shared request() wrapper for the same reason as
+  // organizations.uploadQuestions — a multipart body needs its own
+  // browser-set Content-Type boundary.
+  reportProctoringEvent: async (
+    session_id: number,
+    event_type: ProctoringEventType,
+    opts?: { confidence?: number; note?: string; clip?: Blob }
+  ): Promise<void> => {
+    const access = tokens.getAccess();
+    const form = new FormData();
+    form.append("event_type", event_type);
+    if (opts?.confidence !== undefined) form.append("confidence", String(opts.confidence));
+    if (opts?.note) form.append("note", opts.note);
+    if (opts?.clip) form.append("clip", opts.clip, "clip.webm");
+    const res = await fetch(`${API_URL}/api/enterprise/sessions/${session_id}/proctoring-events/`, {
+      method: "POST",
+      headers: access ? { Authorization: `Bearer ${access}` } : {},
+      body: form,
+    });
+    if (!res.ok) {
+      // Best-effort telemetry — never let a failed proctoring report
+      // interrupt or fail the candidate's actual interview.
+      return;
+    }
+  },
 
   progress: () => request<ProgressResponse>("/api/interviews/progress/"),
 

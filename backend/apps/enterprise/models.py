@@ -148,6 +148,11 @@ class ProctoringEvent(models.Model):
     confidence = models.FloatField(
         default=0.0, help_text="Client-reported detection confidence, 0-1."
     )
+    note = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Short client-supplied reason, mainly for event_type=other (e.g. 'paste', 'devtools').",
+    )
     clip = models.FileField(
         upload_to="proctoring_clips/%Y/%m/",
         null=True,

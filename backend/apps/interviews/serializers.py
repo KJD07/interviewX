@@ -14,6 +14,11 @@ class InterviewSessionSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(read_only=True)
     company_name = serializers.CharField(source="round.role.company.name", read_only=True)
     role_title = serializers.CharField(source="round.role.title", read_only=True)
+    # Whether this session belongs to an org's candidate pipeline (see
+    # apps.enterprise.OrgCandidateInvite) — the frontend uses this to decide
+    # whether to activate webcam-based proctoring at all. Consumer sessions
+    # always resolve False here.
+    is_proctored = serializers.SerializerMethodField()
 
     class Meta:
         model = InterviewSession
@@ -32,8 +37,12 @@ class InterviewSessionSerializer(serializers.ModelSerializer):
             "started_at",
             "ended_at",
             "time_expired",
+            "is_proctored",
         ]
         read_only_fields = ["id", "user", "started_at", "duration_minutes", "time_expired"]
+
+    def get_is_proctored(self, obj):
+        return obj.org_invite.exists()
 
     def create(self, validated_data):
         validated_data["user"] = self.context["request"].user

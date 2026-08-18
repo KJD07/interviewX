@@ -24,8 +24,17 @@ from core.openrouter_client import build_interview_system_prompt, chat_completio
 
 from .emails import send_candidate_invite_email
 from .imports import OrgImportError, get_or_create_org_company, import_org_questions
-from .models import Organization, OrgCandidateInvite, OrganizationMember
-from .serializers import OrganizationSerializer, OrgCandidateInviteSerializer, OrgRoleSerializer
+from .models import Organization, OrgCandidateInvite, OrganizationMember, ProctoringEvent
+from .serializers import (
+    OrganizationSerializer,
+    OrgCandidateInviteSerializer,
+    OrgRoleSerializer,
+    ProctoringEventSerializer,
+)
+
+# Clips are short, triggered captures (a few seconds), not full-session
+# recordings — this cap just guards against a runaway/misbehaving client.
+MAX_PROCTORING_CLIP_BYTES = 15 * 1024 * 1024
 
 
 class UploadQuestionsForm(forms.Form):
@@ -260,3 +269,44 @@ class OrgInviteStartView(APIView):
             },
             status=status.HTTP_201_CREATED,
         )
+
+
+class ProctoringEventCreateView(APIView):
+    """
+    POST /api/enterprise/sessions/<session_id>/proctoring-events/ —
+    candidate-facing. Records one flagged moment (and optionally a short
+    clip) for a proctored interview.
+
+    404s for anything that isn't the requesting user's own in-progress,
+    org-linked session — including a perfectly valid consumer session — so
+    this endpoint can never be used to attach proctoring data to a non-
+    enterprise interview, which is the actual enforcement point for
+    "video capture is enterprise-only" (see ProctoringEvent docstring).
+    """
+
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, session_id):
+        try:
+            session = InterviewSession.objects.get(pk=session_id, user=request.user)
+        except InterviewSession.DoesNotExist:
+            return Response({"detail": "Session not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if not session.org_invite.exists():
+            return Response({"detail": "Session not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if session.status != InterviewSession.Status.IN_PROGRESS:
+            return Response({"detail": "Session is not in progress."}, status=status.HTTP_409_CONFLICT)
+
+        clip = request.FILES.get("clip")
+        if clip is not None:
+            if not (clip.content_type or "").startswith("video/"):
+                return Response({"clip": "Must be a video file."}, status=status.HTTP_400_BAD_REQUEST)
+            if clip.size > MAX_PROCTORING_CLIP_BYTES:
+                return Response({"clip": "Clip is too large."}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = ProctoringEventSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(session=session)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

@@ -33,6 +33,6 @@ class OrgCandidateInviteAdmin(admin.ModelAdmin):
 
 @admin.register(ProctoringEvent)
 class ProctoringEventAdmin(admin.ModelAdmin):
-    list_display = ("session", "event_type", "confidence", "occurred_at", "clip")
+    list_display = ("session", "event_type", "note", "confidence", "occurred_at", "clip")
     list_filter = ("event_type",)
-    search_fields = ("session__id",)
+    search_fields = ("session__id", "note")

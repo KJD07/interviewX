@@ -5,6 +5,7 @@ from .views import (
     OrgDashboardView,
     OrgInviteStartView,
     OrgQuestionUploadView,
+    ProctoringEventCreateView,
 )
 
 urlpatterns = [
@@ -12,4 +13,9 @@ urlpatterns = [
     path("question-bank/upload/", OrgQuestionUploadView.as_view(), name="enterprise-question-upload"),
     path("invites/", OrgCandidateInviteListCreateView.as_view(), name="enterprise-invite-list-create"),
     path("invites/<str:token>/start/", OrgInviteStartView.as_view(), name="enterprise-invite-start"),
+    path(
+        "sessions/<int:session_id>/proctoring-events/",
+        ProctoringEventCreateView.as_view(),
+        name="enterprise-proctoring-event-create",
+    ),
 ]
