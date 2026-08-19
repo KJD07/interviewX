@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,25 +6,31 @@
 
 :root {
   /* Neutral shell — same for every plan */
-  --page:        #FAFAF8;
+  --page:        #F6F5F1;
   --surface:     #FFFFFF;
   --surface-2:   #F1EFEA;
-  --border:      #E4E1D8;
-  --border-mid:  #D6D2C6;
-  --ink:         #1C1A16;
-  --ink-dim:     #6B6858;
-  --ink-faint:   #9C9683;
+  --border:      rgba(20, 20, 15, 0.08);
+  --border-mid:  rgba(20, 20, 15, 0.15);
+  --ink:         #14140F;
+  --ink-dim:     #4A4A40;
+  --ink-faint:   #8A8A7E;
   --danger:      #C0392B;
   --success:     #3F6B4F;
   --success-bg:  #EEF1E9;
 
   /* Default accent (used pre-login / free) — overridden per-plan below */
-  --accent:      #1E1E1C;
-  --accent-dim:  #5F5F58;
-  --accent-glow: rgba(30, 30, 28, 0.08);
-  --accent-ink:  #FAFAF9; /* text color to use ON TOP of var(--accent) */
-  --hero-bg:     #EFEFEC;
-  --hero-text:   #1E1E1C;
+  --accent:      #14140F;
+  --accent-dim:  #3B3B33;
+  --accent-glow: rgba(20, 20, 15, 0.08);
+  --accent-ink:  #F6F5F1; /* text color to use ON TOP of var(--accent) */
+  --hero-bg:     #14140F;
+  --hero-text:   #F6F5F1;
+  --lime:        #E8FF3D;
+
+  /* Focus ring / cursor blink accent — previously referenced but never
+     defined anywhere, which silently broke input focus rings app-wide. */
+  --indigo:      var(--accent);
+  --indigo-glow: var(--accent-glow);
 }
 
 /* ── One theme for every plan ──
@@ -35,21 +41,24 @@
 [data-plan="pro"],
 [data-plan="premium"],
 [data-plan="max"] {
-  --page:        #FAFAF8;
+  --page:        #F6F5F1;
   --surface:     #FFFFFF;
   --surface-2:   #F1EFEA;
-  --border:      #E4E1D8;
-  --border-mid:  #D6D2C6;
-  --ink:         #1C1A16;
-  --ink-dim:     #6B6858;
-  --ink-faint:   #9C9683;
+  --border:      rgba(20, 20, 15, 0.08);
+  --border-mid:  rgba(20, 20, 15, 0.15);
+  --ink:         #14140F;
+  --ink-dim:     #4A4A40;
+  --ink-faint:   #8A8A7E;
 
-  --accent:      #1E1E1C;
-  --accent-dim:  #5F5F58;
-  --accent-glow: rgba(30, 30, 28, 0.08);
-  --accent-ink:  #FAFAF9;
-  --hero-bg:     #EFEFEC;
-  --hero-text:   #1E1E1C;
+  --accent:      #14140F;
+  --accent-dim:  #3B3B33;
+  --accent-glow: rgba(20, 20, 15, 0.08);
+  --accent-ink:  #F6F5F1;
+  --hero-bg:     #14140F;
+  --hero-text:   #F6F5F1;
+  --lime:        #E8FF3D;
+  --indigo:      var(--accent);
+  --indigo-glow: var(--accent-glow);
 }
 
 * {
@@ -57,7 +66,7 @@
 }
 
 html {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Sora', system-ui, sans-serif;
   background-color: var(--page);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
@@ -74,8 +83,15 @@ body {
 }
 
 .font-display {
-  font-family: 'Fraunces', serif;
-  font-optical-sizing: auto;
+  font-family: 'Sora', system-ui, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.font-accent {
+  font-family: 'Space Grotesk', serif;
+  font-style: italic;
+  font-weight: 500;
+  color: var(--ink-dim);
 }
 
 /* Cursor blink — the signature animation */

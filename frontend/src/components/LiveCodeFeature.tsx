@@ -22,24 +22,28 @@ export default function LiveCodeFeature() {
   const [code, setCode] = useState(DEFAULT_CODE);
 
   return (
-    <div className="col-span-1 sm:col-span-2 lg:col-span-3 overflow-hidden rounded-3xl border border-white/50 bg-white/[0.65] shadow-[0_8px_32px_rgba(28,26,22,0.06)] backdrop-blur-sm">
-      <div className="flex flex-col gap-1 p-6 pb-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h3 className="font-display text-lg font-semibold text-[var(--ink)]">Live coding editor</h3>
-          <p className="mt-1 text-sm leading-relaxed text-[var(--ink-dim)]">
-            Real coding rounds run in a real editor, syntax highlighting, multiple languages, no context switching to a
-            notepad. Try it right here.
-          </p>
-        </div>
-        <span className="mt-2 inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--border)] bg-white/60 px-3 py-1 text-xs font-medium text-[var(--ink-faint)] sm:mt-0">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+    <div
+      className="flex h-full flex-col justify-between overflow-hidden rounded-[24px] p-6"
+      style={{ background: "var(--hero-bg)", color: "var(--hero-text)" }}
+    >
+      <div>
+        <span className="inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide" style={{ background: "rgba(232,255,61,0.15)", color: "var(--lime)" }}>
+          <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--lime)" }} />
           Editable demo
         </span>
+        <h3 className="font-display mt-4 text-xl font-semibold leading-tight">Live coding editor</h3>
+        <p className="mt-2 text-sm leading-relaxed" style={{ color: "rgba(246,245,241,0.6)" }}>
+          Real coding rounds run in a real editor, syntax highlighting, multiple languages, no context switching to a
+          notepad. Try it right here.
+        </p>
       </div>
-      <div className="overflow-hidden rounded-b-3xl border-t border-[var(--border)]">
-        <div className="flex items-center justify-between px-4 py-2 text-xs font-semibold text-[var(--ink-dim)]" style={{ background: "var(--surface)" }}>
+      <div className="mt-6 overflow-hidden rounded-2xl border" style={{ borderColor: "rgba(246,245,241,0.08)" }}>
+        <div
+          className="flex items-center justify-between px-4 py-2 text-xs font-semibold"
+          style={{ background: "#1E1E18", color: "rgba(246,245,241,0.5)", borderBottom: "1px solid rgba(246,245,241,0.08)" }}
+        >
           <span>solution.js</span>
-          <span className="text-[var(--ink-faint)]">Edit the code, it's live</span>
+          <span>Edit the code, it&apos;s live</span>
         </div>
         <MonacoEditor
           height="220px"

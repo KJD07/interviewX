@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 export function ScrollReveal({
   children,
@@ -31,13 +31,16 @@ export function GlassCard({
   children,
   className = "",
   hover = true,
+  style,
 }: {
   children: ReactNode;
   className?: string;
   hover?: boolean;
+  style?: CSSProperties;
 }) {
   return (
     <div
+      style={style}
       className={`rounded-3xl border border-white/50 bg-white/[0.65] p-6 shadow-[0_8px_32px_rgba(28,26,22,0.06)] backdrop-blur-sm transition-all duration-300 ease-out will-change-transform ${
         hover ? "hover:-translate-y-1.5 hover:border-white/80 hover:bg-white/75 hover:shadow-[0_16px_44px_rgba(28,26,22,0.10)]" : ""
       } ${className}`}

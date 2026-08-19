@@ -1,8 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Link from "next/link";
 import MarketingNav from "@/components/MarketingNav";
-import { ScrollReveal, GlassCard } from "@/components/ScrollReveal";
+import { ScrollReveal } from "@/components/ScrollReveal";
 
 const VALUES = [
   { title: "Sourced, not scraped", body: "Every question comes from someone who actually sat in that interview - a current employee or a recently interviewed candidate. Nothing is pulled off generic forums." },
@@ -23,106 +24,159 @@ const STATS = [
   { value: "24/7", label: "AI interviewer available whenever you're ready" },
 ];
 
+const STAT_STYLES = [
+  "border border-[var(--border)] bg-[var(--surface)]",
+  "bg-[var(--lime)]",
+  "bg-[var(--ink)] text-[var(--page)]",
+];
+
+const VERIFY_STYLES = [
+  "border border-[var(--border)] bg-[var(--surface)]",
+  "border border-[var(--border)] bg-[var(--surface)]",
+  "bg-[var(--lime)]",
+  "bg-[var(--ink)] text-[var(--page)]",
+];
+
 export default function About() {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[var(--page)]">
-      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute -top-32 right-1/4 h-[480px] w-[480px] rounded-full bg-[var(--accent-glow)] blur-[120px]" />
-        <div className="absolute bottom-0 -left-32 h-[400px] w-[400px] rounded-full bg-[var(--surface-2)] blur-[100px]" />
-      </div>
-
+    <div className="relative min-h-screen bg-[var(--page)]">
       <MarketingNav />
 
-      <section className="mx-auto max-w-4xl px-6 pb-16 pt-40 text-center sm:pt-48">
+      <section className="mx-auto max-w-4xl px-6 pb-14 pt-40 sm:pt-48">
+        <div className="mb-7 inline-flex items-center rounded-full border border-[var(--border-mid)] px-3.5 py-1.5 text-[13px] font-medium">
+          About EvaluLabs
+        </div>
         <motion.h1
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="font-display text-4xl font-semibold tracking-tight text-[var(--ink)] sm:text-5xl"
+          className="font-display max-w-3xl text-5xl font-semibold tracking-tight text-[var(--ink)] sm:text-7xl"
         >
-          Interview prep built on proof, not guesswork.
+          Interview prep built on <em className="font-accent">proof</em>, not guesswork.
         </motion.h1>
         <motion.p
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
-          className="mx-auto mt-6 max-w-2xl text-lg text-[var(--ink-dim)]"
+          className="mt-6 max-w-2xl text-lg leading-relaxed text-[var(--ink-dim)]"
         >
-          Most prep platforms guess at what a company might ask. We don't. Our question
+          Most prep platforms guess at what a company might ask. We don&apos;t. Our question
           bank is curated by people who actually work there, or who were interviewed
-          there recently - every one of them verified with a work email or an offer
-          letter. Then our AI interviewer puts you through the same pressure as the
-          real room, so nothing on interview day feels unfamiliar.
+          there recently — every one of them verified with a work email or an offer
+          letter. Then our AI interviewer puts you through the same pressure as the real room.
         </motion.p>
       </section>
 
-      <section className="mx-auto max-w-5xl px-6 py-10">
-        <ScrollReveal>
-          <div className="rounded-[28px] border border-white/50 bg-white/35 p-8 shadow-[0_16px_50px_rgba(28,26,22,0.08)] backdrop-blur-2xl sm:p-12">
-            <div className="grid grid-cols-1 gap-8 sm:grid-cols-3">
-              {STATS.map((s) => (
-                <div key={s.label} className="text-center">
-                  <p className="font-display text-4xl font-semibold text-[var(--ink)]">{s.value}</p>
-                  <p className="mt-2 text-sm text-[var(--ink-dim)]">{s.label}</p>
+      <section className="mx-auto max-w-6xl px-6 py-10">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {STATS.map((s, i) => (
+            <ScrollReveal key={s.label} delay={i * 0.08}>
+              <div className={`h-full rounded-3xl p-8 ${STAT_STYLES[i]}`}>
+                <p className="font-display mb-4 text-6xl font-semibold leading-none tracking-tight">{s.value}</p>
+                <p
+                  className={`text-sm leading-relaxed ${
+                    i === 2 ? "text-[var(--page)]/70" : "text-[var(--ink-dim)]"
+                  }`}
+                >
+                  {s.label}
+                </p>
+              </div>
+            </ScrollReveal>
+          ))}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-6 py-20">
+        <ScrollReveal className="mb-14 max-w-2xl">
+          <p className="mb-5 text-xs font-semibold uppercase tracking-wider text-[var(--ink-faint)]">What we care about</p>
+          <h2 className="font-display text-4xl font-semibold leading-tight tracking-tight text-[var(--ink)] sm:text-5xl">
+            Three ideas that shape every part of the product.
+          </h2>
+        </ScrollReveal>
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-3">
+          {VALUES.map((v, i) => (
+            <ScrollReveal key={v.title} delay={i * 0.1}>
+              <div className="h-full border-t border-[var(--ink)] pt-6">
+                <div className="mb-14 text-sm font-semibold text-[var(--ink)]">{String(i + 1).padStart(2, "0")}</div>
+                <h3 className="font-display text-lg font-semibold text-[var(--ink)]">{v.title}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-[var(--ink-dim)]">{v.body}</p>
+              </div>
+            </ScrollReveal>
+          ))}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-6 py-20">
+        <div className="mb-12 flex flex-wrap items-end justify-between gap-10">
+          <ScrollReveal className="max-w-2xl">
+            <p className="mb-5 text-xs font-semibold uppercase tracking-wider text-[var(--ink-faint)]">How verification works</p>
+            <h2 className="font-display text-4xl font-semibold leading-tight tracking-tight text-[var(--ink)] sm:text-5xl">
+              How we verify every question.
+            </h2>
+          </ScrollReveal>
+          <p className="max-w-sm text-base leading-relaxed text-[var(--ink-dim)]">
+            No question reaches our bank without a real person and real proof behind it.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {VERIFY_STEPS.map((s, i) => (
+            <ScrollReveal key={s.n} delay={i * 0.1}>
+              <div className={`flex h-full min-h-[220px] flex-col justify-between rounded-3xl p-7 ${VERIFY_STYLES[i]}`}>
+                <span
+                  className={`text-sm font-semibold ${
+                    i === 3 ? "text-[var(--lime)]" : "text-[var(--ink)]"
+                  }`}
+                >
+                  {s.n}
+                </span>
+                <div>
+                  <h3 className="mt-4 font-display text-lg font-semibold">{s.title}</h3>
+                  <p
+                    className={`mt-2 text-sm leading-relaxed ${
+                      i === 3 ? "text-[var(--page)]/70" : "text-[var(--ink-dim)]"
+                    }`}
+                  >
+                    {s.body}
+                  </p>
                 </div>
-              ))}
+              </div>
+            </ScrollReveal>
+          ))}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-6 pb-28">
+        <ScrollReveal>
+          <div className="relative overflow-hidden rounded-[32px] px-8 py-16 sm:px-16" style={{ background: "var(--hero-bg)" }}>
+            <div className="pointer-events-none absolute -top-16 -left-16 h-56 w-56 rounded-full opacity-90" style={{ background: "var(--lime)" }} />
+            <div className="relative ml-auto max-w-xl">
+              <h2 className="font-display text-3xl font-semibold text-[var(--hero-text)] sm:text-4xl">
+                Our story is still being written.
+              </h2>
+              <p className="mt-4 text-[var(--hero-text)] opacity-70">
+                We&apos;re an early-stage team building EvaluLabs one interview at a time.
+                If you have feedback or want to work with us, we&apos;d genuinely love to hear from you.
+              </p>
+              <Link
+                href="/contact"
+                className="mt-8 inline-block rounded-full px-7 py-3.5 text-sm font-semibold text-[var(--ink)] transition-transform duration-300 hover:scale-[1.03] active:scale-[0.98]"
+                style={{ background: "var(--lime)" }}
+              >
+                Get in touch →
+              </Link>
             </div>
           </div>
         </ScrollReveal>
       </section>
 
-      <section className="mx-auto max-w-6xl px-6 py-20">
-        <ScrollReveal className="mx-auto mb-12 max-w-2xl text-center">
-          <h2 className="font-display text-3xl font-semibold text-[var(--ink)]">What we care about</h2>
-        </ScrollReveal>
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-          {VALUES.map((v, i) => (
-            <ScrollReveal key={v.title} delay={i * 0.1}>
-              <GlassCard className="h-full">
-                <h3 className="font-display text-lg font-semibold text-[var(--ink)]">{v.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-[var(--ink-dim)]">{v.body}</p>
-              </GlassCard>
-            </ScrollReveal>
-          ))}
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-6 py-20">
-        <ScrollReveal className="mx-auto mb-12 max-w-2xl text-center">
-          <h2 className="font-display text-3xl font-semibold text-[var(--ink)]">How we verify every question</h2>
-          <p className="mt-4 text-[var(--ink-dim)]">
-            No question reaches our bank without a real person and real proof behind it.
-          </p>
-        </ScrollReveal>
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {VERIFY_STEPS.map((s, i) => (
-            <ScrollReveal key={s.n} delay={i * 0.1}>
-              <GlassCard hover={false} className="h-full bg-white/30">
-                <span className="font-display text-3xl font-semibold text-[var(--ink-faint)]">{s.n}</span>
-                <h3 className="mt-4 font-display text-lg font-semibold text-[var(--ink)]">{s.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-[var(--ink-dim)]">{s.body}</p>
-              </GlassCard>
-            </ScrollReveal>
-          ))}
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-4xl px-6 pb-28">
-        <ScrollReveal>
-          <div className="rounded-[28px] border border-[var(--border)] bg-[var(--surface-2)] p-10 text-center sm:p-14">
-            <h2 className="font-display text-2xl font-semibold text-[var(--ink)] sm:text-3xl">
-              Our story is still being written.
-            </h2>
-            <p className="mx-auto mt-4 max-w-xl text-[var(--ink-dim)]">
-              We're an early-stage team building EvaluLabs one interview at a time.
-              If you have feedback or want to work with us, we'd genuinely love to hear from you.
-            </p>
+      <footer className="mx-auto max-w-6xl px-6 pb-12 pt-4">
+        <div className="flex items-center justify-between border-t border-[var(--border)] pt-6 text-xs text-[var(--ink-faint)]">
+          <span>© {new Date().getFullYear()} EvaluLabs</span>
+          <div className="flex gap-6">
+            <Link href="/pricing" className="hover:opacity-70">Pricing</Link>
+            <Link href="/contact" className="hover:opacity-70">Contact</Link>
           </div>
-        </ScrollReveal>
-      </section>
-
-      <footer className="border-t border-[var(--border)] px-6 py-10 text-center text-xs text-[var(--ink-faint)]">
-        © {new Date().getFullYear()} EvaluLabs
+        </div>
       </footer>
     </div>
   );

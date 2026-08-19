@@ -1,13 +1,76 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import type { ReactNode } from "react";
 import { useAuth } from "@/context/AuthContext";
 import MarketingNav from "@/components/MarketingNav";
-import { ScrollReveal, GlassCard } from "@/components/ScrollReveal";
+import { ScrollReveal } from "@/components/ScrollReveal";
 import { PLANS, PAID_PLAN_IDS, type PlanId } from "@/lib/plans";
 import { subscriptions, ApiError } from "@/lib/api";
+
+const FAQS: { q: string; a: ReactNode }[] = [
+  {
+    q: "Can I switch plans mid-cycle?",
+    a: "Yes — upgrades apply immediately, downgrades take effect next billing period. No pro-rating headaches.",
+  },
+  {
+    q: "What happens if I run out of interviews?",
+    a: "You can top up with additional sessions or upgrade to the next tier — whichever's cheaper for your month.",
+  },
+  {
+    q: "Do unused interviews roll over?",
+    a: "No — sessions reset each cycle so pricing stays honest. Pick the tier that matches how many rooms you'll actually walk into.",
+  },
+  {
+    q: "Cohort or team discounts?",
+    a: (
+      <>
+        Yes —{" "}
+        <Link href="/contact" className="underline underline-offset-4 hover:opacity-70">
+          get in touch
+        </Link>{" "}
+        for bootcamps, universities, and career-services teams.
+      </>
+    ),
+  },
+];
+
+function FaqItem({ q, a, defaultOpen = false }: { q: string; a: ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="border-t border-[var(--border-mid)] py-5">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-4 text-left text-lg font-semibold tracking-tight text-[var(--ink)]"
+      >
+        {q}
+        <motion.span
+          animate={{ rotate: open ? 45 : 0 }}
+          transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+          className="flex-shrink-0 text-2xl leading-none text-[var(--ink-faint)]"
+        >
+          +
+        </motion.span>
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className="overflow-hidden"
+          >
+            <p className="mt-3 text-sm leading-relaxed text-[var(--ink-dim)]">{a}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 declare global {
   interface Window {
@@ -93,28 +156,26 @@ export default function Pricing() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[var(--page)]">
-      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute -top-40 left-1/4 h-[520px] w-[520px] rounded-full bg-[var(--accent-glow)] blur-[120px]" />
-        <div className="absolute top-1/3 -right-40 h-[420px] w-[420px] rounded-full bg-[var(--surface-2)] blur-[100px]" />
-      </div>
-
+    <div className="relative min-h-screen bg-[var(--page)]">
       <MarketingNav />
 
-      <section className="mx-auto max-w-4xl px-6 pb-16 pt-40 text-center sm:pt-48">
+      <section className="mx-auto max-w-4xl px-6 pb-10 pt-40 sm:pt-48">
+        <div className="mb-7 inline-flex items-center gap-2.5 rounded-full border border-[var(--border-mid)] px-3.5 py-1.5 text-[13px] font-medium">
+          Simple, transparent pricing
+        </div>
         <motion.h1
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="font-display text-4xl font-semibold tracking-tight text-[var(--ink)] sm:text-5xl"
+          className="font-display max-w-2xl text-5xl font-semibold tracking-tight text-[var(--ink)] sm:text-7xl"
         >
-          Simple, transparent pricing
+          Simple, transparent pricing.
         </motion.h1>
         <motion.p
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
-          className="mx-auto mt-6 max-w-2xl text-lg text-[var(--ink-dim)]"
+          className="mt-6 max-w-xl text-lg leading-relaxed text-[var(--ink-dim)]"
         >
           Start free with {PLANS.free.monthlyLimit} interviews a month. Upgrade any time for more
           sessions, full history, and AI-powered insights.
@@ -127,19 +188,19 @@ export default function Pricing() {
         </p>
       )}
 
-      <section className="mx-auto max-w-6xl px-6 pb-28">
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 lg:items-stretch">
+      <section className="mx-auto max-w-6xl px-6 pb-16 pt-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-stretch">
           <ScrollReveal>
-            <GlassCard hover={false} className="flex h-full flex-col bg-white/30">
-              <h3 className="font-display text-lg font-semibold text-[var(--ink)]">{PLANS.free.label}</h3>
-              <div className="mt-3 mb-6">
-                <span className="font-display text-3xl font-semibold text-[var(--ink)]">₹0</span>
-                <span className="ml-1 text-sm text-[var(--ink-dim)]">/month</span>
+            <div className="flex h-full flex-col rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-8">
+              <p className="mb-5 text-[13px] font-semibold uppercase tracking-wider text-[var(--ink-faint)]">{PLANS.free.label}</p>
+              <div className="mb-6 flex items-baseline gap-1.5">
+                <span className="font-display text-4xl font-semibold tracking-tight text-[var(--ink)]">₹0</span>
+                <span className="text-sm text-[var(--ink-faint)]">/ month</span>
               </div>
-              <ul className="mb-8 flex-1 space-y-3">
+              <ul className="mb-7 flex-1 space-y-3">
                 {PLANS.free.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm text-[var(--ink-dim)]">
-                    <span className="text-[var(--accent-dim)]">✓</span>
+                  <li key={f} className="flex items-start gap-2.5 text-sm text-[var(--ink)]">
+                    <span>✓</span>
                     {f}
                   </li>
                 ))}
@@ -147,78 +208,153 @@ export default function Pricing() {
               <button
                 onClick={() => router.push(user ? "/dashboard" : "/register")}
                 disabled={loadingPlan !== null}
-                className="w-full rounded-full border border-[var(--border-mid)] py-3 text-sm font-semibold text-[var(--ink)] transition-colors hover:bg-[var(--surface-2)] disabled:opacity-50"
+                className="w-full rounded-full border border-[var(--border-mid)] py-3.5 text-sm font-semibold text-[var(--ink)] transition-colors hover:bg-[var(--surface-2)] disabled:opacity-50"
               >
                 {user ? "Go to Dashboard" : "Start free"}
               </button>
-            </GlassCard>
+            </div>
           </ScrollReveal>
 
           {PAID_PLAN_IDS.map((planId, i) => {
             const plan = PLANS[planId];
             const isBestValue = planId === "premium";
             const isCurrent = user != null && currentPlan === planId;
-            const card = (
-              <GlassCard
-                hover={false}
-                className={`flex h-full flex-col bg-white/30 ${
-                  isBestValue
-                    ? "border-2 border-[#3b82f6] shadow-[0_0_20px_4px_rgba(59,130,246,0.6),0_0_45px_12px_rgba(59,130,246,0.3)]"
-                    : ""
-                }`}
-              >
-                <h3 className="font-display text-lg font-semibold text-[var(--ink)]">{plan.label}</h3>
-                <div className="mt-3 mb-6">
-                  <span className="font-display text-3xl font-semibold text-[var(--ink)]">
-                    ₹{plan.priceRupees}
-                  </span>
-                  <span className="ml-1 text-sm text-[var(--ink-dim)]">/month</span>
-                </div>
-                <ul className="mb-8 flex-1 space-y-3">
-                  {plan.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-sm text-[var(--ink-dim)]">
-                      <span className="text-[var(--accent-dim)]">✓</span>
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <button
-                  onClick={() => handleUpgrade(planId)}
-                  disabled={loadingPlan !== null || isCurrent}
-                  className={`w-full rounded-full py-3 text-sm font-semibold transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100 ${
-                    isBestValue
-                      ? "bg-[#3b82f6] text-white shadow-[0_0_14px_2px_rgba(59,130,246,0.6)] hover:shadow-[0_0_20px_4px_rgba(59,130,246,0.75)]"
-                      : "border border-[var(--border-mid)] text-[var(--ink)] hover:bg-[var(--surface-2)]"
-                  }`}
-                >
-                  {isCurrent
-                    ? "Current plan"
-                    : loadingPlan === planId
-                    ? "Opening checkout…"
-                    : `Choose ${plan.label}`}
-                </button>
-              </GlassCard>
-            );
             return (
               <ScrollReveal key={planId} delay={(i + 1) * 0.08}>
-                {isBestValue ? (
-                  <div className="relative z-10 lg:translate-y-4">
-                    <span className="absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#3b82f6] px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white shadow-[0_0_12px_3px_rgba(59,130,246,0.8)]">
+                <div
+                  className={`relative flex h-full flex-col rounded-3xl p-8 ${
+                    isBestValue
+                      ? "bg-[var(--ink)] text-[var(--page)]"
+                      : "border border-[var(--border)] bg-[var(--surface)]"
+                  }`}
+                >
+                  {isBestValue && (
+                    <span className="absolute right-6 top-6 rounded-full bg-[var(--lime)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--ink)]">
                       Best value
                     </span>
-                    {card}
+                  )}
+                  <p
+                    className={`mb-5 text-[13px] font-semibold uppercase tracking-wider ${
+                      isBestValue ? "text-[var(--lime)]" : "text-[var(--ink-faint)]"
+                    }`}
+                  >
+                    {plan.label}
+                  </p>
+                  <div className="mb-6 flex items-baseline gap-1.5">
+                    <span className="font-display text-4xl font-semibold tracking-tight">₹{plan.priceRupees}</span>
+                    <span className={`text-sm ${isBestValue ? "text-[var(--ink-faint)]" : "text-[var(--ink-faint)]"}`}>
+                      / month
+                    </span>
                   </div>
-                ) : (
-                  card
-                )}
+                  <ul className="mb-7 flex-1 space-y-3">
+                    {plan.features.map((f) => (
+                      <li key={f} className="flex items-start gap-2.5 text-sm">
+                        <span className={isBestValue ? "text-[var(--lime)]" : undefined}>✓</span>
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    onClick={() => handleUpgrade(planId)}
+                    disabled={loadingPlan !== null || isCurrent}
+                    className={`w-full rounded-full py-3.5 text-sm font-semibold transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100 ${
+                      isBestValue
+                        ? "bg-[var(--lime)] text-[var(--ink)]"
+                        : "border border-[var(--border-mid)] text-[var(--ink)] hover:bg-[var(--surface-2)]"
+                    }`}
+                  >
+                    {isCurrent
+                      ? "Current plan"
+                      : loadingPlan === planId
+                      ? "Opening checkout…"
+                      : `Choose ${plan.label}`}
+                  </button>
+                </div>
               </ScrollReveal>
             );
           })}
         </div>
+
+        <div className="mt-24">
+          <p className="mb-5 text-xs font-semibold uppercase tracking-wider text-[var(--ink-faint)]">Compare</p>
+          <h2 className="font-display mb-8 text-3xl font-semibold tracking-tight text-[var(--ink)] sm:text-4xl">
+            Everything in every plan.
+          </h2>
+          <div className="overflow-x-auto rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
+            <div className="min-w-[640px]">
+              <div className="grid grid-cols-5 gap-4 border-b border-[var(--border)] px-7 py-5 text-xs font-semibold uppercase tracking-wider text-[var(--ink-faint)]">
+                <div className="col-span-1">Feature</div>
+                <div>Free</div>
+                <div>Pro</div>
+                <div>Premium</div>
+                <div>Max</div>
+              </div>
+              <div className="grid grid-cols-5 gap-4 border-b border-[var(--border)] px-7 py-4 text-sm">
+                <div className="col-span-1">Mock interviews / month</div>
+                <div>{PLANS.free.monthlyLimit}</div>
+                {PAID_PLAN_IDS.map((id) => (
+                  <div key={id}>{PLANS[id].monthlyLimit ?? "Unlimited"}</div>
+                ))}
+              </div>
+              <div className="grid grid-cols-5 gap-4 border-b border-[var(--border)] px-7 py-4 text-sm">
+                <div className="col-span-1">Companies, roles &amp; rounds</div>
+                <div className="text-[var(--ink-dim)]">Limited</div>
+                {PAID_PLAN_IDS.map((id) => (
+                  <div key={id}>All</div>
+                ))}
+              </div>
+              <div className="grid grid-cols-5 gap-4 border-b border-[var(--border)] px-7 py-4 text-sm">
+                <div className="col-span-1">Full dashboard &amp; history</div>
+                <div className="text-[var(--ink-faint)]">{PLANS.free.hasInsights ? "✓" : "—"}</div>
+                {PAID_PLAN_IDS.map((id) => (
+                  <div key={id}>{PLANS[id].hasInsights ? "✓" : "—"}</div>
+                ))}
+              </div>
+              <div className="grid grid-cols-5 gap-4 border-b border-[var(--border)] px-7 py-4 text-sm">
+                <div className="col-span-1">AI insights &amp; topic scoring</div>
+                <div className="text-[var(--ink-faint)]">{PLANS.free.hasInsights ? "✓" : "—"}</div>
+                {PAID_PLAN_IDS.map((id) => (
+                  <div key={id}>{PLANS[id].hasInsights ? "✓" : "—"}</div>
+                ))}
+              </div>
+              <div className="grid grid-cols-5 gap-4 px-7 py-4 text-sm">
+                <div className="col-span-1">Priority support</div>
+                <div className="text-[var(--ink-faint)]">
+                  {PLANS.free.features.includes("Priority support") ? "✓" : "—"}
+                </div>
+                {PAID_PLAN_IDS.map((id) => (
+                  <div key={id} className={PLANS[id].features.includes("Priority support") ? undefined : "text-[var(--ink-faint)]"}>
+                    {PLANS[id].features.includes("Priority support") ? "✓" : "—"}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-24 grid grid-cols-1 gap-12 lg:grid-cols-[1fr_1.4fr]">
+          <div>
+            <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-[var(--ink-faint)]">FAQ</p>
+            <h2 className="font-display text-3xl font-semibold leading-tight tracking-tight text-[var(--ink)]">
+              Fair questions, short answers.
+            </h2>
+          </div>
+          <div className="border-b border-[var(--border-mid)]">
+            {FAQS.map((faq, i) => (
+              <FaqItem key={faq.q} q={faq.q} a={faq.a} defaultOpen={i === 0} />
+            ))}
+          </div>
+        </div>
       </section>
 
-      <footer className="border-t border-[var(--border)] px-6 py-10 text-center text-xs text-[var(--ink-faint)]">
-        © {new Date().getFullYear()} EvaluLabs
+      <footer className="mx-auto max-w-6xl px-6 pb-12 pt-4">
+        <div className="flex items-center justify-between border-t border-[var(--border)] pt-6 text-xs text-[var(--ink-faint)]">
+          <span>© {new Date().getFullYear()} EvaluLabs</span>
+          <div className="flex gap-6">
+            <Link href="/about" className="hover:opacity-70">About</Link>
+            <Link href="/contact" className="hover:opacity-70">Contact</Link>
+          </div>
+        </div>
       </footer>
     </div>
   );
