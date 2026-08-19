@@ -176,7 +176,7 @@ export default function ProgressPage() {
             </nav>
           )}
 
-          <main className="max-w-4xl mx-auto px-6 py-10">
+          <main className="max-w-4xl mx-auto px-6 py-10 fade-up">
             <div className="mb-8">
               <h1 className="font-display text-2xl font-bold" style={{ color: "var(--ink)" }}>
                 Your progress
