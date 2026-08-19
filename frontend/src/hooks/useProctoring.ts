@@ -287,10 +287,22 @@ export function useProctoring(session: InterviewSession | null) {
     let intervalId: number | undefined;
 
     (async () => {
-      const [tf, coco] = await Promise.all([import("@tensorflow/tfjs"), import("@tensorflow-models/coco-ssd")]);
-      await tf.ready();
-      if (!phoneModelRef.current) {
-        phoneModelRef.current = await coco.load({ base: "lite_mobilenet_v2" });
+      try {
+        const [tf, coco] = await Promise.all([import("@tensorflow/tfjs"), import("@tensorflow-models/coco-ssd")]);
+        await tf.ready();
+        if (!phoneModelRef.current) {
+          // Self-hosted under public/models/coco-ssd/ (same pattern as the
+          // face-api weights below) rather than the package default of
+          // fetching from storage.googleapis.com — that host is unreachable
+          // from some deploy/candidate networks, which silently killed
+          // phone detection for the rest of the session with no retry.
+          phoneModelRef.current = await coco.load({ modelUrl: "/models/coco-ssd/model.json" });
+        }
+      } catch {
+        // Model failed to load (bad network, corrupt cache, etc.) — leave
+        // phoneModelRef null so every tick below just no-ops; other
+        // proctoring checks (face/tab/devtools) are unaffected.
+        return;
       }
       if (cancelled) return;
 

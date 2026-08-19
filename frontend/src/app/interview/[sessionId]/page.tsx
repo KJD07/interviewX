@@ -1070,7 +1070,15 @@ export default function InterviewPage() {
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        cancelExitWarning();
+        // Tab becoming visible again doesn't mean full-screen was restored
+        // (switching tabs/apps often drops full-screen too) — only cancel
+        // the warning once full-screen is actually back, same as the
+        // fullscreenchange handler. Otherwise the modal (and its only
+        // "resume" button, which re-requests full-screen) would vanish
+        // while still minimized, leaving no way to get back in.
+        if (document.fullscreenElement) {
+          cancelExitWarning();
+        }
         return;
       }
       if (hasEnteredFullscreenRef.current && !ending && !autoExitHandledRef.current) {
