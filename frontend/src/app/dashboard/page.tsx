@@ -144,7 +144,7 @@ export default function DashboardPage() {
           </nav>
         )}
 
-        <main className="max-w-4xl mx-auto px-6 py-10 fade-up">
+        <main className="max-w-4xl mx-auto px-6 py-10">
 
           {/* Header row */}
           <div className="flex items-center justify-between mb-8">
@@ -153,32 +153,33 @@ export default function DashboardPage() {
                 {hasInsights ? "Dashboard" : "Home"}
               </h1>
               {monthlyLimit !== null && (
-                <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
-                  {monthlyUsed}/{monthlyLimit} {plan.id === "free" ? "free " : ""}interviews used this month.{" "}
-                  {bonusInterviews > 0 && (
-                    <span>+{bonusInterviews} bonus {bonusInterviews === 1 ? "interview" : "interviews"}.{" "}</span>
-                  )}
-                  <button
-                    onClick={() => router.push("/pricing")}
-                    className="underline"
-                    style={{ color: "var(--accent)" }}
-                  >
-                    {limitReached ? "Upgrade to continue →" : "Upgrade for more →"}
-                  </button>
-                  {/* Paid plans already have this via the sidebar (AppShell) */}
-                  {!isPro && (
-                    <>
-                      {" "}·{" "}
+                <>
+                  <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
+                    {monthlyUsed}/{monthlyLimit} {plan.id === "free" ? "free " : ""}interviews used this month.
+                    {bonusInterviews > 0 && (
+                      <span> +{bonusInterviews} bonus {bonusInterviews === 1 ? "interview" : "interviews"}.</span>
+                    )}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2 mt-2.5">
+                    <button
+                      onClick={() => router.push("/pricing")}
+                      className="px-3.5 py-1.5 rounded-full text-xs font-semibold"
+                      style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)" }}
+                    >
+                      {limitReached ? "Upgrade to continue →" : "Upgrade for more →"}
+                    </button>
+                    {/* Paid plans already have this via the sidebar (AppShell) */}
+                    {!isPro && (
                       <button
                         onClick={() => setShowTopup(true)}
-                        className="underline"
-                        style={{ color: "var(--accent)" }}
+                        className="px-3.5 py-1.5 rounded-full text-xs font-semibold"
+                        style={{ background: "transparent", color: "var(--ink-dim)", border: "1px solid var(--ink-faint)" }}
                       >
                         Buy more interviews
                       </button>
-                    </>
-                  )}
-                </p>
+                    )}
+                  </div>
+                </>
               )}
             </div>
             <div className="flex items-center gap-3">

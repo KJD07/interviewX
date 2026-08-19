@@ -32,7 +32,7 @@ export default function ForgotPasswordPage() {
       className="min-h-screen flex items-center justify-center px-4"
       style={{ background: "var(--page)" }}
     >
-      <div className="w-full max-w-sm fade-up">
+      <div className="w-full max-w-sm">
         <div className="mb-10">
           <span
             className="text-2xl font-bold tracking-tight cursor-blink"

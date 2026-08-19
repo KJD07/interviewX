@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -40,8 +41,18 @@ export default function MarketingNav() {
             : "border-transparent bg-white/30 backdrop-blur-md"
         }`}
       >
-        <Link href="/" className="font-display text-lg font-semibold tracking-tight text-[var(--ink)]">
-          Evalu<span className="text-[var(--accent-dim)]">Labs</span>
+        <Link href="/" className="flex items-center gap-2 font-display text-lg font-semibold tracking-tight text-[var(--ink)]">
+          <Image
+            src="/logo.png"
+            alt="EvaluLabs logo"
+            width={112}
+            height={112}
+            unoptimized
+            className="h-7 w-7 rounded-lg"
+          />
+          <span>
+            Evalu<span className="text-[var(--accent-dim)]">Labs</span>
+          </span>
         </Link>
 
         <div className="hidden items-center gap-1 sm:flex">

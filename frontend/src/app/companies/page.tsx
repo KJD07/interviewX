@@ -10,143 +10,16 @@ import AppShell from "@/components/AppShell";
 import TopupModal from "@/components/TopupModal";
 import PaginationControls from "@/components/PaginationControls";
 import { useSearchAndPaginate } from "@/hooks/useSearchAndPaginate";
-
-// ── Icons ─────────────────────────────────────────────────────────────────────
-
-function ChevronRight() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function ArrowLeft() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M10 13L5 8l5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-// ── Round type badge ──────────────────────────────────────────────────────────
-
-const ROUND_COLORS: Record<string, { bg: string; color: string; label: string }> = {
-  technical:    { bg: "rgba(99,102,241,0.12)",  color: "var(--accent)",   label: "Technical"    },
-  behavioral:   { bg: "rgba(34,197,94,0.10)",   color: "#22c55e",         label: "Behavioral"   },
-  system_design:{ bg: "rgba(245,158,11,0.12)",  color: "#f59e0b",         label: "System Design"},
-  hr:           { bg: "rgba(100,116,139,0.15)", color: "var(--ink-dim)",    label: "HR"           },
-};
-
-function RoundTypeBadge({ type }: { type: string }) {
-  const c = ROUND_COLORS[type] ?? { bg: "rgba(100,116,139,0.15)", color: "var(--ink-dim)", label: type };
-  return (
-    <span
-      className="text-xs font-medium px-2 py-0.5 rounded-full"
-      style={{ background: c.bg, color: c.color }}
-    >
-      {c.label}
-    </span>
-  );
-}
-
-// ── Skeleton loader ───────────────────────────────────────────────────────────
-
-function SkeletonCard() {
-  return (
-    <div
-      className="rounded-lg px-5 py-4 animate-pulse"
-      style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
-    >
-      <div className="h-4 w-32 rounded" style={{ background: "var(--border-mid)" }} />
-      <div className="mt-2 h-3 w-20 rounded" style={{ background: "var(--border-mid)" }} />
-    </div>
-  );
-}
-
-// ── Breadcrumb ────────────────────────────────────────────────────────────────
-
-type Crumb = { label: string; onClick: () => void };
-
-function Breadcrumbs({ crumbs }: { crumbs: Crumb[] }) {
-  return (
-    <nav className="flex items-center gap-1.5 text-sm mb-8">
-      {crumbs.map((c, i) => (
-        <span key={i} className="flex items-center gap-1.5">
-          {i > 0 && <span style={{ color: "var(--border-mid)" }}>/</span>}
-          <button
-            onClick={c.onClick}
-            className="hover:underline transition-colors"
-            style={{ color: i === crumbs.length - 1 ? "var(--ink)" : "var(--ink-dim)" }}
-          >
-            {c.label}
-          </button>
-        </span>
-      ))}
-    </nav>
-  );
-}
-
-// ── Shared list card ─────────────────────────────────────────────────────────
-
-function ListCard({
-  title,
-  subtitle,
-  onClick,
-  right,
-  disabled,
-}: {
-  title: string;
-  subtitle?: string;
-  onClick: () => void;
-  right?: React.ReactNode;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className="w-full text-left rounded-lg px-5 py-4 flex items-center justify-between gap-4 transition-colors disabled:opacity-40"
-      style={{
-        background: "var(--surface)",
-        border: "1px solid var(--border-mid)",
-      }}
-      onMouseEnter={(e) =>
-        !disabled && ((e.currentTarget as HTMLElement).style.borderColor = "var(--border-mid)")
-      }
-    >
-      <div className="min-w-0">
-        <p className="text-sm font-medium truncate" style={{ color: "var(--ink)" }}>
-          {title}
-        </p>
-        {subtitle && (
-          <p className="text-xs mt-0.5 truncate" style={{ color: "var(--ink-dim)" }}>
-            {subtitle}
-          </p>
-        )}
-      </div>
-      <div className="flex items-center gap-3 shrink-0">
-        {right}
-        <span style={{ color: "var(--ink-faint)" }}>
-          <ChevronRight />
-        </span>
-      </div>
-    </button>
-  );
-}
-
-// ── Tone style pill ───────────────────────────────────────────────────────────
-
-function TonePill({ tone }: { tone: string }) {
-  return (
-    <span
-      className="text-xs px-2 py-0.5 rounded-full font-medium capitalize"
-      style={{ background: "var(--border-mid)", color: "var(--ink-dim)" }}
-    >
-      {tone}
-    </span>
-  );
-}
+import { ArrowLeft } from "@/components/ui/Icon";
+import { Breadcrumbs, type Crumb } from "@/components/ui/Breadcrumbs";
+import { ListCard } from "@/components/ui/ListCard";
+import { SkeletonList } from "@/components/ui/Skeleton";
+import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { TonePill, RoundTypeBadge, FreeTierBadge } from "@/components/ui/Badge";
+import { Input } from "@/components/ui/Field";
+import { RevealGroup, RevealItem } from "@/components/motion/Reveal";
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
@@ -251,25 +124,20 @@ export default function CompaniesPage() {
   return (
     <ProtectedRoute>
       <AppShell>
-      <div className="min-h-screen" style={{ background: "var(--page)" }}>
+      <div className="min-h-screen bg-page">
 
         {/* Nav — only shown for free plan; paid plans use the sidebar instead */}
         {!isPro && (
-          <nav
-            className="flex items-center justify-between px-6 py-4 border-b"
-            style={{ borderColor: "var(--surface)" }}
-          >
+          <nav className="flex items-center justify-between px-6 py-4 border-b border-surface">
             <button
               onClick={() => router.push("/dashboard")}
-              className="text-lg font-bold tracking-tight"
-              style={{ color: "var(--ink)" }}
+              className="text-lg font-bold tracking-tight text-ink"
             >
               EvaluLabs
             </button>
             <button
               onClick={() => router.push("/dashboard")}
-              className="flex items-center gap-1.5 text-sm hover:underline"
-              style={{ color: "var(--ink-dim)" }}
+              className="flex items-center gap-1.5 text-sm hover:underline text-ink-dim"
             >
               <ArrowLeft />
               Dashboard
@@ -277,132 +145,91 @@ export default function CompaniesPage() {
           </nav>
         )}
 
-        <main className="max-w-2xl mx-auto px-6 py-10 fade-up">
+        <main className="max-w-2xl mx-auto px-6 py-10">
 
           <Breadcrumbs crumbs={crumbs} />
 
           {/* Global fetch error */}
           {fetchError && (
-            <p
-              className="mb-6 text-sm rounded px-3 py-2"
-              style={{
-                background: "rgba(239,68,68,0.1)",
-                border: "1px solid rgba(239,68,68,0.3)",
-                color: "var(--danger)",
-              }}
-            >
-              {fetchError}
-            </p>
+            <Alert tone="danger" className="mb-6">{fetchError}</Alert>
           )}
 
           {/* Start error */}
           {startError && (
-            <p
-              className="mb-6 text-sm rounded px-3 py-2"
-              style={{
-                background: "rgba(239,68,68,0.1)",
-                border: "1px solid rgba(239,68,68,0.3)",
-                color: "var(--danger)",
-              }}
-            >
-              {startError}
-            </p>
+            <Alert tone="danger" className="mb-6">{startError}</Alert>
           )}
 
           {/* Limit warning */}
           {limitReached && (
-            <div
-              className="mb-6 rounded-lg px-5 py-4"
-              style={{
-                background: "rgba(99,102,241,0.08)",
-                border: "1px solid rgba(99,102,241,0.25)",
-              }}
-            >
-              <p className="text-sm font-medium" style={{ color: "var(--accent)" }}>
+            <Card tone="muted" pad="sm" className="mb-6">
+              <p className="text-sm font-medium text-accent">
                 {plan.label} plan limit reached
               </p>
-              <p className="text-xs mt-1" style={{ color: "var(--ink-dim)" }}>
+              <p className="text-xs mt-1 text-ink-dim">
                 You've used {monthlyUsed}/{monthlyLimit} interviews this month.
               </p>
               <div className="flex flex-wrap gap-2.5 mt-3">
-                <button
-                  onClick={() => setShowTopup(true)}
-                  className="px-3.5 py-1.5 rounded-full text-xs font-semibold"
-                  style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
-                >
+                <Button variant="primary" size="sm" onClick={() => setShowTopup(true)}>
                   Buy more interviews
-                </button>
-                <button
-                  onClick={() => router.push("/pricing")}
-                  className="px-3.5 py-1.5 rounded-full text-xs font-semibold"
-                  style={{ background: "transparent", color: "var(--accent)", border: "1px solid var(--accent)" }}
-                >
+                </Button>
+                <Button variant="outline-accent" size="sm" onClick={() => router.push("/pricing")}>
                   Upgrade plan →
-                </button>
+                </Button>
               </div>
-            </div>
+            </Card>
           )}
 
           {/* ── COMPANIES ── */}
           {view.step === "companies" && (
             <>
               <div className="mb-6">
-                <h1 className="font-display text-2xl font-bold" style={{ color: "var(--ink)" }}>
+                <h1 className="font-display text-2xl font-bold text-ink">
                   Choose a company
                 </h1>
-                <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
+                <p className="mt-1 text-sm text-ink-dim">
                   Select a company to browse roles and interview rounds.
                 </p>
               </div>
 
               {companyList.length > 0 && (
-                <input
+                <Input
                   type="text"
                   value={companySearch.query}
                   onChange={(e) => companySearch.setQuery(e.target.value)}
                   placeholder="Search companies…"
-                  className="w-full rounded-lg px-3.5 py-2.5 text-sm mb-5"
-                  style={{ background: "var(--surface)", border: "1px solid var(--border-mid)", color: "var(--ink)" }}
+                  className="mb-5"
                 />
               )}
 
               {loading || detailLoading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map((n) => <SkeletonCard key={n} />)}
-                </div>
+                <SkeletonList />
               ) : companyList.length === 0 ? (
-                <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
+                <p className="text-sm text-ink-dim">
                   No companies available yet.
                 </p>
               ) : companySearch.results.length === 0 ? (
-                <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
+                <p className="text-sm text-ink-dim">
                   No companies match "{companySearch.query}".
                 </p>
               ) : (
                 <>
-                  <div className="space-y-3">
+                  <RevealGroup className="space-y-3">
                     {companySearch.results.map((c) => (
-                      <ListCard
-                        key={c.id}
-                        title={c.name}
-                        subtitle={`Tone: ${c.tone_style} · ${c.question_count ?? 0} question${c.question_count === 1 ? "" : "s"}`}
-                        onClick={() => handleSelectCompany(c.id)}
-                        right={
-                          <div className="flex items-center gap-2">
-                            {c.is_free && (
-                              <span
-                                className="text-xs font-medium px-2 py-0.5 rounded-full"
-                                style={{ background: "rgba(34,197,94,0.10)", color: "#22c55e" }}
-                              >
-                                Free tier
-                              </span>
-                            )}
-                            <TonePill tone={c.tone_style} />
-                          </div>
-                        }
-                      />
+                      <RevealItem key={c.id}>
+                        <ListCard
+                          title={c.name}
+                          subtitle={`Tone: ${c.tone_style} · ${c.question_count ?? 0} question${c.question_count === 1 ? "" : "s"}`}
+                          onClick={() => handleSelectCompany(c.id)}
+                          right={
+                            <div className="flex items-center gap-2">
+                              {c.is_free && <FreeTierBadge />}
+                              <TonePill tone={c.tone_style} />
+                            </div>
+                          }
+                        />
+                      </RevealItem>
                     ))}
-                  </div>
+                  </RevealGroup>
                   {!companySearch.isSearching && (
                     <PaginationControls
                       page={companySearch.page}
@@ -419,29 +246,30 @@ export default function CompaniesPage() {
           {view.step === "roles" && (
             <>
               <div className="mb-6">
-                <h1 className="font-display text-2xl font-bold" style={{ color: "var(--ink)" }}>
+                <h1 className="font-display text-2xl font-bold text-ink">
                   {view.company.name}
                 </h1>
-                <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
+                <p className="mt-1 text-sm text-ink-dim">
                   Pick a role to see available interview rounds.
                 </p>
               </div>
 
               {view.company.roles.length === 0 ? (
-                <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
+                <p className="text-sm text-ink-dim">
                   No roles available for this company yet.
                 </p>
               ) : (
-                <div className="space-y-3">
+                <RevealGroup className="space-y-3">
                   {view.company.roles.map((role) => (
-                    <ListCard
-                      key={role.id}
-                      title={role.title}
-                      subtitle={`${role.rounds.length} round${role.rounds.length !== 1 ? "s" : ""}`}
-                      onClick={() => handleSelectRole(view.company, role)}
-                    />
+                    <RevealItem key={role.id}>
+                      <ListCard
+                        title={role.title}
+                        subtitle={`${role.rounds.length} round${role.rounds.length !== 1 ? "s" : ""}`}
+                        onClick={() => handleSelectRole(view.company, role)}
+                      />
+                    </RevealItem>
                   ))}
-                </div>
+                </RevealGroup>
               )}
             </>
           )}
@@ -452,48 +280,44 @@ export default function CompaniesPage() {
             return (
               <>
                 <div className="mb-6">
-                  <h1 className="font-display text-2xl font-bold" style={{ color: "var(--ink)" }}>
+                  <h1 className="font-display text-2xl font-bold text-ink">
                     {v.role.title}
                   </h1>
-                  <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
+                  <p className="mt-1 text-sm text-ink-dim">
                     Select a round to start your AI interview.
                   </p>
                 </div>
 
                 {v.role.rounds.length === 0 ? (
-                  <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
+                  <p className="text-sm text-ink-dim">
                     No rounds configured for this role yet.
                   </p>
                 ) : (
-                  <div className="space-y-3">
+                  <RevealGroup className="space-y-3">
                     {v.role.rounds.map((round) => (
-                      <div
-                        key={round.id}
-                        className="rounded-lg px-5 py-4 flex items-center justify-between gap-4"
-                        style={{
-                          background: "var(--surface)",
-                          border: "1px solid var(--border-mid)",
-                        }}
-                      >
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>
-                            {round.title}
-                          </p>
-                          <div className="mt-1.5">
-                            <RoundTypeBadge type={round.round_type} />
+                      <RevealItem key={round.id}>
+                        <Card pad="sm" className="flex items-center justify-between gap-4">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-ink">
+                              {round.title}
+                            </p>
+                            <div className="mt-1.5">
+                              <RoundTypeBadge type={round.round_type} />
+                            </div>
                           </div>
-                        </div>
-                        <button
-                          onClick={() => handleStartInterview(round.id)}
-                          disabled={limitReached || starting === round.id}
-                          className="shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-opacity disabled:opacity-40"
-                          style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
-                        >
-                          {starting === round.id ? "Starting…" : "Start interview"}
-                        </button>
-                      </div>
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            className="shrink-0"
+                            disabled={limitReached || starting === round.id}
+                            onClick={() => handleStartInterview(round.id)}
+                          >
+                            {starting === round.id ? "Starting…" : "Start interview"}
+                          </Button>
+                        </Card>
+                      </RevealItem>
                     ))}
-                  </div>
+                  </RevealGroup>
                 )}
               </>
             );

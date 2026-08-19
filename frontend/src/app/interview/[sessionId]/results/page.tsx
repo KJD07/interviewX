@@ -222,7 +222,7 @@ export default function ResultsPage() {
           </button>
         </nav>
 
-        <main className="max-w-2xl mx-auto px-6 py-10 fade-up space-y-8">
+        <main className="max-w-2xl mx-auto px-6 py-10 space-y-8">
 
           {/* Header */}
           <div>

@@ -45,7 +45,7 @@ export default function LoginPage() {
   return (
     <main className="min-h-screen flex items-center justify-center px-4"
       style={{ background: "var(--page)" }}>
-      <div className="w-full max-w-sm fade-up">
+      <div className="w-full max-w-sm">
 
         {/* Logo mark */}
         <div className="mb-10">

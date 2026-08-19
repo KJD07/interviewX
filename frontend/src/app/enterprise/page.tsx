@@ -385,7 +385,7 @@ export default function EnterprisePage() {
   return (
     <ProtectedRoute>
       <div className="min-h-screen" style={{ background: "var(--page)" }}>
-        <main className="max-w-5xl mx-auto px-6 py-10 fade-up">
+        <main className="max-w-5xl mx-auto px-6 py-10">
 
           {loading && <p className="text-sm" style={{ color: "var(--ink-dim)" }}>Loading…</p>}
 
