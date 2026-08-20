@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
@@ -54,13 +54,28 @@ function LogoutIcon() {
   );
 }
 
-export default function Sidebar() {
+type SidebarProps = {
+  mobileOpen?: boolean;
+  onClose?: () => void;
+};
+
+export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   const { user, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const plan = planOf(user?.subscription_plan);
   const [showTopup, setShowTopup] = useState(false);
   const bonusInterviews = user?.bonus_interviews ?? 0;
+
+  useEffect(() => {
+    const previous = document.body.style.overflow;
+    if (mobileOpen) {
+      document.body.style.overflow = "hidden";
+    }
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [mobileOpen]);
 
   const NAV_ITEMS = [
     { href: "/dashboard", label: "Dashboard", icon: GridIcon },
@@ -79,11 +94,13 @@ export default function Sidebar() {
   const initial = (user?.username || "?").charAt(0).toUpperCase();
 
   return (
-    <aside
-      className="w-[260px] shrink-0 h-screen sticky top-0 flex flex-col px-5 py-7 border-r"
-      style={{ background: "var(--page)", borderColor: "var(--border)" }}
-    >
-      <div className="flex flex-col min-h-0 flex-1">
+    <>
+      {/* Desktop sidebar */}
+      <aside
+        className="hidden md:flex w-[260px] shrink-0 h-screen sticky top-0 flex flex-col px-5 py-7 border-r"
+        style={{ background: "var(--page)", borderColor: "var(--border)" }}
+      >
+        <div className="flex flex-col min-h-0 flex-1">
         <Link
           href="/dashboard"
           className="font-display flex items-center gap-2.5 text-[19px] font-semibold tracking-tight px-1.5 mb-9 shrink-0"
@@ -175,6 +192,88 @@ export default function Sidebar() {
       </div>
 
       {showTopup && <TopupModal onClose={() => setShowTopup(false)} />}
-    </aside>
+      </aside>
+
+      {/* Mobile drawer */}
+      {mobileOpen && (
+        <div className="md:hidden fixed inset-0 z-50 flex">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]" onClick={onClose} />
+          <div className="relative w-[18rem] max-w-[85vw] h-[100dvh] max-h-[100dvh] overflow-hidden" style={{ background: 'var(--page)' }}>
+            <div className="flex flex-col h-full px-5 py-6 border-r" style={{ borderColor: 'var(--border)' }}>
+              <div className="mb-6 shrink-0">
+                <Link href="/dashboard" className="font-display flex items-center gap-2.5 text-[18px] font-semibold tracking-tight px-1.5 mb-4 shrink-0" style={{ color: 'var(--ink)' }}>
+                  <Image src={icon} alt="EvaluLabs" width={24} height={24} className="rounded-md" priority />
+                  EvaluLabs
+                </Link>
+              </div>
+
+              <nav className="space-y-1 overflow-y-auto flex-1 min-h-0 pr-1 pb-2">
+                {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+                  const active = pathname === href || pathname?.startsWith(href + "/");
+                  return (
+                    <Link
+                      key={href}
+                      href={href}
+                      onClick={onClose}
+                      className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-[15px] transition-all duration-200 ease-out hover:opacity-80"
+                      style={{
+                        background: active ? "var(--surface-2)" : "transparent",
+                        color: active ? "var(--ink)" : "var(--ink-dim)",
+                        fontWeight: active ? 600 : 500,
+                      }}
+                    >
+                      <Icon />
+                      {label}
+                    </Link>
+                  );
+                })}
+              </nav>
+
+              <div className="mt-auto pt-4 border-t shrink-0" style={{ borderColor: 'var(--border)' }}>
+                <div className="space-y-3">
+                  <div className="rounded-2xl p-[18px]" style={{ background: "var(--hero-bg)" }}>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--ink-faint)" }}>
+                      Plan
+                    </p>
+                    <div className="flex items-baseline justify-between gap-2 mb-1">
+                      <span className="font-display text-[19px] font-semibold tracking-tight" style={{ color: "var(--hero-text)" }}>
+                        {plan.label}
+                      </span>
+                      <Link href="/pricing" className="text-xs pb-px transition-opacity hover:opacity-70" style={{ color: "var(--lime)", borderBottom: "1px solid var(--lime)" }}>
+                        Manage
+                      </Link>
+                    </div>
+
+                    {bonusInterviews > 0 && (
+                      <p className="text-xs mt-1" style={{ color: "var(--ink-faint)" }}>
+                        +{bonusInterviews} bonus {bonusInterviews === 1 ? "interview" : "interviews"}
+                      </p>
+                    )}
+
+                    <button onClick={() => setShowTopup(true)} className="text-[12.5px] mt-1 pb-px block transition-opacity hover:opacity-70" style={{ color: "var(--ink-faint)", borderBottom: "1px dashed rgba(184,184,174,0.4)" }}>
+                      + Buy more interviews
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between px-1 py-1">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold shrink-0" style={{ background: "var(--ink)", color: "var(--page)" }}>
+                        {initial}
+                      </span>
+                      <span className="text-[13.5px] truncate" style={{ color: "var(--ink-dim)" }}>
+                        {user?.username}
+                      </span>
+                    </div>
+                    <button onClick={handleLogout} className="shrink-0 hover:opacity-80" style={{ color: "var(--ink-faint)" }} title="Sign out">
+                      <LogoutIcon />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

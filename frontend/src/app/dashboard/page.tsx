@@ -154,19 +154,19 @@ export default function DashboardPage() {
           </nav>
         )}
 
-        <main className="max-w-6xl mx-auto px-8 py-10 fade-up">
+        <main className="max-w-6xl mx-auto px-4 sm:px-8 py-10 fade-up">
 
           {/* Header row */}
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl" style={{ color: "var(--ink)" }}>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
+            <div className="w-full sm:w-auto">
+              <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight mb-2 sm:mb-0" style={{ color: "var(--ink)" }}>
                 {hasInsights ? "Dashboard" : "Home"}
               </h1>
             </div>
-            <div className="flex items-center gap-2.5 shrink-0">
+            <div className="flex w-full sm:w-auto items-center gap-3 flex-col sm:flex-row">
               <button
                 onClick={() => router.push("/pricing")}
-                className="px-5 py-3 rounded-full text-[14.5px] font-medium transition-colors hover:bg-[var(--surface-2)]"
+                className="w-full sm:w-auto px-4 py-2 rounded-full text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
                 style={{ background: "transparent", color: "var(--ink)", border: "1px solid var(--border-mid)" }}
               >
                 {isPro ? "Manage subscription" : "Upgrade"}
@@ -174,7 +174,7 @@ export default function DashboardPage() {
               <button
                 onClick={() => router.push("/companies")}
                 disabled={limitReached}
-                className="px-5 py-3 rounded-full text-[14.5px] font-semibold transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:hover:scale-100"
+                className="w-full sm:w-auto px-4 py-2 rounded-full text-sm font-semibold transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:hover:scale-100"
                 style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
               >
                 + Start interview
@@ -422,6 +422,7 @@ export default function DashboardPage() {
                     : "No sessions match this filter."}
                 </p>
               ) : (
+                <div className="overflow-x-auto">
                 <div
                   className="rounded-3xl overflow-hidden shadow-[0_8px_32px_rgba(28,26,22,0.06)]"
                   style={{ border: "1px solid var(--border)", background: "var(--surface)" }}
@@ -435,6 +436,7 @@ export default function DashboardPage() {
                       background: "var(--surface-2)",
                       color: "var(--ink-dim)",
                       borderBottom: "1px solid var(--border)",
+                      minWidth: "920px",
                     }}
                   >
                     <span>Session</span>
@@ -463,6 +465,7 @@ export default function DashboardPage() {
                           i < sessionSearch.results.length - 1
                             ? "1px solid var(--border)"
                             : "none",
+                        minWidth: "920px",
                       }}
                     >
                       <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>
@@ -485,6 +488,7 @@ export default function DashboardPage() {
                       </span>
                     </div>
                   ))}
+                </div>
                 </div>
               )}
 
