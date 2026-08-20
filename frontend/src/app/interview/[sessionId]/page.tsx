@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
+import Image from "next/image";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -8,6 +9,7 @@ import type { InterviewSession, WorkspacePayload } from "@/lib/api";
 import CodeWorkspace from "@/components/interview/CodeWorkspace";
 import SystemDesignWorkspace from "@/components/interview/SystemDesignWorkspace";
 import { useProctoring } from "@/hooks/useProctoring";
+import icon from "@/app/icon.png";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -84,10 +86,11 @@ function TimerBadge({ secondsLeft }: { secondsLeft: number | null }) {
   return (
     <span
       className="hidden sm:flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full tabular-nums"
-      style={{
-        background: low ? "rgba(239,68,68,0.12)" : "var(--accent-glow)",
-        color: low ? "var(--danger)" : "var(--accent)",
-      }}
+      style={
+        low
+          ? { background: "rgba(239,68,68,0.12)", color: "var(--danger)" }
+          : { background: "var(--surface)", color: "var(--ink)", border: "1px solid var(--border)" }
+      }
       title="Time remaining"
     >
       <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
@@ -1149,13 +1152,19 @@ export default function InterviewPage() {
             style={{ background: "rgba(6, 10, 20, 0.7)" }}
           >
             <div
-              className="w-full max-w-sm rounded-xl p-6 text-center fade-up"
-              style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
+              className="w-full max-w-sm rounded-[20px] p-8 text-center fade-up"
+              style={{ background: "var(--page)", border: "1px solid var(--border)" }}
             >
-              <h2 className="font-display text-base font-bold mb-2" style={{ color: "var(--ink)" }}>
+              <div
+                className="inline-flex w-11 h-11 rounded-xl items-center justify-center text-lg mb-4"
+                style={{ background: "var(--surface-2)" }}
+              >
+                ⛶
+              </div>
+              <h2 className="font-display text-lg font-semibold tracking-tight mb-3" style={{ color: "var(--ink)" }}>
                 Enter full-screen to begin
               </h2>
-              <p className="text-sm mb-6" style={{ color: "var(--ink-dim)" }}>
+              <p className="text-sm leading-relaxed mb-6" style={{ color: "var(--ink-dim)" }}>
                 This interview runs in full-screen mode. If you exit full-screen or
                 switch away, you&apos;ll have a short grace period to return before the
                 interview ends automatically — so make sure you&apos;re ready before
@@ -1163,7 +1172,7 @@ export default function InterviewPage() {
               </p>
               <button
                 onClick={enterFullscreen}
-                className="w-full py-2.5 rounded-full text-sm font-semibold transition-opacity"
+                className="w-full py-3.5 rounded-full text-sm font-semibold transition-opacity"
                 style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
               >
                 Start full-screen interview
@@ -1315,12 +1324,13 @@ export default function InterviewPage() {
           style={{ borderColor: "var(--surface)" }}
         >
           <div className="flex items-center gap-3 flex-wrap">
-            <span className="text-base font-bold tracking-tight" style={{ color: "var(--ink)" }}>
+            <span className="flex items-center gap-2 text-base font-semibold tracking-tight" style={{ color: "var(--ink)" }}>
+              <Image src={icon} alt="" width={24} height={24} className="rounded-md" priority />
               EvaluLabs
             </span>
             <span
-              className="hidden sm:block text-xs font-medium px-2 py-0.5 rounded-full"
-              style={{ background: "var(--accent-glow)", color: "var(--accent)" }}
+              className="hidden sm:block text-xs font-medium px-2.5 py-1 rounded-full"
+              style={{ background: "var(--surface)", color: "var(--ink)", border: "1px solid var(--border)" }}
             >
               Session #{sessionId}
             </span>
@@ -1342,8 +1352,8 @@ export default function InterviewPage() {
             <TimerBadge secondsLeft={secondsLeft} />
             {isFullscreen && (
               <span
-                className="hidden sm:flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
-                style={{ background: "var(--accent-glow)", color: "var(--accent)" }}
+                className="hidden sm:flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full"
+                style={{ background: "var(--surface-2)", color: "var(--ink-dim)" }}
                 title="Exiting full-screen will end the interview"
               >
                 Full-screen
@@ -1414,10 +1424,12 @@ export default function InterviewPage() {
         {/* ── Message thread ── */}
         <div className="flex-1 overflow-y-auto px-4 py-6 space-y-5">
           {messages.length === 0 && !session && (
-            <div className="flex justify-center mt-12">
-              <p className="text-sm" style={{ color: "var(--ink-faint)" }}>
-                Loading interview…
-              </p>
+            <div className="flex justify-start mt-2">
+              <div
+                className="w-7 h-7 rounded-full shrink-0 mt-1 mr-2.5 skeleton"
+                style={{ borderRadius: "9999px" }}
+              />
+              <div className="skeleton h-16 w-72 rounded-2xl" />
             </div>
           )}
 

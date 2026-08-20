@@ -9,6 +9,7 @@ import { planOf, hasSkills } from "@/lib/plans";
 import AppShell from "@/components/AppShell";
 import PaginationControls from "@/components/PaginationControls";
 import { useSearchAndPaginate } from "@/hooks/useSearchAndPaginate";
+import { SkeletonCard } from "@/components/Skeleton";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -17,20 +18,6 @@ function ChevronRight() {
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
       <path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
-  );
-}
-
-// ── Skeleton loader ───────────────────────────────────────────────────────────
-
-function SkeletonCard() {
-  return (
-    <div
-      className="rounded-lg px-5 py-4 animate-pulse"
-      style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
-    >
-      <div className="h-4 w-32 rounded" style={{ background: "var(--border-mid)" }} />
-      <div className="mt-2 h-3 w-20 rounded" style={{ background: "var(--border-mid)" }} />
-    </div>
   );
 }
 
@@ -65,33 +52,45 @@ function ListCard({
   onClick,
   right,
   disabled,
+  avatarLabel,
 }: {
   title: string;
   subtitle?: string;
   onClick: () => void;
   right?: React.ReactNode;
   disabled?: boolean;
+  avatarLabel?: string;
 }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className="w-full text-left rounded-lg px-5 py-4 flex items-center justify-between gap-4 transition-colors disabled:opacity-40"
-      style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
+      className="company-row w-full text-left rounded-2xl px-6 py-5 flex items-center justify-between gap-4 transition-colors disabled:opacity-40"
+      style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
     >
-      <div className="min-w-0">
-        <p className="text-sm font-medium truncate" style={{ color: "var(--ink)" }}>
-          {title}
-        </p>
-        {subtitle && (
-          <p className="text-xs mt-0.5 truncate" style={{ color: "var(--ink-dim)" }}>
-            {subtitle}
-          </p>
+      <div className="flex items-center gap-4 min-w-0">
+        {avatarLabel && (
+          <span
+            className="company-avatar w-11 h-11 rounded-[10px] flex items-center justify-center text-[15px] font-semibold tracking-tight shrink-0"
+            style={{ background: "var(--surface-2)", color: "var(--ink)" }}
+          >
+            {avatarLabel}
+          </span>
         )}
+        <div className="min-w-0">
+          <p className="company-title text-[17.5px] font-semibold truncate" style={{ color: "var(--ink)", letterSpacing: "-0.015em" }}>
+            {title}
+          </p>
+          {subtitle && (
+            <p className="company-subtitle text-[13px] mt-0.5 truncate" style={{ color: "var(--ink-faint)" }}>
+              {subtitle}
+            </p>
+          )}
+        </div>
       </div>
-      <div className="flex items-center gap-3 shrink-0">
+      <div className="flex items-center gap-4 shrink-0">
         {right}
-        <span style={{ color: "var(--ink-faint)" }}>
+        <span className="company-chevron" style={{ color: "var(--ink-faint)" }}>
           <ChevronRight />
         </span>
       </div>
@@ -102,12 +101,18 @@ function ListCard({
 function TonePill({ tone }: { tone: string }) {
   return (
     <span
-      className="text-xs px-2 py-0.5 rounded-full font-medium capitalize"
-      style={{ background: "var(--border-mid)", color: "var(--ink-dim)" }}
+      className="company-tonepill text-[11.5px] px-3 py-1 rounded-full font-medium capitalize"
+      style={{ background: "var(--surface-2)", color: "var(--ink)" }}
     >
       {tone}
     </span>
   );
+}
+
+function initialsOf(name: string) {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2);
+  return (parts[0][0] || "") + (parts[1][0] || "");
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
@@ -211,7 +216,7 @@ export default function SkillsPage() {
     <ProtectedRoute>
       <AppShell>
         <div className="min-h-screen" style={{ background: "var(--page)" }}>
-          <main className="max-w-2xl mx-auto px-6 py-10 fade-up">
+          <main className="max-w-[1080px] mx-auto px-[44px] pt-9 pb-[60px] fade-up">
             <Breadcrumbs crumbs={crumbs} />
 
             {!entitled ? (
@@ -271,24 +276,33 @@ export default function SkillsPage() {
                 {/* ── SKILLS (grouped by category) ── */}
                 {view.step === "skills" && (
                   <>
-                    <div className="mb-6">
-                      <h1 className="font-display text-2xl font-bold" style={{ color: "var(--ink)" }}>
+                    <div className="mb-8">
+                      <h1
+                        className="font-display text-[44px] font-semibold leading-none"
+                        style={{ color: "var(--ink)", letterSpacing: "-0.035em" }}
+                      >
                         Practice by skill
                       </h1>
-                      <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
+                      <p className="mt-3 text-[15px]" style={{ color: "var(--ink-dim)" }}>
                         Skip the company loop — drill a single skill directly.
                       </p>
                     </div>
 
                     {skillList.length > 0 && (
-                      <input
-                        type="text"
-                        value={skillSearch.query}
-                        onChange={(e) => skillSearch.setQuery(e.target.value)}
-                        placeholder="Search skills…"
-                        className="w-full rounded-lg px-3.5 py-2.5 text-sm mb-5"
-                        style={{ background: "var(--surface)", border: "1px solid var(--border-mid)", color: "var(--ink)" }}
-                      />
+                      <div
+                        className="rounded-[18px] p-2 flex items-center gap-3 mb-3.5"
+                        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+                      >
+                        <span className="pl-3" style={{ color: "var(--ink-faint)" }}>⌕</span>
+                        <input
+                          type="text"
+                          value={skillSearch.query}
+                          onChange={(e) => skillSearch.setQuery(e.target.value)}
+                          placeholder="Search skills…"
+                          className="flex-1 bg-transparent outline-none text-[14.5px] py-2.5"
+                          style={{ color: "var(--ink)" }}
+                        />
+                      </div>
                     )}
 
                     {loading || detailLoading ? (
@@ -314,12 +328,13 @@ export default function SkillsPage() {
                               >
                                 {category}
                               </h2>
-                              <div className="space-y-3">
+                              <div className="flex flex-col gap-[10px]">
                                 {items.map((s) => (
                                   <ListCard
                                     key={s.id}
                                     title={s.name}
                                     subtitle={s.description || `Tone: ${s.tone_style}`}
+                                    avatarLabel={initialsOf(s.name)}
                                     onClick={() => handleSelectSkill(s.id)}
                                     right={<TonePill tone={s.tone_style} />}
                                   />
@@ -344,7 +359,7 @@ export default function SkillsPage() {
                 {view.step === "roles" && (
                   <>
                     <div className="mb-6">
-                      <h1 className="font-display text-2xl font-bold" style={{ color: "var(--ink)" }}>
+                      <h1 className="font-display text-3xl font-semibold tracking-tight" style={{ color: "var(--ink)" }}>
                         {view.skill.name}
                       </h1>
                       <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
@@ -357,7 +372,7 @@ export default function SkillsPage() {
                         No tracks available for this skill yet.
                       </p>
                     ) : (
-                      <div className="space-y-3">
+                      <div className="flex flex-col gap-[10px]">
                         {view.skill.roles.map((role) => (
                           <ListCard
                             key={role.id}
@@ -377,7 +392,7 @@ export default function SkillsPage() {
                   return (
                     <>
                       <div className="mb-6">
-                        <h1 className="font-display text-2xl font-bold" style={{ color: "var(--ink)" }}>
+                        <h1 className="font-display text-3xl font-semibold tracking-tight" style={{ color: "var(--ink)" }}>
                           {v.role.title}
                         </h1>
                         <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>

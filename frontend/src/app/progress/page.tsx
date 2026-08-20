@@ -14,6 +14,7 @@ import type {
 import { isPaidPlan } from "@/lib/plans";
 import PaginationControls from "@/components/PaginationControls";
 import { useSearchAndPaginate } from "@/hooks/useSearchAndPaginate";
+import { SkeletonStatCard } from "@/components/Skeleton";
 
 // ── Small SVG line chart (no chart library — keeps bundle light) ───────────────
 
@@ -81,13 +82,10 @@ function MomentumBadge({ momentum }: { momentum: number | null }) {
   if (momentum === null || momentum === undefined) return null;
   const up = momentum > 0.05;
   const down = momentum < -0.05;
-  const color = up ? "#22c55e" : down ? "var(--danger)" : "var(--ink-dim)";
+  const color = up ? "#1E7A44" : down ? "var(--danger)" : "var(--ink-dim)";
   const arrow = up ? "↑" : down ? "↓" : "→";
   return (
-    <span
-      className="text-xs font-semibold px-2 py-0.5 rounded-full"
-      style={{ background: "rgba(255,255,255,0.05)", color }}
-    >
+    <span className="text-sm font-semibold" style={{ color }}>
       {arrow} {momentum > 0 ? "+" : ""}
       {momentum}/session
     </span>
@@ -97,15 +95,15 @@ function MomentumBadge({ momentum }: { momentum: number | null }) {
 function ConsistencyBadge({ consistency }: { consistency: "high" | "medium" | "low" | null }) {
   if (!consistency) return null;
   const map = {
-    high: { label: "Consistent", color: "#22c55e" },
-    medium: { label: "Somewhat consistent", color: "#f59e0b" },
-    low: { label: "Inconsistent", color: "var(--danger)" },
+    high: { label: "Consistent", color: "#4A4A00", bg: "rgba(34,197,94,0.12)" },
+    medium: { label: "Somewhat consistent", color: "#4A4A00", bg: "rgba(232,255,61,0.4)" },
+    low: { label: "Inconsistent", color: "var(--danger)", bg: "rgba(239,68,68,0.1)" },
   };
   const c = map[consistency];
   return (
     <span
-      className="text-xs font-semibold px-2 py-0.5 rounded-full"
-      style={{ background: "rgba(255,255,255,0.05)", color: c.color }}
+      className="text-sm font-medium px-3 py-1 rounded-full"
+      style={{ background: c.bg, color: c.color }}
     >
       {c.label}
     </span>
@@ -115,8 +113,8 @@ function ConsistencyBadge({ consistency }: { consistency: "high" | "medium" | "l
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
     <div
-      className={`rounded-xl px-5 py-5 ${className}`}
-      style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
+      className={`rounded-[20px] px-8 py-7 ${className}`}
+      style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
     >
       {children}
     </div>
@@ -176,20 +174,23 @@ export default function ProgressPage() {
             </nav>
           )}
 
-          <main className="max-w-4xl mx-auto px-6 py-10 fade-up">
+          <main className="max-w-[1080px] mx-auto px-[44px] pt-9 pb-[60px] fade-up">
             <div className="mb-8">
-              <h1 className="font-display text-2xl font-bold" style={{ color: "var(--ink)" }}>
+              <h1
+                className="font-display text-[44px] font-semibold leading-none"
+                style={{ color: "var(--ink)", letterSpacing: "-0.035em" }}
+              >
                 Your progress
               </h1>
-              <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
+              <p className="mt-3 text-[15px]" style={{ color: "var(--ink-dim)" }}>
                 How you're trending across every mock interview you've completed.
               </p>
             </div>
 
             {loading ? (
-              <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
-                Loading…
-              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 fade-up">
+                {[1, 2, 3, 4].map((n) => <SkeletonStatCard key={n} />)}
+              </div>
             ) : error ? (
               <p className="text-sm" style={{ color: "var(--danger)" }}>
                 {error}
@@ -222,10 +223,10 @@ export default function ProgressPage() {
                       >
                         Overall readiness (last 3 avg)
                       </p>
-                      <div className="flex items-baseline gap-3">
-                        <span className="text-5xl font-black tabular-nums" style={{ color: "var(--ink)" }}>
+                      <div className="flex items-baseline gap-5 flex-wrap">
+                        <span className="font-display text-[64px] leading-none font-semibold tracking-tight tabular-nums" style={{ color: "var(--ink)" }}>
                           {heroScore ?? "—"}
-                          <span className="text-xl font-normal" style={{ color: "var(--ink-faint)" }}>
+                          <span className="text-2xl font-normal" style={{ color: "var(--ink-faint)" }}>
                             /10
                           </span>
                         </span>

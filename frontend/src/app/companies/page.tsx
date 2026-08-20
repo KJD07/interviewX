@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -10,6 +10,7 @@ import AppShell from "@/components/AppShell";
 import TopupModal from "@/components/TopupModal";
 import PaginationControls from "@/components/PaginationControls";
 import { useSearchAndPaginate } from "@/hooks/useSearchAndPaginate";
+import { SkeletonCard } from "@/components/Skeleton";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -50,20 +51,6 @@ function RoundTypeBadge({ type }: { type: string }) {
   );
 }
 
-// ── Skeleton loader ───────────────────────────────────────────────────────────
-
-function SkeletonCard() {
-  return (
-    <div
-      className="rounded-lg px-5 py-4 animate-pulse"
-      style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
-    >
-      <div className="h-4 w-32 rounded" style={{ background: "var(--border-mid)" }} />
-      <div className="mt-2 h-3 w-20 rounded" style={{ background: "var(--border-mid)" }} />
-    </div>
-  );
-}
-
 // ── Breadcrumb ────────────────────────────────────────────────────────────────
 
 type Crumb = { label: string; onClick: () => void };
@@ -95,39 +82,48 @@ function ListCard({
   onClick,
   right,
   disabled,
+  avatarLabel,
 }: {
   title: string;
   subtitle?: string;
   onClick: () => void;
   right?: React.ReactNode;
   disabled?: boolean;
+  avatarLabel?: string;
 }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className="w-full text-left rounded-lg px-5 py-4 flex items-center justify-between gap-4 transition-colors disabled:opacity-40"
+      className="company-row w-full text-left rounded-2xl px-6 py-5 flex items-center justify-between gap-4 transition-colors disabled:opacity-40"
       style={{
         background: "var(--surface)",
-        border: "1px solid var(--border-mid)",
+        border: "1px solid var(--border)",
       }}
-      onMouseEnter={(e) =>
-        !disabled && ((e.currentTarget as HTMLElement).style.borderColor = "var(--border-mid)")
-      }
     >
-      <div className="min-w-0">
-        <p className="text-sm font-medium truncate" style={{ color: "var(--ink)" }}>
-          {title}
-        </p>
-        {subtitle && (
-          <p className="text-xs mt-0.5 truncate" style={{ color: "var(--ink-dim)" }}>
-            {subtitle}
-          </p>
+      <div className="flex items-center gap-4 min-w-0">
+        {avatarLabel && (
+          <span
+            className="company-avatar w-11 h-11 rounded-[10px] flex items-center justify-center text-[15px] font-semibold tracking-tight shrink-0"
+            style={{ background: "var(--surface-2)", color: "var(--ink)" }}
+          >
+            {avatarLabel}
+          </span>
         )}
+        <div className="min-w-0">
+          <p className="company-title text-[17.5px] font-semibold truncate" style={{ color: "var(--ink)", letterSpacing: "-0.015em" }}>
+            {title}
+          </p>
+          {subtitle && (
+            <p className="company-subtitle text-[13px] mt-0.5 truncate" style={{ color: "var(--ink-faint)" }}>
+              {subtitle}
+            </p>
+          )}
+        </div>
       </div>
-      <div className="flex items-center gap-3 shrink-0">
+      <div className="flex items-center gap-4 shrink-0">
         {right}
-        <span style={{ color: "var(--ink-faint)" }}>
+        <span className="company-chevron" style={{ color: "var(--ink-faint)" }}>
           <ChevronRight />
         </span>
       </div>
@@ -137,15 +133,26 @@ function ListCard({
 
 // ── Tone style pill ───────────────────────────────────────────────────────────
 
+function formatTone(tone: string) {
+  const [first, ...rest] = tone.split("_");
+  return [first.charAt(0).toUpperCase() + first.slice(1), ...rest].join(" · ");
+}
+
 function TonePill({ tone }: { tone: string }) {
   return (
     <span
-      className="text-xs px-2 py-0.5 rounded-full font-medium capitalize"
-      style={{ background: "var(--border-mid)", color: "var(--ink-dim)" }}
+      className="company-tonepill text-[11.5px] px-3 py-1 rounded-full font-medium"
+      style={{ background: "var(--surface-2)", color: "var(--ink)" }}
     >
-      {tone}
+      {formatTone(tone)}
     </span>
   );
+}
+
+function initialsOf(name: string) {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2);
+  return (parts[0][0] || "") + (parts[1][0] || "");
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
@@ -167,6 +174,8 @@ export default function CompaniesPage() {
   const [starting, setStarting] = useState<number | null>(null); // round id being started
   const [startError, setStartError] = useState("");
   const [showTopup, setShowTopup] = useState(false);
+  const [sortDesc, setSortDesc] = useState(false);
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
 
   // Initial company list fetch
   useEffect(() => {
@@ -246,7 +255,11 @@ export default function CompaniesPage() {
   // let a user keep going past their monthly limit without upgrading.
   const limitReached = monthlyLimit !== null && monthlyUsed >= monthlyLimit && bonusInterviews <= 0;
 
-  const companySearch = useSearchAndPaginate(companyList, (c) => c.name);
+  const sortedCompanyList = useMemo(() => {
+    const list = [...companyList].sort((a, b) => a.name.localeCompare(b.name));
+    return sortDesc ? list.reverse() : list;
+  }, [companyList, sortDesc]);
+  const companySearch = useSearchAndPaginate(sortedCompanyList, (c) => c.name);
 
   return (
     <ProtectedRoute>
@@ -277,7 +290,7 @@ export default function CompaniesPage() {
           </nav>
         )}
 
-        <main className="max-w-2xl mx-auto px-6 py-10 fade-up">
+        <main className="max-w-[1080px] mx-auto px-[44px] pt-9 pb-[60px] fade-up">
 
           <Breadcrumbs crumbs={crumbs} />
 
@@ -346,24 +359,71 @@ export default function CompaniesPage() {
           {/* ── COMPANIES ── */}
           {view.step === "companies" && (
             <>
-              <div className="mb-6">
-                <h1 className="font-display text-2xl font-bold" style={{ color: "var(--ink)" }}>
+              <div className="mb-8">
+                <h1
+                  className="font-display text-[44px] font-semibold leading-none"
+                  style={{ color: "var(--ink)", letterSpacing: "-0.035em" }}
+                >
                   Choose a company
                 </h1>
-                <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
+                <p className="mt-3 text-[15px]" style={{ color: "var(--ink-dim)" }}>
                   Select a company to browse roles and interview rounds.
+                  {companyList.length > 0 && (
+                    <> All {companyList.length} companies have verified question banks.</>
+                  )}
                 </p>
               </div>
 
               {companyList.length > 0 && (
-                <input
-                  type="text"
-                  value={companySearch.query}
-                  onChange={(e) => companySearch.setQuery(e.target.value)}
-                  placeholder="Search companies…"
-                  className="w-full rounded-lg px-3.5 py-2.5 text-sm mb-5"
-                  style={{ background: "var(--surface)", border: "1px solid var(--border-mid)", color: "var(--ink)" }}
-                />
+                <div className="flex items-center gap-2 mb-3.5">
+                  <div
+                    className="flex-1 rounded-[18px] p-2 flex items-center gap-3"
+                    style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+                  >
+                    <span className="pl-3" style={{ color: "var(--ink-faint)" }}>⌕</span>
+                    <input
+                      type="text"
+                      value={companySearch.query}
+                      onChange={(e) => companySearch.setQuery(e.target.value)}
+                      placeholder={`Search ${companyList.length}+ companies…`}
+                      className="flex-1 bg-transparent outline-none text-[14.5px] py-2.5"
+                      style={{ color: "var(--ink)" }}
+                    />
+                  </div>
+                  <div className="relative shrink-0">
+                    <button
+                      onClick={() => setSortMenuOpen((v) => !v)}
+                      className="px-4 py-2.5 rounded-full text-[13px] font-medium flex items-center gap-1.5"
+                      style={{ background: "transparent", border: "1px solid var(--border-mid)", color: "var(--ink)" }}
+                    >
+                      {sortDesc ? "Z-A" : "A-Z"}
+                      <span style={{ color: "var(--ink-faint)" }}>▾</span>
+                    </button>
+                    {sortMenuOpen && (
+                      <div
+                        className="absolute right-0 top-full mt-1.5 rounded-xl overflow-hidden z-10 shadow-[0_8px_24px_rgba(28,26,22,0.12)]"
+                        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+                      >
+                        {[
+                          { label: "A-Z", desc: false },
+                          { label: "Z-A", desc: true },
+                        ].map((opt) => (
+                          <button
+                            key={opt.label}
+                            onClick={() => {
+                              setSortDesc(opt.desc);
+                              setSortMenuOpen(false);
+                            }}
+                            className="block w-full text-left px-4 py-2.5 text-[14px] whitespace-nowrap hover:bg-[var(--surface-2)]"
+                            style={{ color: "var(--ink)" }}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
 
               {loading || detailLoading ? (
@@ -380,26 +440,15 @@ export default function CompaniesPage() {
                 </p>
               ) : (
                 <>
-                  <div className="space-y-3">
+                  <div className="flex flex-col gap-[10px]">
                     {companySearch.results.map((c) => (
                       <ListCard
                         key={c.id}
                         title={c.name}
-                        subtitle={`Tone: ${c.tone_style} · ${c.question_count ?? 0} question${c.question_count === 1 ? "" : "s"}`}
+                        subtitle={`${c.category ? c.category + " · " : ""}${c.question_count ?? 0} verified question${c.question_count === 1 ? "" : "s"}`}
+                        avatarLabel={initialsOf(c.name)}
                         onClick={() => handleSelectCompany(c.id)}
-                        right={
-                          <div className="flex items-center gap-2">
-                            {c.is_free && (
-                              <span
-                                className="text-xs font-medium px-2 py-0.5 rounded-full"
-                                style={{ background: "rgba(34,197,94,0.10)", color: "#22c55e" }}
-                              >
-                                Free tier
-                              </span>
-                            )}
-                            <TonePill tone={c.tone_style} />
-                          </div>
-                        }
+                        right={<TonePill tone={c.tone_style} />}
                       />
                     ))}
                   </div>
@@ -419,7 +468,7 @@ export default function CompaniesPage() {
           {view.step === "roles" && (
             <>
               <div className="mb-6">
-                <h1 className="font-display text-2xl font-bold" style={{ color: "var(--ink)" }}>
+                <h1 className="font-display text-3xl font-semibold tracking-tight" style={{ color: "var(--ink)" }}>
                   {view.company.name}
                 </h1>
                 <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
@@ -452,7 +501,7 @@ export default function CompaniesPage() {
             return (
               <>
                 <div className="mb-6">
-                  <h1 className="font-display text-2xl font-bold" style={{ color: "var(--ink)" }}>
+                  <h1 className="font-display text-3xl font-semibold tracking-tight" style={{ color: "var(--ink)" }}>
                     {v.role.title}
                   </h1>
                   <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>

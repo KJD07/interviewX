@@ -11,27 +11,33 @@ import { planOf, isPaidPlan } from "@/lib/plans";
 import PaginationControls from "@/components/PaginationControls";
 import RealInterviewReportsCard from "@/components/RealInterviewReportsCard";
 import { useSearchAndPaginate } from "@/hooks/useSearchAndPaginate";
+import { Skeleton, SkeletonStatCard, SkeletonTable } from "@/components/Skeleton";
+
+const STATUS_MAP = {
+  in_progress: { label: "In progress", bg: "#FBF8D6", color: "#6B6B3D", dot: "#D4B94A" },
+  completed: { label: "Completed", bg: "#DEF3E0", color: "#3FA562", dot: "#3FA562" },
+  abandoned: { label: "Abandoned", bg: "var(--surface-2)", color: "var(--ink-dim)", dot: "var(--ink-faint)" },
+} as const;
 
 function StatusBadge({ status }: { status: InterviewSession["status"] }) {
-  const map = {
-    in_progress: { label: "In progress", bg: "var(--accent-glow)", color: "var(--accent)" },
-    completed: { label: "Completed", bg: "var(--success-bg)", color: "var(--success)" },
-    abandoned: { label: "Abandoned", bg: "var(--surface-2)", color: "var(--ink-dim)" },
-  };
-  const s = map[status];
+  const s = STATUS_MAP[status];
   return (
     <span
-      className="text-xs font-medium px-2 py-0.5 rounded-full"
+      className="inline-flex items-center justify-center justify-self-start gap-1.5 text-xs font-medium leading-none px-2.5 py-1.5 rounded-full whitespace-nowrap"
       style={{ background: s.bg, color: s.color }}
     >
+      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: s.dot }} />
       {s.label}
     </span>
   );
 }
 
-function ScorePill({ value }: { value: number | undefined }) {
+function ScorePill({ value, variant = "default" }: { value: number | undefined; variant?: "default" | "overall" }) {
   if (value === undefined) return <span style={{ color: "var(--ink-faint)" }}>—</span>;
-  const color = value >= 7 ? "var(--success)" : value >= 5 ? "#B8862F" : "var(--danger)";
+  const color =
+    value <= 2 ? "var(--danger)" :
+    variant === "overall" ? "#B8862F" :
+    value >= 7 ? "var(--success)" : "var(--ink)";
   return (
     <span className="font-semibold tabular-nums" style={{ color }}>
       {value}<span className="text-xs font-normal" style={{ color: "var(--ink-faint)" }}>/10</span>
@@ -52,6 +58,7 @@ export default function DashboardPage() {
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [fetchError, setFetchError] = useState("");
   const [showTopup, setShowTopup] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "in_progress">("all");
 
   useEffect(() => {
     // Guards against setState firing after the user has already navigated
@@ -104,8 +111,11 @@ export default function DashboardPage() {
     return v !== undefined && (best === undefined || v > best) ? v : best;
   }, undefined);
 
+  const statusFilteredSessions =
+    statusFilter === "all" ? sessions : sessions.filter((s) => s.status === statusFilter);
+
   const sessionSearch = useSearchAndPaginate(
-    sessions,
+    statusFilteredSessions,
     (s) => `${s.company_name ?? ""} ${s.role_title ?? ""} Session #${s.id}`
   );
 
@@ -144,71 +154,40 @@ export default function DashboardPage() {
           </nav>
         )}
 
-        <main className="max-w-4xl mx-auto px-6 py-10 fade-up">
+        <main className="max-w-6xl mx-auto px-8 py-10 fade-up">
 
           {/* Header row */}
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h1 className="font-display text-2xl font-bold" style={{ color: "var(--ink)" }}>
+              <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl" style={{ color: "var(--ink)" }}>
                 {hasInsights ? "Dashboard" : "Home"}
               </h1>
-              {monthlyLimit !== null && (
-                <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
-                  {monthlyUsed}/{monthlyLimit} {plan.id === "free" ? "free " : ""}interviews used this month.{" "}
-                  {bonusInterviews > 0 && (
-                    <span>+{bonusInterviews} bonus {bonusInterviews === 1 ? "interview" : "interviews"}.{" "}</span>
-                  )}
-                  <button
-                    onClick={() => router.push("/pricing")}
-                    className="underline"
-                    style={{ color: "var(--accent)" }}
-                  >
-                    {limitReached ? "Upgrade to continue →" : "Upgrade for more →"}
-                  </button>
-                  {/* Paid plans already have this via the sidebar (AppShell) */}
-                  {!isPro && (
-                    <>
-                      {" "}·{" "}
-                      <button
-                        onClick={() => setShowTopup(true)}
-                        className="underline"
-                        style={{ color: "var(--accent)" }}
-                      >
-                        Buy more interviews
-                      </button>
-                    </>
-                  )}
-                </p>
-              )}
             </div>
-            <div className="flex items-center gap-3">
-              {!isPro ? (
-                <button
-                  onClick={() => router.push("/pricing")}
-                  className="px-5 py-2.5 rounded-full text-sm font-semibold"
-                  style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)" }}
-                >
-                  Upgrade ↗
-                </button>
-              ) : (
-                <button
-                  onClick={() => router.push("/pricing")}
-                  className="px-5 py-2.5 rounded-full text-sm font-semibold"
-                  style={{ background: "transparent", color: "var(--ink-dim)", border: "1px solid var(--ink-faint)" }}
-                >
-                  Manage subscription
-                </button>
-              )}
+            <div className="flex items-center gap-2.5 shrink-0">
+              <button
+                onClick={() => router.push("/pricing")}
+                className="px-5 py-3 rounded-full text-[14.5px] font-medium transition-colors hover:bg-[var(--surface-2)]"
+                style={{ background: "transparent", color: "var(--ink)", border: "1px solid var(--border-mid)" }}
+              >
+                {isPro ? "Manage subscription" : "Upgrade"}
+              </button>
               <button
                 onClick={() => router.push("/companies")}
                 disabled={limitReached}
-                className="px-5 py-2.5 rounded-full text-sm font-semibold transition-opacity disabled:opacity-40"
+                className="px-5 py-3 rounded-full text-[14.5px] font-semibold transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:hover:scale-100"
                 style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
               >
                 + Start interview
               </button>
             </div>
           </div>
+
+          {/* Paid plans: analytics skeleton while sessions are loading */}
+          {hasInsights && loadingSessions && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 mb-8 fade-up">
+              {[1, 2, 3, 4].map((n) => <SkeletonStatCard key={n} />)}
+            </div>
+          )}
 
           {/* Paid plans: detailed analytics summary */}
           {hasInsights && !loadingSessions && !fetchError && completedSessions.length > 0 && (
@@ -218,43 +197,51 @@ export default function DashboardPage() {
               </p>
               <button
                 onClick={() => router.push("/progress")}
-                className="px-3.5 py-1.5 rounded-full text-xs font-semibold transition-opacity hover:opacity-80"
-                style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)" }}
+                className="px-4 py-2 rounded-full text-[13.5px] font-medium transition-colors hover:bg-[var(--surface-2)]"
+                style={{ background: "var(--surface)", color: "var(--ink)", border: "1px solid var(--border-mid)" }}
               >
                 View full progress →
               </button>
             </div>
           )}
           {hasInsights && !loadingSessions && !fetchError && completedSessions.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 mb-3.5">
               {[
                 { label: "Interviews completed", value: completedSessions.length },
                 { label: "Avg. overall", value: avgOverall !== undefined ? `${avgOverall}/10` : "—" },
                 { label: "Avg. communication", value: avgComm !== undefined ? `${avgComm}/10` : "—" },
-                { label: "Best score", value: bestOverall !== undefined ? `${bestOverall}/10` : "—" },
+                { label: "Best score", value: bestOverall !== undefined ? `${bestOverall}/10` : "—", lime: true },
               ].map((stat) => (
                 <div
                   key={stat.label}
-                  className="rounded-2xl px-4 py-4 shadow-[0_4px_16px_rgba(28,26,22,0.05)]"
-                  style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+                  className="rounded-[18px] p-[22px]"
+                  style={
+                    stat.lime
+                      ? { background: "var(--lime)" }
+                      : { background: "var(--surface)", border: "1px solid var(--border)" }
+                  }
                 >
-                  <p className="font-display text-2xl font-bold tabular-nums" style={{ color: "var(--ink)" }}>
+                  <p className="font-display text-[40px] leading-none font-semibold tracking-tight tabular-nums mb-2.5" style={{ color: "var(--ink)" }}>
                     {stat.value}
                   </p>
-                  <p className="text-xs mt-1" style={{ color: "var(--ink-dim)" }}>
+                  <p className="text-[13px]" style={{ color: stat.lime ? "var(--ink)" : "var(--ink-dim)" }}>
                     {stat.label}
                   </p>
                 </div>
               ))}
+            </div>
+          )}
+          {hasInsights && !loadingSessions && !fetchError && completedSessions.length > 0 && avgTech !== undefined && (
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3.5 mb-8">
               {avgTech !== undefined && (
                 <div
-                  className="rounded-2xl px-4 py-4 col-span-2 sm:col-span-1 shadow-[0_4px_16px_rgba(28,26,22,0.05)]"
+                  className="rounded-[18px] p-[22px]"
                   style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
                 >
-                  <p className="font-display text-2xl font-bold tabular-nums" style={{ color: "var(--ink)" }}>
+                  <p className="font-display text-[40px] leading-none font-semibold tracking-tight tabular-nums mb-2.5" style={{ color: "var(--ink)" }}>
                     {avgTech}/10
                   </p>
-                  <p className="text-xs mt-1" style={{ color: "var(--ink-dim)" }}>
+                  <p className="text-[13px]" style={{ color: "var(--ink-dim)" }}>
                     Avg. technical
                   </p>
                 </div>
@@ -270,9 +257,18 @@ export default function DashboardPage() {
           {/* Free plan: no dashboard/history — just their most recent plain score */}
           {!hasInsights ? (
             loadingSessions ? (
-              <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
-                Loading…
-              </p>
+              <div
+                className="rounded-3xl px-6 py-8 text-center fade-up"
+                style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+              >
+                <Skeleton className="h-3 w-28 rounded mb-4 mx-auto" />
+                <Skeleton className="h-12 w-24 rounded-xl mb-3 mx-auto" />
+                <Skeleton className="h-3 w-56 rounded mb-6 mx-auto" />
+                <div className="flex items-center justify-center gap-3">
+                  <Skeleton className="h-10 w-32 rounded-full" />
+                  <Skeleton className="h-10 w-40 rounded-full" />
+                </div>
+              </div>
             ) : fetchError ? (
               <p className="text-sm" style={{ color: "var(--danger)" }}>
                 {fetchError}
@@ -342,9 +338,14 @@ export default function DashboardPage() {
             )
           ) : /* Paid plans: full history table with score columns */
           loadingSessions ? (
-            <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
-              Loading sessions…
-            </p>
+            <div className="fade-up">
+              <div className="flex items-center justify-between mb-3">
+                <Skeleton className="h-3 w-20 rounded" />
+                <Skeleton className="h-8 w-48 rounded-full" />
+              </div>
+              <Skeleton className="h-12 w-full rounded-2xl mb-4" />
+              <SkeletonTable />
+            </div>
           ) : fetchError ? (
             <p className="text-sm" style={{ color: "var(--danger)" }}>
               {fetchError}
@@ -370,18 +371,55 @@ export default function DashboardPage() {
             </div>
           ) : (
             <>
-              <input
-                type="text"
-                value={sessionSearch.query}
-                onChange={(e) => sessionSearch.setQuery(e.target.value)}
-                placeholder="Search sessions by company or role…"
-                className="w-full rounded-lg px-3.5 py-2.5 text-sm mb-4"
-                style={{ background: "var(--surface)", border: "1px solid var(--border-mid)", color: "var(--ink)" }}
-              />
+              <div className="flex items-center justify-between mb-3">
+                <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--ink-dim)" }}>
+                  <span style={{ color: "var(--ink-faint)" }}>◇</span> Sessions
+                </p>
+                <div className="flex items-center gap-2">
+                  {[
+                    { key: "all" as const, label: "All" },
+                    { key: "completed" as const, label: "Completed" },
+                    { key: "in_progress" as const, label: "In progress" },
+                  ].map((opt) => {
+                    const active = statusFilter === opt.key;
+                    return (
+                      <button
+                        key={opt.key}
+                        onClick={() => setStatusFilter(opt.key)}
+                        className="px-4 py-1.5 rounded-full text-[13px] font-medium transition-colors"
+                        style={
+                          active
+                            ? { background: "var(--accent)", color: "var(--accent-ink)" }
+                            : { background: "var(--surface)", color: "var(--ink)", border: "1px solid var(--border-mid)" }
+                        }
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div
+                className="rounded-2xl p-2 mb-4 flex items-center gap-3"
+                style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+              >
+                <span className="pl-3" style={{ color: "var(--ink-faint)" }}>⌕</span>
+                <input
+                  type="text"
+                  value={sessionSearch.query}
+                  onChange={(e) => sessionSearch.setQuery(e.target.value)}
+                  placeholder="Search sessions by company or role…"
+                  className="flex-1 bg-transparent outline-none text-[14.5px] py-2.5"
+                  style={{ color: "var(--ink)" }}
+                />
+              </div>
 
               {sessionSearch.results.length === 0 ? (
                 <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
-                  No sessions match "{sessionSearch.query}".
+                  {sessionSearch.isSearching
+                    ? `No sessions match "${sessionSearch.query}".`
+                    : "No sessions match this filter."}
                 </p>
               ) : (
                 <div
@@ -392,7 +430,8 @@ export default function DashboardPage() {
                   <div
                     className="grid text-xs font-medium uppercase tracking-wider px-5 py-3"
                     style={{
-                      gridTemplateColumns: "1fr 80px 60px 60px 60px 100px",
+                      gridTemplateColumns: "1fr 130px 70px 70px 80px 110px",
+                      columnGap: "24px",
                       background: "var(--surface-2)",
                       color: "var(--ink-dim)",
                       borderBottom: "1px solid var(--border)",
@@ -403,7 +442,7 @@ export default function DashboardPage() {
                     <span>Comm.</span>
                     <span>Tech.</span>
                     <span>Overall</span>
-                    <span className="text-right">Date</span>
+                    <span>Date</span>
                   </div>
 
                   {sessionSearch.results.map((s, i) => (
@@ -418,12 +457,12 @@ export default function DashboardPage() {
                       }
                       className="dash-row grid items-center px-5 py-4 cursor-pointer transition-colors"
                       style={{
-                        gridTemplateColumns: "1fr 80px 60px 60px 60px 100px",
+                        gridTemplateColumns: "1fr 130px 70px 70px 80px 110px",
+                        columnGap: "24px",
                         borderBottom:
                           i < sessionSearch.results.length - 1
                             ? "1px solid var(--border)"
                             : "none",
-                        background: i % 2 === 0 ? "transparent" : "var(--surface-2)",
                       }}
                     >
                       <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>
@@ -437,9 +476,9 @@ export default function DashboardPage() {
                       <StatusBadge status={s.status} />
                       <ScorePill value={s.scores?.communication} />
                       <ScorePill value={s.scores?.technical} />
-                      <ScorePill value={s.scores?.overall} />
+                      <ScorePill value={s.scores?.overall} variant="overall" />
                       <span
-                        className="text-xs text-right"
+                        className="text-xs"
                         style={{ color: "var(--ink-faint)" }}
                       >
                         {formatDate(s.started_at)}

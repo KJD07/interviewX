@@ -1,10 +1,12 @@
 "use client";
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { planOf, hasSkills } from "@/lib/plans";
 import TopupModal from "@/components/TopupModal";
+import icon from "@/app/icon.png";
 
 function GridIcon() {
   return (
@@ -74,17 +76,20 @@ export default function Sidebar() {
     router.replace("/login");
   };
 
+  const initial = (user?.username || "?").charAt(0).toUpperCase();
+
   return (
     <aside
-      className="w-56 shrink-0 h-screen sticky top-0 flex flex-col px-4 py-6 border-r"
-      style={{ background: "var(--surface)", borderColor: "var(--border)" }}
+      className="w-[260px] shrink-0 h-screen sticky top-0 flex flex-col px-5 py-7 border-r"
+      style={{ background: "var(--page)", borderColor: "var(--border)" }}
     >
       <div className="flex flex-col min-h-0 flex-1">
         <Link
           href="/dashboard"
-          className="font-display text-lg font-semibold tracking-tight px-2 mb-8 block shrink-0"
+          className="font-display flex items-center gap-2.5 text-[19px] font-semibold tracking-tight px-1.5 mb-9 shrink-0"
           style={{ color: "var(--ink)" }}
         >
+          <Image src={icon} alt="EvaluLabs" width={28} height={28} className="rounded-md" priority />
           EvaluLabs
         </Link>
 
@@ -95,10 +100,11 @@ export default function Sidebar() {
               <Link
                 key={href}
                 href={href}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-[15px] transition-all duration-200 ease-out hover:opacity-80"
                 style={{
-                  background: active ? "var(--accent-glow)" : "transparent",
-                  color: active ? "var(--accent-dim)" : "var(--ink-dim)",
+                  background: active ? "var(--surface-2)" : "transparent",
+                  color: active ? "var(--ink)" : "var(--ink-dim)",
+                  fontWeight: active ? 600 : 500,
                 }}
               >
                 <Icon />
@@ -109,46 +115,54 @@ export default function Sidebar() {
         </nav>
       </div>
 
-      <div className="px-2 space-y-4 shrink-0">
+      <div className="space-y-3 shrink-0">
         <div
-          className="rounded-lg px-3 py-2.5"
+          className="rounded-2xl p-[18px]"
           style={{ background: "var(--hero-bg)" }}
         >
-          <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--hero-text)", opacity: 0.65 }}>
+          <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--ink-faint)" }}>
             Plan
           </p>
-          <div className="flex items-center justify-between mt-1">
-            <span className="font-display text-sm font-semibold" style={{ color: "var(--hero-text)" }}>
+          <div className="flex items-baseline justify-between gap-2 mb-1">
+            <span className="font-display text-[19px] font-semibold tracking-tight" style={{ color: "var(--hero-text)" }}>
               {plan.label}
             </span>
             <Link
               href="/pricing"
-              className="text-xs underline"
-              style={{ color: "var(--hero-text)", opacity: 0.75 }}
+              className="text-xs pb-px transition-opacity hover:opacity-70"
+              style={{ color: "var(--lime)", borderBottom: "1px solid var(--lime)" }}
             >
               Manage
             </Link>
           </div>
 
           {bonusInterviews > 0 && (
-            <p className="text-xs mt-1.5" style={{ color: "var(--hero-text)", opacity: 0.75 }}>
+            <p className="text-xs mt-1" style={{ color: "var(--ink-faint)" }}>
               +{bonusInterviews} bonus {bonusInterviews === 1 ? "interview" : "interviews"}
             </p>
           )}
 
           <button
             onClick={() => setShowTopup(true)}
-            className="text-xs mt-1.5 underline block"
-            style={{ color: "var(--hero-text)", opacity: 0.75 }}
+            className="text-[12.5px] mt-1 pb-px block transition-opacity hover:opacity-70"
+            style={{ color: "var(--ink-faint)", borderBottom: "1px dashed rgba(184,184,174,0.4)" }}
           >
             + Buy more interviews
           </button>
         </div>
 
-        <div className="flex items-center justify-between px-1">
-          <span className="text-sm truncate" style={{ color: "var(--ink-dim)" }}>
-            {user?.username}
-          </span>
+        <div className="flex items-center justify-between px-1 py-1">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span
+              className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold shrink-0"
+              style={{ background: "var(--ink)", color: "var(--page)" }}
+            >
+              {initial}
+            </span>
+            <span className="text-[13.5px] truncate" style={{ color: "var(--ink-dim)" }}>
+              {user?.username}
+            </span>
+          </div>
           <button
             onClick={handleLogout}
             className="shrink-0 hover:opacity-80"

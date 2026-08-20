@@ -8,7 +8,7 @@
   /* Neutral shell — same for every plan */
   --page:        #F6F5F1;
   --surface:     #FFFFFF;
-  --surface-2:   #F1EFEA;
+  --surface-2:   #EDEBE3;
   --border:      rgba(20, 20, 15, 0.08);
   --border-mid:  rgba(20, 20, 15, 0.15);
   --ink:         #14140F;
@@ -43,7 +43,7 @@
 [data-plan="max"] {
   --page:        #F6F5F1;
   --surface:     #FFFFFF;
-  --surface-2:   #F1EFEA;
+  --surface-2:   #EDEBE3;
   --border:      rgba(20, 20, 15, 0.08);
   --border-mid:  rgba(20, 20, 15, 0.15);
   --ink:         #14140F;
@@ -123,12 +123,59 @@ input:focus {
   animation: fadeUp 0.35s ease both;
 }
 
+/* Skeleton shimmer — pure CSS (background-position only), cheap on the GPU
+   and avoids any JS animation library so loading states stay lightweight. */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--border-mid) 37%, var(--surface-2) 63%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+/* Default, cheap hover/press transition for interactive elements that don't
+   specify their own — keeps switching between nav items/buttons feeling
+   smooth without any JS. Restricted to color-ish properties + transform so
+   it never triggers layout thrash. */
+a, button {
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease,
+    opacity 0.18s ease, transform 0.18s ease;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fade-up { animation: none; }
   .cursor-blink::after { animation: none; }
+  .skeleton { animation: none; }
+  a, button { transition: none; }
 }
 
 /* Dashboard session rows — themed hover/zebra, no hardcoded dark-slate colors */
 .dash-row:hover {
   background: var(--surface-2) !important;
+}
+
+/* Company/role list rows — invert to a dark card with a lime accent on hover */
+.company-row:hover {
+  background: var(--ink) !important;
+  border-color: var(--ink) !important;
+}
+.company-row:hover .company-avatar {
+  background: var(--lime) !important;
+  color: var(--ink) !important;
+}
+.company-row:hover .company-title {
+  color: var(--page) !important;
+}
+.company-row:hover .company-subtitle {
+  color: #B8B8AE !important;
+}
+.company-row:hover .company-tonepill {
+  background: rgba(232, 255, 61, 0.15) !important;
+  color: var(--lime) !important;
+}
+.company-row:hover .company-chevron {
+  color: var(--lime) !important;
 }
