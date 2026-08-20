@@ -59,6 +59,7 @@ export default function DashboardPage() {
   const [fetchError, setFetchError] = useState("");
   const [showTopup, setShowTopup] = useState(false);
   const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "in_progress">("all");
+  const [showSnapshot, setShowSnapshot] = useState(true);
 
   useEffect(() => {
     // Guards against setState firing after the user has already navigated
@@ -119,6 +120,33 @@ export default function DashboardPage() {
     (s) => `${s.company_name ?? ""} ${s.role_title ?? ""} Session #${s.id}`
   );
 
+  const analyticsSessions =
+    statusFilter === "all" ? sessions : sessions.filter((s) => s.status === statusFilter);
+
+  const analyticsCompleted = analyticsSessions.filter((s) => s.status === "completed");
+  const analyticsAvg = (nums: number[]) =>
+    nums.length ? Math.round((nums.reduce((a, b) => a + b, 0) / nums.length) * 10) / 10 : undefined;
+  const analyticsAvgOverall = analyticsAvg(
+    analyticsCompleted.map((s) => s.scores?.overall).filter((v): v is number => v !== undefined)
+  );
+  const analyticsAvgComm = analyticsAvg(
+    analyticsCompleted.map((s) => s.scores?.communication).filter((v): v is number => v !== undefined)
+  );
+  const analyticsAvgTech = analyticsAvg(
+    analyticsCompleted.map((s) => s.scores?.technical).filter((v): v is number => v !== undefined)
+  );
+  const analyticsBestOverall = analyticsCompleted.reduce<number | undefined>((best, s) => {
+    const v = s.scores?.overall;
+    return v !== undefined && (best === undefined || v > best) ? v : best;
+  }, undefined);
+
+  const statCards = [
+    { label: "Interviews", value: analyticsCompleted.length },
+    { label: "Avg. overall", value: analyticsAvgOverall !== undefined ? `${analyticsAvgOverall}/10` : "—" },
+    { label: "Avg. communication", value: analyticsAvgComm !== undefined ? `${analyticsAvgComm}/10` : "—" },
+    { label: "Best score", value: analyticsBestOverall !== undefined ? `${analyticsBestOverall}/10` : "—", lime: true },
+  ];
+
   return (
     <ProtectedRoute>
       <AppShell>
@@ -154,19 +182,19 @@ export default function DashboardPage() {
           </nav>
         )}
 
-        <main className="max-w-6xl mx-auto px-8 py-10 fade-up">
+        <main className="max-w-6xl mx-auto px-4 sm:px-8 py-10 fade-up">
 
           {/* Header row */}
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl" style={{ color: "var(--ink)" }}>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
+            <div className="w-full sm:w-auto">
+              <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight mb-2 sm:mb-0" style={{ color: "var(--ink)" }}>
                 {hasInsights ? "Dashboard" : "Home"}
               </h1>
             </div>
-            <div className="flex items-center gap-2.5 shrink-0">
+            <div className="flex w-full sm:w-auto items-center gap-3 flex-col sm:flex-row">
               <button
                 onClick={() => router.push("/pricing")}
-                className="px-5 py-3 rounded-full text-[14.5px] font-medium transition-colors hover:bg-[var(--surface-2)]"
+                className="w-full sm:w-auto px-4 py-2 rounded-full text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
                 style={{ background: "transparent", color: "var(--ink)", border: "1px solid var(--border-mid)" }}
               >
                 {isPro ? "Manage subscription" : "Upgrade"}
@@ -174,7 +202,7 @@ export default function DashboardPage() {
               <button
                 onClick={() => router.push("/companies")}
                 disabled={limitReached}
-                className="px-5 py-3 rounded-full text-[14.5px] font-semibold transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:hover:scale-100"
+                className="w-full sm:w-auto px-4 py-2 rounded-full text-sm font-semibold transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:hover:scale-100"
                 style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
               >
                 + Start interview
@@ -191,61 +219,79 @@ export default function DashboardPage() {
 
           {/* Paid plans: detailed analytics summary */}
           {hasInsights && !loadingSessions && !fetchError && completedSessions.length > 0 && (
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--ink-dim)" }}>
-                Performance snapshot
-              </p>
-              <button
-                onClick={() => router.push("/progress")}
-                className="px-4 py-2 rounded-full text-[13.5px] font-medium transition-colors hover:bg-[var(--surface-2)]"
-                style={{ background: "var(--surface)", color: "var(--ink)", border: "1px solid var(--border-mid)" }}
-              >
-                View full progress →
-              </button>
-            </div>
-          )}
-          {hasInsights && !loadingSessions && !fetchError && completedSessions.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 mb-3.5">
-              {[
-                { label: "Interviews completed", value: completedSessions.length },
-                { label: "Avg. overall", value: avgOverall !== undefined ? `${avgOverall}/10` : "—" },
-                { label: "Avg. communication", value: avgComm !== undefined ? `${avgComm}/10` : "—" },
-                { label: "Best score", value: bestOverall !== undefined ? `${bestOverall}/10` : "—", lime: true },
-              ].map((stat) => (
-                <div
-                  key={stat.label}
-                  className="rounded-[18px] p-[22px]"
-                  style={
-                    stat.lime
-                      ? { background: "var(--lime)" }
-                      : { background: "var(--surface)", border: "1px solid var(--border)" }
-                  }
-                >
-                  <p className="font-display text-[40px] leading-none font-semibold tracking-tight tabular-nums mb-2.5" style={{ color: "var(--ink)" }}>
-                    {stat.value}
-                  </p>
-                  <p className="text-[13px]" style={{ color: stat.lime ? "var(--ink)" : "var(--ink-dim)" }}>
-                    {stat.label}
-                  </p>
+            <div className="mb-3 rounded-[18px] border shadow-sm" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-4 sm:p-5">
+                <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--ink-dim)" }}>
+                  Performance snapshot
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => router.push("/progress")}
+                    className="hidden sm:inline-flex px-4 py-2 rounded-full text-[13.5px] font-medium transition-colors hover:bg-[var(--surface-2)]"
+                    style={{ background: "var(--surface)", color: "var(--ink)", border: "1px solid var(--border-mid)" }}
+                  >
+                    View full progress →
+                  </button>
+                  <button
+                    onClick={() => setShowSnapshot((v) => !v)}
+                    className="sm:hidden px-2.5 py-1.5 rounded-full text-[11px] font-medium"
+                    style={{ background: "var(--surface-2)", color: "var(--ink)" }}
+                  >
+                    {showSnapshot ? "Hide" : "Show"}
+                  </button>
                 </div>
-              ))}
-            </div>
-          )}
-          {hasInsights && !loadingSessions && !fetchError && completedSessions.length > 0 && avgTech !== undefined && (
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3.5 mb-8">
-              {avgTech !== undefined && (
-                <div
-                  className="rounded-[18px] p-[22px]"
-                  style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-                >
-                  <p className="font-display text-[40px] leading-none font-semibold tracking-tight tabular-nums mb-2.5" style={{ color: "var(--ink)" }}>
-                    {avgTech}/10
-                  </p>
-                  <p className="text-[13px]" style={{ color: "var(--ink-dim)" }}>
-                    Avg. technical
-                  </p>
+              </div>
+
+              <div className={showSnapshot ? "block" : "hidden"}>
+                <div className="px-4 pb-4 sm:px-5 sm:pb-5">
+                  <div className="grid grid-cols-2 xl:grid-cols-4 gap-3.5 mb-3.5">
+                    {statCards.map((stat) => (
+                      <div
+                        key={stat.label}
+                        className="rounded-[16px] p-4 shadow-sm transition-all duration-200 hover:-translate-y-[1px]"
+                        style={
+                          stat.lime
+                            ? { background: "var(--lime)" }
+                            : { background: "var(--surface)", border: "1px solid var(--border)" }
+                        }
+                      >
+                        <p className="font-display text-[24px] sm:text-[30px] leading-none font-semibold tracking-tight tabular-nums mb-2" style={{ color: "var(--ink)" }}>
+                          {stat.value}
+                        </p>
+                        <p className="text-[11px] sm:text-[12px]" style={{ color: stat.lime ? "var(--ink)" : "var(--ink-dim)" }}>
+                          {stat.label}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {analyticsAvgTech !== undefined && (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+                      <div
+                        className="rounded-[16px] p-4 shadow-sm"
+                        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+                      >
+                        <p className="font-display text-[24px] sm:text-[30px] leading-none font-semibold tracking-tight tabular-nums mb-2" style={{ color: "var(--ink)" }}>
+                          {analyticsAvgTech}/10
+                        </p>
+                        <p className="text-[11px] sm:text-[12px]" style={{ color: "var(--ink-dim)" }}>
+                          Avg. technical
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="sm:hidden mt-4">
+                    <button
+                      onClick={() => router.push("/progress")}
+                      className="w-full px-4 py-2.5 rounded-full text-sm font-medium"
+                      style={{ background: "var(--surface-2)", color: "var(--ink)", border: "1px solid var(--border-mid)" }}
+                    >
+                      View full progress →
+                    </button>
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
           )}
 
@@ -371,11 +417,14 @@ export default function DashboardPage() {
             </div>
           ) : (
             <>
-              <div className="flex items-center justify-between mb-3">
-                <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--ink-dim)" }}>
+              <div
+                className="mb-4 flex flex-col gap-3 rounded-2xl p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4"
+                style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+              >
+                <p className="flex items-center gap-1.5 px-1 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--ink-dim)" }}>
                   <span style={{ color: "var(--ink-faint)" }}>◇</span> Sessions
                 </p>
-                <div className="flex items-center gap-2">
+                <div className="grid w-full grid-cols-3 gap-2 sm:w-auto sm:flex sm:items-center">
                   {[
                     { key: "all" as const, label: "All" },
                     { key: "completed" as const, label: "Completed" },
@@ -386,7 +435,7 @@ export default function DashboardPage() {
                       <button
                         key={opt.key}
                         onClick={() => setStatusFilter(opt.key)}
-                        className="px-4 py-1.5 rounded-full text-[13px] font-medium transition-colors"
+                        className="whitespace-nowrap rounded-full px-2.5 py-2 text-center text-[12px] font-medium leading-none transition-colors sm:px-4 sm:py-1.5 sm:text-[13px]"
                         style={
                           active
                             ? { background: "var(--accent)", color: "var(--accent-ink)" }
@@ -422,70 +471,147 @@ export default function DashboardPage() {
                     : "No sessions match this filter."}
                 </p>
               ) : (
-                <div
-                  className="rounded-3xl overflow-hidden shadow-[0_8px_32px_rgba(28,26,22,0.06)]"
-                  style={{ border: "1px solid var(--border)", background: "var(--surface)" }}
-                >
-                  {/* Table header */}
-                  <div
-                    className="grid text-xs font-medium uppercase tracking-wider px-5 py-3"
-                    style={{
-                      gridTemplateColumns: "1fr 130px 70px 70px 80px 110px",
-                      columnGap: "24px",
-                      background: "var(--surface-2)",
-                      color: "var(--ink-dim)",
-                      borderBottom: "1px solid var(--border)",
-                    }}
-                  >
-                    <span>Session</span>
-                    <span>Status</span>
-                    <span>Comm.</span>
-                    <span>Tech.</span>
-                    <span>Overall</span>
-                    <span>Date</span>
+                <>
+                  <div className="space-y-3 sm:hidden">
+                    {sessionSearch.results.map((s) => (
+                      <div
+                        key={s.id}
+                        onClick={() =>
+                          router.push(
+                            s.status === "completed"
+                              ? `/interview/${s.id}/results`
+                              : `/interview/${s.id}`
+                          )
+                        }
+                        className="rounded-2xl p-4 cursor-pointer transition-colors"
+                        style={{
+                          background: "var(--surface)",
+                          border: "1px solid var(--border)",
+                          boxShadow: "0 8px 24px rgba(28,26,22,0.04)",
+                        }}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold truncate" style={{ color: "var(--ink)" }}>
+                              {s.company_name ?? `Session #${s.id}`}
+                            </p>
+                            {s.role_title && (
+                              <p className="text-xs mt-1 truncate" style={{ color: "var(--ink-faint)" }}>
+                                {s.role_title}
+                              </p>
+                            )}
+                          </div>
+                          <StatusBadge status={s.status} />
+                        </div>
+
+                        <div className="mt-3 grid grid-cols-3 gap-2">
+                          <div className="rounded-xl px-2 py-2" style={{ background: "var(--page)" }}>
+                            <p className="text-[10px] uppercase tracking-wider" style={{ color: "var(--ink-faint)" }}>
+                              Comm
+                            </p>
+                            <div className="mt-1">
+                              <ScorePill value={s.scores?.communication} />
+                            </div>
+                          </div>
+                          <div className="rounded-xl px-2 py-2" style={{ background: "var(--page)" }}>
+                            <p className="text-[10px] uppercase tracking-wider" style={{ color: "var(--ink-faint)" }}>
+                              Tech
+                            </p>
+                            <div className="mt-1">
+                              <ScorePill value={s.scores?.technical} />
+                            </div>
+                          </div>
+                          <div className="rounded-xl px-2 py-2" style={{ background: "var(--page)" }}>
+                            <p className="text-[10px] uppercase tracking-wider" style={{ color: "var(--ink-faint)" }}>
+                              Overall
+                            </p>
+                            <div className="mt-1">
+                              <ScorePill value={s.scores?.overall} variant="overall" />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 flex items-center justify-between gap-3 pt-2 border-t" style={{ borderColor: "var(--border)" }}>
+                          <span className="text-[11px]" style={{ color: "var(--ink-faint)" }}>
+                            {formatDate(s.started_at)}
+                          </span>
+                          <span className="text-[11px] font-medium" style={{ color: "var(--ink-dim)" }}>
+                            Open →
+                          </span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
 
-                  {sessionSearch.results.map((s, i) => (
+                  <div className="hidden sm:block overflow-x-auto">
                     <div
-                      key={s.id}
-                      onClick={() =>
-                        router.push(
-                          s.status === "completed"
-                            ? `/interview/${s.id}/results`
-                            : `/interview/${s.id}`
-                        )
-                      }
-                      className="dash-row grid items-center px-5 py-4 cursor-pointer transition-colors"
-                      style={{
-                        gridTemplateColumns: "1fr 130px 70px 70px 80px 110px",
-                        columnGap: "24px",
-                        borderBottom:
-                          i < sessionSearch.results.length - 1
-                            ? "1px solid var(--border)"
-                            : "none",
-                      }}
+                      className="rounded-3xl overflow-hidden shadow-[0_8px_32px_rgba(28,26,22,0.06)]"
+                      style={{ border: "1px solid var(--border)", background: "var(--surface)" }}
                     >
-                      <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>
-                        {s.company_name ?? `Session #${s.id}`}
-                        {s.role_title && (
-                          <span className="ml-1.5 font-normal" style={{ color: "var(--ink-faint)" }}>
-                            · {s.role_title}
-                          </span>
-                        )}
-                      </span>
-                      <StatusBadge status={s.status} />
-                      <ScorePill value={s.scores?.communication} />
-                      <ScorePill value={s.scores?.technical} />
-                      <ScorePill value={s.scores?.overall} variant="overall" />
-                      <span
-                        className="text-xs"
-                        style={{ color: "var(--ink-faint)" }}
+                      {/* Table header */}
+                      <div
+                        className="grid text-xs font-medium uppercase tracking-wider px-5 py-3"
+                        style={{
+                          gridTemplateColumns: "1fr 130px 70px 70px 80px 110px",
+                          columnGap: "24px",
+                          background: "var(--surface-2)",
+                          color: "var(--ink-dim)",
+                          borderBottom: "1px solid var(--border)",
+                          minWidth: "920px",
+                        }}
                       >
-                        {formatDate(s.started_at)}
-                      </span>
+                        <span>Session</span>
+                        <span>Status</span>
+                        <span>Comm.</span>
+                        <span>Tech.</span>
+                        <span>Overall</span>
+                        <span>Date</span>
+                      </div>
+
+                      {sessionSearch.results.map((s, i) => (
+                        <div
+                          key={s.id}
+                          onClick={() =>
+                            router.push(
+                              s.status === "completed"
+                                ? `/interview/${s.id}/results`
+                                : `/interview/${s.id}`
+                            )
+                          }
+                          className="dash-row grid items-center px-5 py-4 cursor-pointer transition-colors"
+                          style={{
+                            gridTemplateColumns: "1fr 130px 70px 70px 80px 110px",
+                            columnGap: "24px",
+                            borderBottom:
+                              i < sessionSearch.results.length - 1
+                                ? "1px solid var(--border)"
+                                : "none",
+                            minWidth: "920px",
+                          }}
+                        >
+                          <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>
+                            {s.company_name ?? `Session #${s.id}`}
+                            {s.role_title && (
+                              <span className="ml-1.5 font-normal" style={{ color: "var(--ink-faint)" }}>
+                                · {s.role_title}
+                              </span>
+                            )}
+                          </span>
+                          <StatusBadge status={s.status} />
+                          <ScorePill value={s.scores?.communication} />
+                          <ScorePill value={s.scores?.technical} />
+                          <ScorePill value={s.scores?.overall} variant="overall" />
+                          <span
+                            className="text-xs"
+                            style={{ color: "var(--ink-faint)" }}
+                          >
+                            {formatDate(s.started_at)}
+                          </span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                </>
               )}
 
               {!sessionSearch.isSearching && (

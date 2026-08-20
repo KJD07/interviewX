@@ -45,17 +45,17 @@ export default function LoginPage() {
   return (
     <main className="min-h-screen flex items-center justify-center px-4"
       style={{ background: "var(--page)" }}>
-      <div className="w-full max-w-sm fade-up">
+      <div className="w-full max-w-sm sm:max-w-md p-6 sm:p-8 fade-up">
 
         {/* Logo mark */}
-        <div className="mb-10">
+        <div className="mb-6 sm:mb-10">
           <span
-            className="text-2xl font-bold tracking-tight cursor-blink"
+            className="text-xl sm:text-2xl font-bold tracking-tight cursor-blink"
             style={{ color: "var(--ink)" }}
           >
             EvaluLabs
           </span>
-          <p className="mt-2 text-sm" style={{ color: "var(--ink-dim)" }}>
+          <p className="mt-2 text-sm sm:text-base" style={{ color: "var(--ink-dim)" }}>
             Sign in to continue practising.
           </p>
         </div>
@@ -69,11 +69,11 @@ export default function LoginPage() {
 
         <div className="flex items-center gap-3 mb-6">
           <div className="h-px flex-1" style={{ background: "var(--border-mid)" }} />
-          <span className="text-xs" style={{ color: "var(--ink-faint)" }}>or</span>
+          <span className="text-sm" style={{ color: "var(--ink-faint)" }}>or</span>
           <div className="h-px flex-1" style={{ background: "var(--border-mid)" }} />
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
           <div>
             <label
               htmlFor="email"
@@ -149,14 +149,14 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full rounded-full py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
+            className="w-full rounded-full py-2.5 sm:py-3 text-sm font-semibold transition-opacity disabled:opacity-50"
             style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
           >
             {submitting ? "Signing in…" : "Sign in"}
           </button>
         </form>
 
-        <p className="mt-6 text-sm text-center" style={{ color: "var(--ink-faint)" }}>
+        <p className="mt-6 text-sm sm:text-base text-center" style={{ color: "var(--ink-faint)" }}>
           No account?{" "}
           <Link
             href="/register"

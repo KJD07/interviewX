@@ -95,33 +95,33 @@ function ListCard({
     <button
       onClick={onClick}
       disabled={disabled}
-      className="company-row w-full text-left rounded-2xl px-6 py-5 flex items-center justify-between gap-4 transition-colors disabled:opacity-40"
+      className="company-row w-full text-left rounded-2xl px-4 py-4 sm:px-6 sm:py-5 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 transition-colors disabled:opacity-40"
       style={{
         background: "var(--surface)",
         border: "1px solid var(--border)",
       }}
     >
-      <div className="flex items-center gap-4 min-w-0">
+      <div className="flex items-center gap-3 sm:gap-4 min-w-0 w-full sm:w-auto">
         {avatarLabel && (
           <span
-            className="company-avatar w-11 h-11 rounded-[10px] flex items-center justify-center text-[15px] font-semibold tracking-tight shrink-0"
+            className="company-avatar w-10 h-10 sm:w-11 sm:h-11 rounded-[10px] flex items-center justify-center text-[14px] sm:text-[15px] font-semibold tracking-tight shrink-0"
             style={{ background: "var(--surface-2)", color: "var(--ink)" }}
           >
             {avatarLabel}
           </span>
         )}
-        <div className="min-w-0">
-          <p className="company-title text-[17.5px] font-semibold truncate" style={{ color: "var(--ink)", letterSpacing: "-0.015em" }}>
+        <div className="min-w-0 flex-1">
+          <p className="company-title text-base sm:text-[17.5px] font-semibold leading-snug break-words" style={{ color: "var(--ink)", letterSpacing: "-0.015em" }}>
             {title}
           </p>
           {subtitle && (
-            <p className="company-subtitle text-[13px] mt-0.5 truncate" style={{ color: "var(--ink-faint)" }}>
+            <p className="company-subtitle text-xs sm:text-[13px] mt-0.5 break-words" style={{ color: "var(--ink-faint)" }}>
               {subtitle}
             </p>
           )}
         </div>
       </div>
-      <div className="flex items-center gap-4 shrink-0">
+      <div className="flex items-center justify-between w-full sm:w-auto gap-3 sm:gap-4 shrink-0">
         {right}
         <span className="company-chevron" style={{ color: "var(--ink-faint)" }}>
           <ChevronRight />
@@ -290,7 +290,7 @@ export default function CompaniesPage() {
           </nav>
         )}
 
-        <main className="max-w-[1080px] mx-auto px-[44px] pt-9 pb-[60px] fade-up">
+        <main className="max-w-[1080px] mx-auto px-4 sm:px-[44px] pt-6 sm:pt-9 pb-[60px] fade-up">
 
           <Breadcrumbs crumbs={crumbs} />
 
@@ -361,12 +361,12 @@ export default function CompaniesPage() {
             <>
               <div className="mb-8">
                 <h1
-                  className="font-display text-[44px] font-semibold leading-none"
+                  className="font-display text-[28px] sm:text-[44px] font-semibold leading-none"
                   style={{ color: "var(--ink)", letterSpacing: "-0.035em" }}
                 >
                   Choose a company
                 </h1>
-                <p className="mt-3 text-[15px]" style={{ color: "var(--ink-dim)" }}>
+                <p className="mt-3 text-sm sm:text-[15px]" style={{ color: "var(--ink-dim)" }}>
                   Select a company to browse roles and interview rounds.
                   {companyList.length > 0 && (
                     <> All {companyList.length} companies have verified question banks.</>
@@ -375,7 +375,7 @@ export default function CompaniesPage() {
               </div>
 
               {companyList.length > 0 && (
-                <div className="flex items-center gap-2 mb-3.5">
+                <div className="flex flex-col sm:flex-row items-stretch gap-2 mb-3.5">
                   <div
                     className="flex-1 rounded-[18px] p-2 flex items-center gap-3"
                     style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
@@ -386,14 +386,14 @@ export default function CompaniesPage() {
                       value={companySearch.query}
                       onChange={(e) => companySearch.setQuery(e.target.value)}
                       placeholder={`Search ${companyList.length}+ companies…`}
-                      className="flex-1 bg-transparent outline-none text-[14.5px] py-2.5"
+                      className="flex-1 bg-transparent outline-none text-[14.5px] py-2.5 min-w-0"
                       style={{ color: "var(--ink)" }}
                     />
                   </div>
                   <div className="relative shrink-0">
                     <button
                       onClick={() => setSortMenuOpen((v) => !v)}
-                      className="px-4 py-2.5 rounded-full text-[13px] font-medium flex items-center gap-1.5"
+                      className="w-full sm:w-auto px-4 py-2.5 rounded-full text-[13px] font-medium flex items-center justify-center gap-1.5"
                       style={{ background: "transparent", border: "1px solid var(--border-mid)", color: "var(--ink)" }}
                     >
                       {sortDesc ? "Z-A" : "A-Z"}
@@ -468,7 +468,7 @@ export default function CompaniesPage() {
           {view.step === "roles" && (
             <>
               <div className="mb-6">
-                <h1 className="font-display text-3xl font-semibold tracking-tight" style={{ color: "var(--ink)" }}>
+                <h1 className="font-display text-2xl sm:text-3xl font-semibold tracking-tight" style={{ color: "var(--ink)" }}>
                   {view.company.name}
                 </h1>
                 <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
@@ -501,7 +501,7 @@ export default function CompaniesPage() {
             return (
               <>
                 <div className="mb-6">
-                  <h1 className="font-display text-3xl font-semibold tracking-tight" style={{ color: "var(--ink)" }}>
+                  <h1 className="font-display text-2xl sm:text-3xl font-semibold tracking-tight" style={{ color: "var(--ink)" }}>
                     {v.role.title}
                   </h1>
                   <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
@@ -518,14 +518,14 @@ export default function CompaniesPage() {
                     {v.role.rounds.map((round) => (
                       <div
                         key={round.id}
-                        className="rounded-lg px-5 py-4 flex items-center justify-between gap-4"
+                        className="rounded-lg px-4 py-4 sm:px-5 sm:py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4"
                         style={{
                           background: "var(--surface)",
                           border: "1px solid var(--border-mid)",
                         }}
                       >
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>
+                        <div className="min-w-0 w-full sm:w-auto">
+                          <p className="text-sm sm:text-[15px] font-medium break-words" style={{ color: "var(--ink)" }}>
                             {round.title}
                           </p>
                           <div className="mt-1.5">
@@ -535,7 +535,7 @@ export default function CompaniesPage() {
                         <button
                           onClick={() => handleStartInterview(round.id)}
                           disabled={limitReached || starting === round.id}
-                          className="shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-opacity disabled:opacity-40"
+                          className="w-full sm:w-auto shrink-0 px-4 py-2.5 rounded-full text-sm font-semibold transition-opacity disabled:opacity-40"
                           style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
                         >
                           {starting === round.id ? "Starting…" : "Start interview"}

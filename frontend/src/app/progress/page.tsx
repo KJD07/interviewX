@@ -113,7 +113,7 @@ function ConsistencyBadge({ consistency }: { consistency: "high" | "medium" | "l
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
     <div
-      className={`rounded-[20px] px-8 py-7 ${className}`}
+      className={`rounded-[18px] px-4 py-5 sm:px-6 sm:py-6 shadow-sm transition-all duration-200 hover:-translate-y-[1px] ${className}`}
       style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
     >
       {children}
@@ -174,15 +174,15 @@ export default function ProgressPage() {
             </nav>
           )}
 
-          <main className="max-w-[1080px] mx-auto px-[44px] pt-9 pb-[60px] fade-up">
+          <main className="max-w-[1080px] mx-auto px-4 sm:px-[44px] pt-6 sm:pt-9 pb-[60px] fade-up">
             <div className="mb-8">
               <h1
-                className="font-display text-[44px] font-semibold leading-none"
+                className="font-display text-[30px] sm:text-[44px] font-semibold leading-none"
                 style={{ color: "var(--ink)", letterSpacing: "-0.035em" }}
               >
                 Your progress
               </h1>
-              <p className="mt-3 text-[15px]" style={{ color: "var(--ink-dim)" }}>
+              <p className="mt-3 text-sm sm:text-[15px]" style={{ color: "var(--ink-dim)" }}>
                 How you're trending across every mock interview you've completed.
               </p>
             </div>
@@ -214,28 +214,28 @@ export default function ProgressPage() {
             ) : (
               <>
                 {/* Hero readiness card */}
-                <Card className="mb-6">
-                  <div className="flex items-start justify-between flex-wrap gap-4">
-                    <div>
+                <Card className="mb-6 px-4 py-5 sm:px-8 sm:py-7">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="w-full">
                       <p
-                        className="text-xs font-semibold uppercase tracking-wider mb-2"
+                        className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider mb-2"
                         style={{ color: "var(--ink-dim)" }}
                       >
                         Overall readiness (last 3 avg)
                       </p>
-                      <div className="flex items-baseline gap-5 flex-wrap">
-                        <span className="font-display text-[64px] leading-none font-semibold tracking-tight tabular-nums" style={{ color: "var(--ink)" }}>
+                      <div className="flex flex-col sm:flex-row sm:items-baseline gap-3 sm:gap-5">
+                        <span className="font-display text-[42px] sm:text-[64px] leading-none font-semibold tracking-tight tabular-nums" style={{ color: "var(--ink)" }}>
                           {heroScore ?? "—"}
-                          <span className="text-2xl font-normal" style={{ color: "var(--ink-faint)" }}>
+                          <span className="text-xl sm:text-2xl font-normal" style={{ color: "var(--ink-faint)" }}>
                             /10
                           </span>
                         </span>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           <MomentumBadge momentum={data.momentum} />
                           <ConsistencyBadge consistency={data.consistency} />
                         </div>
                       </div>
-                      <p className="text-xs mt-2" style={{ color: "var(--ink-dim)" }}>
+                      <p className="text-[11px] sm:text-xs mt-2" style={{ color: "var(--ink-dim)" }}>
                         Based on {data.total_completed} completed interview
                         {data.total_completed === 1 ? "" : "s"}
                         {data.momentum !== null &&
@@ -353,7 +353,7 @@ function DetailedView({
       {/* Topic breakdown — weakest first, doubles as "what to practice" */}
       {data.topics.length > 0 && (
         <Card>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
             <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--ink-dim)" }}>
               What to practice next
             </p>
@@ -363,28 +363,30 @@ function DetailedView({
           </div>
           <div className="space-y-3">
             {data.topics.map((t: ProgressTopic) => (
-              <div key={t.name} className="flex items-center gap-3">
-                <span className="text-sm w-40 shrink-0 truncate" style={{ color: "var(--ink)" }} title={t.name}>
+              <div key={t.name} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                <span className="text-sm sm:w-40 shrink-0 break-words" style={{ color: "var(--ink)" }} title={t.name}>
                   {t.name}
                 </span>
-                <div className="flex-1 h-2 rounded-full" style={{ background: "var(--border-mid)" }}>
-                  <div
-                    className="h-2 rounded-full"
-                    style={{
-                      width: `${Math.min(t.average, 10) * 10}%`,
-                      background: t.average >= 7 ? "#22c55e" : t.average >= 5 ? "#f59e0b" : "var(--danger)",
-                    }}
-                  />
+                <div className="flex-1 flex items-center gap-2 sm:gap-3">
+                  <div className="flex-1 h-2 rounded-full" style={{ background: "var(--border-mid)" }}>
+                    <div
+                      className="h-2 rounded-full"
+                      style={{
+                        width: `${Math.min(t.average, 10) * 10}%`,
+                        background: t.average >= 7 ? "#22c55e" : t.average >= 5 ? "#f59e0b" : "var(--danger)",
+                      }}
+                    />
+                  </div>
+                  <span
+                    className="text-sm font-semibold tabular-nums w-10 text-right"
+                    style={{ color: "var(--ink)" }}
+                  >
+                    {t.average}
+                  </span>
+                  <span className="text-xs w-16 text-right" style={{ color: "var(--ink-faint)" }}>
+                    {t.attempts}x
+                  </span>
                 </div>
-                <span
-                  className="text-sm font-semibold tabular-nums w-10 text-right"
-                  style={{ color: "var(--ink)" }}
-                >
-                  {t.average}
-                </span>
-                <span className="text-xs w-16 text-right" style={{ color: "var(--ink-faint)" }}>
-                  {t.attempts}x
-                </span>
               </div>
             ))}
           </div>
@@ -425,11 +427,11 @@ function DetailedView({
             {companySearch.results.map((c: ProgressCompany) => (
               <div
                 key={c.company}
-                className="flex items-center justify-between px-3 py-2.5 rounded-lg"
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-3 py-2.5 rounded-lg"
                 style={{ background: "var(--page)" }}
               >
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-sm font-medium truncate" style={{ color: "var(--ink)" }}>
+                <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                  <span className="text-sm font-medium break-words" style={{ color: "var(--ink)" }}>
                     {c.company}
                   </span>
                   {c.ready && (
@@ -441,7 +443,7 @@ function DetailedView({
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-4 shrink-0">
+                <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0">
                   <span className="text-xs" style={{ color: "var(--ink-faint)" }}>
                     {c.attempts} attempt{c.attempts === 1 ? "" : "s"}
                   </span>

@@ -385,12 +385,11 @@ export default function RealInterviewReportModal({ sessionId, onClose, onSubmitt
 
             {step === 1 && hadRecentInterview === "no" && (
               <button
-                onClick={() => submit("no")}
-                disabled={submitting}
-                className="flex-1 py-3 rounded-full text-sm font-semibold transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60"
-                style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
+                onClick={onClose}
+                className="flex-1 py-3 rounded-full text-sm font-semibold transition-colors hover:opacity-90"
+                style={{ background: "var(--page)", color: "var(--ink)", border: "1px solid var(--border-mid)" }}
               >
-                {submitting ? "Submitting…" : "Submit"}
+                Close
               </button>
             )}
 
