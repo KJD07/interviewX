@@ -19,7 +19,7 @@ function ScoreRing({ value, label }: { value: number | undefined; label: string 
   const color = score >= 7 ? "#22c55e" : score >= 5 ? "#f59e0b" : "var(--danger)";
 
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className="flex min-w-0 flex-col items-center gap-2 text-center">
       <div className="relative" style={{ width: 72, height: 72 }}>
         <svg width="72" height="72" style={{ transform: "rotate(-90deg)" }}>
           <circle
@@ -45,7 +45,7 @@ function ScoreRing({ value, label }: { value: number | undefined; label: string 
           {value !== undefined ? value : "—"}
         </div>
       </div>
-      <span className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--ink-dim)" }}>
+      <span className="max-w-[84px] text-center text-[10px] font-medium uppercase leading-tight tracking-[0.08em] sm:max-w-none sm:text-xs sm:tracking-wider" style={{ color: "var(--ink-dim)" }}>
         {label}
       </span>
     </div>
@@ -222,7 +222,7 @@ export default function ResultsPage() {
           </button>
         </nav>
 
-        <main className="max-w-2xl mx-auto px-6 py-10 fade-up space-y-8">
+        <main className="max-w-2xl mx-auto space-y-8 px-4 py-6 fade-up sm:px-6 sm:py-10">
 
           {/* Header */}
           <div>
@@ -292,13 +292,13 @@ export default function ResultsPage() {
           {/* Score breakdown — paid plans only */}
           {plan.hasInsights ? (
             <div
-              className="rounded-xl px-6 py-6"
+              className="rounded-xl px-4 py-5 sm:px-6 sm:py-6"
               style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
             >
-              <h2 className="text-sm font-semibold uppercase tracking-wider mb-6" style={{ color: "var(--ink-dim)" }}>
+              <h2 className="mb-5 text-sm font-semibold uppercase tracking-wider sm:mb-6" style={{ color: "var(--ink-dim)" }}>
                 Score breakdown
               </h2>
-              <div className="flex justify-around">
+              <div className="grid grid-cols-3 gap-2 sm:gap-4">
                 <ScoreRing value={scores.communication} label="Communication" />
                 <ScoreRing value={scores.technical} label="Technical" />
                 <ScoreRing value={scores.problem_solving} label="Problem solving" />

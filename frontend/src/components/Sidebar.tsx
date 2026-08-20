@@ -97,7 +97,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
     <>
       {/* Desktop sidebar */}
       <aside
-        className="hidden md:flex w-[260px] shrink-0 h-screen sticky top-0 flex flex-col px-5 py-7 border-r"
+        className="hidden md:flex w-[260px] shrink-0 h-screen sticky top-0 flex-col px-5 py-7 border-r"
         style={{ background: "var(--page)", borderColor: "var(--border)" }}
       >
         <div className="flex flex-col min-h-0 flex-1">
