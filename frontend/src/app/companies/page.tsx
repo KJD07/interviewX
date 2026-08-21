@@ -8,6 +8,7 @@ import type { Company, CompanyDetail, Role, Round } from "@/lib/api";
 import { planOf, isPaidPlan } from "@/lib/plans";
 import AppShell from "@/components/AppShell";
 import TopupModal from "@/components/TopupModal";
+import InterviewInstructionsModal from "@/components/InterviewInstructionsModal";
 import PaginationControls from "@/components/PaginationControls";
 import { useSearchAndPaginate } from "@/hooks/useSearchAndPaginate";
 import { SkeletonCard } from "@/components/Skeleton";
@@ -221,6 +222,8 @@ export default function CompaniesPage() {
       setStarting(null);
     }
   };
+
+  const [pendingRound, setPendingRound] = useState<{ id: number; title: string } | null>(null);
 
   // ── Breadcrumb logic ────────────────────────────────────────────────────────
 
@@ -533,7 +536,7 @@ export default function CompaniesPage() {
                           </div>
                         </div>
                         <button
-                          onClick={() => handleStartInterview(round.id)}
+                          onClick={() => setPendingRound({ id: round.id, title: round.title })}
                           disabled={limitReached || starting === round.id}
                           className="w-full sm:w-auto shrink-0 px-4 py-2.5 rounded-full text-sm font-semibold transition-opacity disabled:opacity-40"
                           style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
@@ -553,6 +556,18 @@ export default function CompaniesPage() {
       </AppShell>
 
       {showTopup && <TopupModal onClose={() => setShowTopup(false)} />}
+
+      {pendingRound && view.step === "rounds" && (
+        <InterviewInstructionsModal
+          companyName={view.company.name}
+          roleTitle={view.role.title}
+          roundTitle={pendingRound.title}
+          confirming={starting === pendingRound.id}
+          error={startError}
+          onCancel={() => setPendingRound(null)}
+          onConfirm={() => handleStartInterview(pendingRound.id)}
+        />
+      )}
     </ProtectedRoute>
   );
 }

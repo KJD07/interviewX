@@ -10,6 +10,7 @@ import AppShell from "@/components/AppShell";
 import PaginationControls from "@/components/PaginationControls";
 import { useSearchAndPaginate } from "@/hooks/useSearchAndPaginate";
 import { SkeletonCard } from "@/components/Skeleton";
+import InterviewInstructionsModal from "@/components/InterviewInstructionsModal";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -193,6 +194,8 @@ export default function SkillsPage() {
       setStarting(null);
     }
   };
+
+  const [pendingRound, setPendingRound] = useState<{ id: number; title: string } | null>(null);
 
   const crumbs: Crumb[] = [
     { label: "Dashboard", onClick: () => router.push("/dashboard") },
@@ -416,7 +419,7 @@ export default function SkillsPage() {
                                 {round.title}
                               </p>
                               <button
-                                onClick={() => handleStartInterview(round.id)}
+                                onClick={() => setPendingRound({ id: round.id, title: round.title })}
                                 disabled={limitReached || starting === round.id}
                                 className="shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-opacity disabled:opacity-40"
                                 style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
@@ -435,6 +438,18 @@ export default function SkillsPage() {
           </main>
         </div>
       </AppShell>
+
+      {pendingRound && view.step === "rounds" && (
+        <InterviewInstructionsModal
+          companyName={view.skill.name}
+          roleTitle={view.role.title}
+          roundTitle={pendingRound.title}
+          confirming={starting === pendingRound.id}
+          error={startError}
+          onCancel={() => setPendingRound(null)}
+          onConfirm={() => handleStartInterview(pendingRound.id)}
+        />
+      )}
     </ProtectedRoute>
   );
 }

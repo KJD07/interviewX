@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { organizations, ApiError } from "@/lib/api";
+import { INTERVIEW_INSTRUCTIONS } from "@/components/InterviewInstructionsModal";
 
 // Candidate-facing entry point for an org's proctored/real interview invite.
 // Starting the session reuses interviews.start()'s exact counterpart on the
@@ -62,17 +63,38 @@ export default function InviteStartPage() {
   return (
     <ProtectedRoute>
       <div className="min-h-screen flex items-center justify-center px-6" style={{ background: "var(--page)" }}>
-        <div className="w-full max-w-sm text-center">
+        <div className="w-full max-w-sm sm:max-w-md text-center">
           {step === "loading" && <p style={{ color: "var(--ink-dim)" }}>Loading…</p>}
 
           {step === "ready" && (
             <div
-              className="rounded-xl p-6 fade-up"
+              className="rounded-xl p-5 sm:p-6 text-left fade-up"
               style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
             >
-              <h2 className="font-display text-base font-bold mb-2" style={{ color: "var(--ink)" }}>
-                This interview is proctored
+              <h2 className="font-display text-lg font-bold mb-1 text-center" style={{ color: "var(--ink)" }}>
+                Before you begin
               </h2>
+              <p className="text-xs text-center mb-5" style={{ color: "var(--ink-faint)" }}>
+                This interview is part of your employer&apos;s hiring process.
+              </p>
+
+              <ul className="space-y-2.5 mb-5">
+                {INTERVIEW_INSTRUCTIONS.map((line, i) => (
+                  <li key={i} className="flex items-start gap-2.5 text-sm" style={{ color: "var(--ink)" }}>
+                    <span
+                      className="mt-0.5 shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-semibold"
+                      style={{ background: "var(--accent-glow)", color: "var(--accent)" }}
+                    >
+                      {i + 1}
+                    </span>
+                    <span>{line}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <h3 className="text-sm font-semibold mb-1.5" style={{ color: "var(--ink)" }}>
+                Camera & microphone required
+              </h3>
               <p className="text-sm mb-6" style={{ color: "var(--ink-dim)" }}>
                 As part of this employer&apos;s hiring process, this interview requires camera
                 and microphone access. Your camera captures a short clip only around moments
