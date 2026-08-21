@@ -1,10 +1,14 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import AppShell from "@/components/AppShell";
 import PaginationControls from "@/components/PaginationControls";
 import { useSearchAndPaginate } from "@/hooks/useSearchAndPaginate";
 import { organizations, ApiError } from "@/lib/api";
 import type { OrgDashboard, OrgCandidateInvite, OrgRound, OrgRole } from "@/lib/api";
+import { useCurrency, formatPrice } from "@/lib/currency";
+
+const ENTERPRISE_PRICE_PER_SEAT_RUPEES = 99;
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
@@ -334,6 +338,46 @@ function InvitesTable({ invites }: { invites: OrgCandidateInvite[] }) {
   );
 }
 
+function EnterprisePricingCard() {
+  const currency = useCurrency();
+  return (
+    <div
+      className="rounded-3xl p-8 shadow-[0_8px_32px_rgba(28,26,22,0.06)] mt-6 text-left"
+      style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+    >
+      <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--ink-faint)" }}>
+        Enterprise pricing
+      </p>
+      <div className="flex items-baseline gap-1.5 mb-4">
+        <span className="font-display text-4xl font-bold" style={{ color: "var(--ink)" }}>
+          {formatPrice(ENTERPRISE_PRICE_PER_SEAT_RUPEES, currency)}
+        </span>
+        <span className="text-sm" style={{ color: "var(--ink-faint)" }}>/ seat / month</span>
+      </div>
+      <ul className="space-y-2 mb-6">
+        {[
+          "Bulk candidate invites with expiring links",
+          "Custom question bank upload (.csv, .xlsx, .json)",
+          "Org-wide candidate quota & progress tracking",
+          "Priority support",
+        ].map((f) => (
+          <li key={f} className="flex items-start gap-2.5 text-sm" style={{ color: "var(--ink)" }}>
+            <span style={{ color: "var(--accent)" }}>✓</span>
+            {f}
+          </li>
+        ))}
+      </ul>
+      <a
+        href="/contact"
+        className="inline-flex px-5 py-2.5 rounded-full text-sm font-semibold transition-transform duration-200 hover:scale-[1.02]"
+        style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
+      >
+        Talk to sales →
+      </a>
+    </div>
+  );
+}
+
 export default function EnterprisePage() {
   const [dashboard, setDashboard] = useState<OrgDashboard | null>(null);
   const [invites, setInvites] = useState<OrgCandidateInvite[]>([]);
@@ -384,6 +428,7 @@ export default function EnterprisePage() {
 
   return (
     <ProtectedRoute>
+      <AppShell>
       <div className="min-h-screen" style={{ background: "var(--page)" }}>
         <main className="max-w-5xl mx-auto px-6 py-10 fade-up">
 
@@ -400,6 +445,7 @@ export default function EnterprisePage() {
               <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
                 Contact EvaluLabs to set up your company's account.
               </p>
+              <EnterprisePricingCard />
             </div>
           )}
 
@@ -478,6 +524,7 @@ export default function EnterprisePage() {
           )}
         </main>
       </div>
+      </AppShell>
     </ProtectedRoute>
   );
 }

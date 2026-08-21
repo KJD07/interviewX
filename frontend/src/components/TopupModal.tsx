@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { useAuth } from "@/context/AuthContext";
 import { subscriptions, ApiError } from "@/lib/api";
 import { TOPUP_PACKS, TOPUP_PACK_IDS, type TopupPackId } from "@/lib/plans";
+import { useCurrency, formatPrice } from "@/lib/currency";
 
 declare global {
   interface Window {
@@ -16,6 +17,7 @@ export default function TopupModal({ onClose }: { onClose: () => void }) {
   const [loadingPack, setLoadingPack] = useState<TopupPackId | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState<string | null>(null);
+  const currency = useCurrency();
 
   const handleBuy = async (pack: TopupPackId) => {
     setLoadingPack(pack);
@@ -136,11 +138,11 @@ export default function TopupModal({ onClose }: { onClose: () => void }) {
                         {pack.label} — {pack.credits} interviews
                       </p>
                       <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
-                        {pack.perInterview}
+                        {currency === "INR" ? pack.perInterview : `${formatPrice(pack.priceRupees / pack.credits, currency)}/interview`}
                       </p>
                     </div>
                     <span className="text-sm font-bold shrink-0 ml-3" style={{ color: "var(--accent)" }}>
-                      {loadingPack === packId ? "Opening…" : `₹${pack.priceRupees}`}
+                      {loadingPack === packId ? "Opening…" : formatPrice(pack.priceRupees, currency)}
                     </span>
                   </button>
                 );

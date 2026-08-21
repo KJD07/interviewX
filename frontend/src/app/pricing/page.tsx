@@ -10,6 +10,7 @@ import MarketingNav from "@/components/MarketingNav";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { PLANS, PAID_PLAN_IDS, type PlanId } from "@/lib/plans";
 import { subscriptions, ApiError } from "@/lib/api";
+import { useCurrency, formatPrice } from "@/lib/currency";
 
 const FAQS: { q: string; a: ReactNode }[] = [
   {
@@ -83,6 +84,7 @@ export default function Pricing() {
   const router = useRouter();
   const [loadingPlan, setLoadingPlan] = useState<PlanId | null>(null);
   const [error, setError] = useState("");
+  const currency = useCurrency();
 
   const currentPlan = (user?.subscription_plan as PlanId) || "free";
 
@@ -189,12 +191,17 @@ export default function Pricing() {
       )}
 
       <section className="mx-auto max-w-6xl px-6 pb-16 pt-6">
+        {currency === "USD" && (
+          <p className="mb-4 text-xs text-[var(--ink-faint)]">
+            Prices shown in USD for reference — checkout is billed in INR at the current exchange rate.
+          </p>
+        )}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-stretch">
           <ScrollReveal>
             <div className="flex h-full flex-col rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-8">
               <p className="mb-5 text-[13px] font-semibold uppercase tracking-wider text-[var(--ink-faint)]">{PLANS.free.label}</p>
               <div className="mb-6 flex items-baseline gap-1.5">
-                <span className="font-display text-4xl font-semibold tracking-tight text-[var(--ink)]">₹0</span>
+                <span className="font-display text-4xl font-semibold tracking-tight text-[var(--ink)]">{formatPrice(0, currency)}</span>
                 <span className="text-sm text-[var(--ink-faint)]">/ month</span>
               </div>
               <ul className="mb-7 flex-1 space-y-3">
@@ -241,7 +248,7 @@ export default function Pricing() {
                     {plan.label}
                   </p>
                   <div className="mb-6 flex items-baseline gap-1.5">
-                    <span className="font-display text-4xl font-semibold tracking-tight">₹{plan.priceRupees}</span>
+                    <span className="font-display text-4xl font-semibold tracking-tight">{formatPrice(plan.priceRupees, currency)}</span>
                     <span className={`text-sm ${isBestValue ? "text-[var(--ink-faint)]" : "text-[var(--ink-faint)]"}`}>
                       / month
                     </span>
