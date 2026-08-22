@@ -44,6 +44,7 @@ export interface User {
   interviews_this_month?: number;
   bonus_interviews?: number;
   is_email_verified?: boolean;
+  is_staff?: boolean;
   auth_provider?: "email" | "google";
 }
 
@@ -51,6 +52,42 @@ export interface AuthResponse {
   access: string;
   refresh: string;
   user: User;
+}
+
+export interface AdminField {
+  name: string;
+  label: string;
+  type: string;
+  required: boolean;
+  readonly: boolean;
+  help_text: string;
+  choices: { value: string; label: string }[];
+  options: { value: number; label: string }[];
+}
+
+export interface AdminModel {
+  app_label: string;
+  model: string;
+  label: string;
+  fields: AdminField[];
+  list_display: string[];
+  search_fields: string[];
+  actions: { name: string; label: string }[];
+}
+
+export interface AdminObject {
+  id: number;
+  [key: string]: unknown;
+}
+
+export interface AdminInsights {
+  referrals: Record<string, number>;
+  new_users: { month: string; count: number }[];
+  monthly_active_users: { month: string; count: number }[];
+  plans: Record<string, number>;
+  companies: number;
+  revenue: Record<"day" | "week" | "month" | "quarter" | "year", number>;
+  revenue_daily: { day: string; amount: number }[];
 }
 
 export interface RegisterResponse {
@@ -333,6 +370,14 @@ export const auth = {
       false
     ),
 
+  googleAdmin: (id_token: string) =>
+    request<AuthResponse>(
+      "/api/auth/google-admin/",
+      { method: "POST", body: JSON.stringify({ id_token }) },
+      true,
+      false
+    ),
+
   me: () => request<User>("/api/auth/me/"),
 
   forgotPassword: (email: string) =>
@@ -355,6 +400,23 @@ export const auth = {
       true,
       false
     ),
+};
+
+export const adminApi = {
+  insights: () => request<AdminInsights>("/api/analytics/referral/dashboard/"),
+  schema: () => request<{ groups: { app_label: string; models: AdminModel[] }[] }>("/api/admin/schema/"),
+  list: (model: AdminModel, page: number, search: string) =>
+    request<{ results: AdminObject[]; page: number; page_size: number; total: number }>(
+      `/api/admin/${model.app_label}/${model.model}/?page=${page}&search=${encodeURIComponent(search)}`
+    ),
+  create: (model: AdminModel, data: Record<string, unknown>) =>
+    request<{ object: AdminObject }>(`/api/admin/${model.app_label}/${model.model}/`, { method: "POST", body: JSON.stringify(data) }),
+  update: (model: AdminModel, id: number, data: Record<string, unknown>) =>
+    request<{ object: AdminObject }>(`/api/admin/${model.app_label}/${model.model}/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
+  remove: (model: AdminModel, id: number) =>
+    request<void>(`/api/admin/${model.app_label}/${model.model}/${id}/`, { method: "DELETE" }),
+  action: (model: AdminModel, action: string, ids: number[]) =>
+    request<{ detail: string }>(`/api/admin/${model.app_label}/${model.model}/${action}/`, { method: "POST", body: JSON.stringify({ ids }) }),
 };
 
 // ── Company endpoints ─────────────────────────────────────────────────────────

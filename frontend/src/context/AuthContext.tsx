@@ -31,6 +31,7 @@ interface AuthContextValue {
     newPassword2: string
   ) => Promise<void>;
   loginWithGoogle: (idToken: string) => Promise<void>;
+  loginWithGoogleAdmin: (idToken: string) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -133,6 +134,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     persistUser(data.user);
   }, []);
 
+  const loginWithGoogleAdmin = useCallback(async (idToken: string) => {
+    const data = await auth.googleAdmin(idToken);
+    tokens.set(data.access, data.refresh);
+    persistUser(data.user);
+  }, []);
+
   const logout = useCallback(() => {
     tokens.clear();
     localStorage.removeItem("ix_user");
@@ -156,6 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         forgotPassword,
         resetPassword,
         loginWithGoogle,
+        loginWithGoogleAdmin,
         logout,
         refreshUser,
       }}

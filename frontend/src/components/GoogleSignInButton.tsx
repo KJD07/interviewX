@@ -20,10 +20,11 @@ declare global {
 interface Props {
   onError?: (message: string) => void;
   onStart?: () => void;
+  adminOnly?: boolean;
 }
 
-export default function GoogleSignInButton({ onError, onStart }: Props) {
-  const { loginWithGoogle } = useAuth();
+export default function GoogleSignInButton({ onError, onStart, adminOnly = false }: Props) {
+  const { loginWithGoogle, loginWithGoogleAdmin } = useAuth();
   const buttonRef = useRef<HTMLDivElement>(null);
   const [scriptLoaded, setScriptLoaded] = useState(false);
 
@@ -46,7 +47,8 @@ export default function GoogleSignInButton({ onError, onStart }: Props) {
       callback: async (response: { credential: string }) => {
         onStart?.();
         try {
-          await loginWithGoogle(response.credential);
+          const signIn = adminOnly ? loginWithGoogleAdmin : loginWithGoogle;
+          await signIn(response.credential);
           // Full reload keeps this simple and matches the rest of the app's
           // "redirect after auth" pattern used on the login/register pages.
           window.location.href = "/dashboard";
@@ -65,7 +67,7 @@ export default function GoogleSignInButton({ onError, onStart }: Props) {
       shape: "rectangular",
       text: "continue_with",
     });
-  }, [scriptLoaded, loginWithGoogle, onError, onStart]);
+  }, [scriptLoaded, loginWithGoogle, loginWithGoogleAdmin, adminOnly, onError, onStart]);
 
   if (!GOOGLE_CLIENT_ID) return null;
 

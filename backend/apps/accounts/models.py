@@ -156,6 +156,17 @@ class User(AbstractUser):
         return self.email or self.username
 
 
+class ReferralVisit(models.Model):
+    source = models.CharField(max_length=30, db_index=True)
+    visited_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-visited_at"]
+
+    def __str__(self):
+        return f"{self.source} — {self.visited_at:%Y-%m-%d}"
+
+
 class EmailOTP(models.Model):
     """One-time code used to verify a user's email address before they can log in."""
 

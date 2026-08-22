@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
+import ReferralTracker from "@/components/ReferralTracker";
 
 export const metadata: Metadata = {
   title: "EvaluLabs | AI Interview Practice",
@@ -18,7 +19,7 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider><ReferralTracker />{children}</AuthProvider>
       </body>
     </html>
   );
