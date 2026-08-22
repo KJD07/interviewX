@@ -20,6 +20,7 @@ urlpatterns = [
     path("", health_check),
     path("api/auth/", include("apps.accounts.urls")),
     path("api/admin/", include("apps.accounts.admin_urls")),
+    path("api/analytics/referral/", include("apps.accounts.insights_urls")),
     path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
     path("api/companies/", include("apps.companies.urls")),
     path("api/interviews/", include("apps.interviews.urls")),

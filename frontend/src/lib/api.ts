@@ -80,6 +80,16 @@ export interface AdminObject {
   [key: string]: unknown;
 }
 
+export interface AdminInsights {
+  referrals: Record<string, number>;
+  new_users: { month: string; count: number }[];
+  monthly_active_users: { month: string; count: number }[];
+  plans: Record<string, number>;
+  companies: number;
+  revenue: Record<"day" | "week" | "month" | "quarter" | "year", number>;
+  revenue_daily: { day: string; amount: number }[];
+}
+
 export interface RegisterResponse {
   detail: string;
   email: string;
@@ -393,6 +403,7 @@ export const auth = {
 };
 
 export const adminApi = {
+  insights: () => request<AdminInsights>("/api/analytics/referral/dashboard/"),
   schema: () => request<{ groups: { app_label: string; models: AdminModel[] }[] }>("/api/admin/schema/"),
   list: (model: AdminModel, page: number, search: string) =>
     request<{ results: AdminObject[]; page: number; page_size: number; total: number }>(
