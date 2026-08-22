@@ -44,6 +44,7 @@ export interface User {
   interviews_this_month?: number;
   bonus_interviews?: number;
   is_email_verified?: boolean;
+  is_staff?: boolean;
   auth_provider?: "email" | "google";
 }
 
@@ -328,6 +329,14 @@ export const auth = {
   google: (id_token: string) =>
     request<AuthResponse>(
       "/api/auth/google/",
+      { method: "POST", body: JSON.stringify({ id_token }) },
+      true,
+      false
+    ),
+
+  googleAdmin: (id_token: string) =>
+    request<AuthResponse>(
+      "/api/auth/google-admin/",
       { method: "POST", body: JSON.stringify({ id_token }) },
       true,
       false

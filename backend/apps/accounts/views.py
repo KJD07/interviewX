@@ -43,6 +43,7 @@ def _token_response(user) -> dict:
             "monthly_limit": effective_monthly_limit(user),
             "is_email_verified": user.is_email_verified,
             "auth_provider": user.auth_provider,
+            "is_staff": user.is_staff,
         },
     }
 
@@ -332,6 +333,7 @@ class GoogleAuthView(APIView):
     permission_classes = [AllowAny]
     throttle_classes = [AuthRateThrottle]
     throttle_scope = "auth"
+    staff_only = False
 
     def post(self, request):
         serializer = GoogleAuthSerializer(data=request.data)
@@ -371,6 +373,11 @@ class GoogleAuthView(APIView):
             # otherwise create a brand new account.
             user = User.objects.filter(email__iexact=email).first()
             if user is None:
+                if self.staff_only:
+                    return Response(
+                        {"detail": "No staff account is linked to this Google account."},
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
                 base_username = email.split("@")[0]
                 username = base_username
                 suffix = 1
@@ -385,7 +392,19 @@ class GoogleAuthView(APIView):
             user.is_email_verified = True
             user.save()
 
+        if self.staff_only and not user.is_staff:
+            return Response(
+                {"detail": "This Google account is not authorized for staff access."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         return Response(_token_response(user), status=status.HTTP_200_OK)
+
+
+class AdminGoogleAuthView(GoogleAuthView):
+    """Google sign-in for existing staff accounts; never creates accounts."""
+
+    staff_only = True
 
 
 class MeView(APIView):
@@ -414,5 +433,6 @@ class MeView(APIView):
                 "bonus_interviews": user.bonus_interviews,
                 "is_email_verified": user.is_email_verified,
                 "auth_provider": user.auth_provider,
+                "is_staff": user.is_staff,
             }
         )
