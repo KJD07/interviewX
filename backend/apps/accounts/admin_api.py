@@ -2,9 +2,9 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from django.contrib import admin
+from django.core.cache import cache
 from django.db import models
 from django.http import Http404
-from django.utils.dateformat import format as date_format
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -32,17 +32,18 @@ def _field_metadata(model_admin, model, form, request):
     fields = []
     for name, field in form.base_fields.items():
         model_field = next((candidate for candidate in model._meta.get_fields() if candidate.name == name), None)
-        choices = [{"value": str(value), "label": label} for value, label in (getattr(field, "choices", None) or [])]
+        is_relation = isinstance(model_field, (models.ForeignKey, models.OneToOneField, models.ManyToManyField))
+        choices = [] if is_relation else [{"value": str(value), "label": str(label)} for value, label in (getattr(field, "choices", None) or [])]
         options = []
-        if isinstance(model_field, (models.ForeignKey, models.OneToOneField)):
-            options = [{"value": obj.pk, "label": str(obj)} for obj in model_field.remote_field.model.objects.all()[:500]]
+        if is_relation:
+            options = [{"value": obj.pk, "label": str(obj)} for obj in model_field.remote_field.model.objects.all()[:100]]
         fields.append({
             "name": name,
-            "label": field.label or name.replace("_", " ").title(),
+            "label": str(field.label or name.replace("_", " ").title()),
             "type": field.__class__.__name__,
             "required": field.required,
                 "readonly": name in readonly or model_field is None,
-            "help_text": field.help_text,
+            "help_text": str(field.help_text or ""),
             "choices": choices,
             "options": options,
         })
@@ -65,6 +66,9 @@ class AdminSchemaView(APIView):
     permission_classes = [IsAdminUser]
 
     def get(self, request):
+        cached = cache.get("admin-schema-v2")
+        if cached is not None:
+            return Response(cached)
         groups = {}
         for model, model_admin in admin.site._registry.items():
             form = model_admin.get_form(request)
@@ -81,7 +85,9 @@ class AdminSchemaView(APIView):
                     for name, action in model_admin.get_actions(request).items()
                 ],
             })
-        return Response({"groups": [{"app_label": key, "models": value} for key, value in groups.items()]})
+        payload = {"groups": [{"app_label": key, "models": value} for key, value in groups.items()]}
+        cache.set("admin-schema-v2", payload, timeout=3600)
+        return Response(payload)
 
 
 class AdminModelView(APIView):
