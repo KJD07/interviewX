@@ -117,6 +117,7 @@ class RoleAdmin(admin.ModelAdmin):
 class RoundAdmin(admin.ModelAdmin):
     list_display = ("title", "role", "order")
     list_filter = ("role__company",)
+    search_fields = ("title", "role__title", "role__company__name")
     inlines = [InterviewQuestionInline]
     actions = ["generate_questions_via_ai"]
 

@@ -283,6 +283,7 @@ function AdminWorkspace() {
 
   const selectModel = (model: AdminModel) => {
     setSelected(model); setPage(1); setSearch(""); setFilters({}); setForm(null); setMobileOpen(false); setError("");
+    setRows([]); setTotal(0); setSelectedIds(new Set());
   };
 
   const openForm = (row?: AdminObject) => {
@@ -327,10 +328,15 @@ function AdminWorkspace() {
 
   // Operates on the checked rows; if none are checked, falls back to every
   // row currently loaded on the page rather than silently doing nothing.
-  const runAction = async (action: string) => {
+  const runAction = async (action: string, label: string) => {
     if (!selected || !rows.length) return;
     const ids = selectedIds.size ? Array.from(selectedIds) : rows.map((row) => row.id);
-    try { const result = await adminApi.action(selected, action, ids); setNotice(result.detail); }
+    if (action === "delete_selected" && !window.confirm(`${label}? This cannot be undone.`)) return;
+    try {
+      const result = await adminApi.action(selected, action, ids);
+      setNotice(result.detail);
+      const data = await adminApi.list(selected, page, search, filters); setRows(data.results); setTotal(data.total); setSelectedIds(new Set());
+    }
     catch (err) { setError(err instanceof ApiError ? err.detail : "Unable to run action."); }
   };
 
@@ -375,7 +381,7 @@ function AdminWorkspace() {
           {selected?.can_add && <button onClick={() => openForm()} className="rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap" style={{ background: "var(--accent)", color: "var(--accent-ink)" }}>Add new</button>}
         </div></div>
         {error && <p className="mb-4 rounded px-3 py-2 text-sm" style={{ background: "rgba(239,68,68,.1)", color: "var(--danger)" }}>{error}</p>}{notice && <p className="mb-4 rounded px-3 py-2 text-sm whitespace-pre-line" style={{ background: "var(--success-bg)", color: "var(--success)" }}>{notice}</p>}
-        {selected?.actions.length ? <div className="flex flex-wrap gap-2 mb-4 items-center">{selected.actions.map((action) => <button key={action.name} onClick={() => runAction(action.name)} className="rounded px-3 py-1.5 text-xs font-medium" style={{ border: "1px solid var(--border-mid)", color: "var(--ink-dim)" }}>{action.label}</button>)}<span className="text-xs" style={{ color: "var(--ink-faint)" }}>{selectedIds.size ? `${selectedIds.size} selected` : "acts on all rows on this page unless you check some"}</span></div> : null}
+        {selected?.actions.length ? <div className="flex flex-wrap gap-2 mb-4 items-center">{selected.actions.map((action) => <button key={action.name} onClick={() => runAction(action.name, action.label)} className="rounded px-3 py-1.5 text-xs font-medium" style={{ border: "1px solid var(--border-mid)", color: "var(--ink-dim)" }}>{action.label}</button>)}<span className="text-xs" style={{ color: "var(--ink-faint)" }}>{selectedIds.size ? `${selectedIds.size} selected` : "acts on all rows on this page unless you check some"}</span></div> : null}
         <div className="overflow-x-auto rounded border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}><table className="w-full text-left text-sm"><thead><tr style={{ borderBottom: "1px solid var(--border)" }}><th className="px-4 py-3 w-8"><input type="checkbox" checked={rows.length > 0 && selectedIds.size === rows.length} onChange={toggleAll} style={{ accentColor: "var(--accent)" }} /></th>{selected?.list_display.map((field) => <th key={field} className="px-4 py-3 text-xs uppercase tracking-wider whitespace-nowrap" style={{ color: "var(--ink-faint)" }}>{displayName(field)}</th>)}<th /></tr></thead><tbody>{busy ? <tr><td colSpan={(selected?.list_display.length ?? 0) + 2} className="px-4 py-10 text-center" style={{ color: "var(--ink-faint)" }}>Loading...</td></tr> : rows.map((row) => <tr key={row.id} style={{ borderBottom: "1px solid var(--border)" }}><td className="px-4 py-3"><input type="checkbox" checked={selectedIds.has(row.id)} onChange={() => toggleRow(row.id)} style={{ accentColor: "var(--accent)" }} /></td>{selected?.list_display.map((field) => <td key={field} className="px-4 py-3 max-w-xs truncate whitespace-nowrap" style={{ color: "var(--ink-dim)" }}>{String(row[`${field}_label`] ?? row[field] ?? "—")}</td>)}<td className="px-4 py-3 whitespace-nowrap text-right">{selected?.can_change && <button onClick={() => openForm(row)} className="mr-3 text-xs font-medium hover:underline" style={{ color: "var(--accent)" }}>Edit</button>}{selected?.can_delete && <button onClick={() => remove(row)} className="text-xs hover:underline" style={{ color: "var(--danger)" }}>Delete</button>}</td></tr>)}</tbody></table>{!busy && !rows.length && <p className="px-4 py-10 text-center text-sm" style={{ color: "var(--ink-faint)" }}>No records found.</p>}</div><div className="flex justify-between mt-4 text-sm" style={{ color: "var(--ink-dim)" }}><button disabled={page === 1} onClick={() => setPage(page - 1)} className="disabled:opacity-30">Previous</button><span>Page {page}</span><button disabled={page * 25 >= total} onClick={() => setPage(page + 1)} className="disabled:opacity-30">Next</button></div>
       </main>}
     </section>

@@ -8,6 +8,7 @@ from django.contrib.admin.utils import get_deleted_objects, label_for_field, mod
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.db import models
+from django.db.models.fields.files import FieldFile
 from django.http import Http404
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
@@ -33,6 +34,8 @@ def _json_value(value):
         return str(value)
     if isinstance(value, models.Model):
         return value.pk
+    if isinstance(value, FieldFile):
+        return value.url if value else ""
     return value
 
 
@@ -505,6 +508,26 @@ class AdminActionView(APIView):
             raise Http404("Admin action not found")
         queryset = model_admin.get_queryset(request).filter(pk__in=request.data.get("ids", []))
         count = queryset.count()
+
+        # Django's built-in delete_selected action doesn't delete on the first
+        # call — it renders an intermediate confirmation TemplateResponse and
+        # only performs the deletion once request.POST["post"] is present
+        # (the confirm-page submit). That response is meaningless here (no
+        # template is rendered back to the frontend), so calling it through
+        # the generic path below silently does nothing. Perform the deletion
+        # directly instead, mirroring what delete_selected itself does once
+        # confirmed.
+        if action_name == "delete_selected":
+            _check_permission(model_admin, request, "delete")
+            _, model_count, perms_needed, protected = get_deleted_objects(list(queryset), request, admin.site)
+            if perms_needed:
+                return Response({"detail": "You do not have permission to delete one or more related objects."}, status=403)
+            if protected:
+                return Response({"detail": "Cannot delete — protected by: " + ", ".join(str(item) for item in protected)}, status=400)
+            for obj in queryset:
+                model_admin.log_deletion(request, obj, str(obj))
+            model_admin.delete_queryset(request, queryset)
+            return Response({"detail": f"Successfully deleted {count} object(s)."})
 
         # Capture message_user() calls directly rather than reading them back
         # via django.contrib.messages.get_messages(): that framework's storage
