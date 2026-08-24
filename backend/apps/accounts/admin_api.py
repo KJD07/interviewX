@@ -495,7 +495,10 @@ class AdminActionView(APIView):
             raise Http404("Admin action not found")
         queryset = model_admin.get_queryset(request).filter(pk__in=request.data.get("ids", []))
         count = queryset.count()
-        action[0](request, queryset)
+        # get_actions() deliberately returns the *unbound* function (Django grabs it
+        # off self.__class__, not self) so callers must pass model_admin explicitly —
+        # same calling convention as Django admin's own response_action().
+        action[0](model_admin, request, queryset)
 
         texts = []
         try:
