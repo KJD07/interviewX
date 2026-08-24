@@ -63,6 +63,25 @@ export interface AdminField {
   help_text: string;
   choices: { value: string; label: string }[];
   options: { value: number; label: string }[];
+  is_m2m: boolean;
+}
+
+export interface AdminFieldset {
+  title: string;
+  field_names: string[];
+}
+
+export interface AdminInline {
+  app_label: string;
+  model_name: string;
+  label: string;
+  fk_name: string;
+}
+
+export interface AdminListFilter {
+  name: string;
+  label: string;
+  choices: { value: string; label: string }[];
 }
 
 export interface AdminModel {
@@ -72,12 +91,39 @@ export interface AdminModel {
   fields: AdminField[];
   list_display: string[];
   search_fields: string[];
+  list_filter: AdminListFilter[];
+  fieldsets: AdminFieldset[];
+  inlines: AdminInline[];
   actions: { name: string; label: string }[];
+  can_view: boolean;
+  can_add: boolean;
+  can_change: boolean;
+  can_delete: boolean;
 }
 
 export interface AdminObject {
   id: number;
   [key: string]: unknown;
+}
+
+export interface AdminHistoryEntry {
+  id: number;
+  timestamp: string;
+  user: string;
+  action: string;
+  change_message: string;
+}
+
+export interface AdminDeletePreview {
+  objects: string[];
+  model_count: Record<string, number>;
+  protected: string[];
+  perms_needed: string[];
+}
+
+export interface AdminLookupResult {
+  value: number;
+  label: string;
 }
 
 export interface AdminInsights {
@@ -405,18 +451,67 @@ export const auth = {
 export const adminApi = {
   insights: () => request<AdminInsights>("/api/analytics/referral/dashboard/"),
   schema: () => request<{ groups: { app_label: string; models: AdminModel[] }[] }>("/api/admin/schema/"),
-  list: (model: AdminModel, page: number, search: string) =>
-    request<{ results: AdminObject[]; page: number; page_size: number; total: number }>(
-      `/api/admin/${model.app_label}/${model.model}/?page=${page}&search=${encodeURIComponent(search)}`
-    ),
+  list: (model: AdminModel, page: number, search: string, filters?: Record<string, string>) => {
+    const params = new URLSearchParams({ page: String(page), search });
+    Object.entries(filters ?? {}).forEach(([key, value]) => {
+      if (value) params.set(`filter_${key}`, value);
+    });
+    return request<{ results: AdminObject[]; page: number; page_size: number; total: number }>(
+      `/api/admin/${model.app_label}/${model.model}/?${params.toString()}`
+    );
+  },
   create: (model: AdminModel, data: Record<string, unknown>) =>
     request<{ object: AdminObject }>(`/api/admin/${model.app_label}/${model.model}/`, { method: "POST", body: JSON.stringify(data) }),
   update: (model: AdminModel, id: number, data: Record<string, unknown>) =>
     request<{ object: AdminObject }>(`/api/admin/${model.app_label}/${model.model}/${id}/`, { method: "PATCH", body: JSON.stringify(data) }),
   remove: (model: AdminModel, id: number) =>
     request<void>(`/api/admin/${model.app_label}/${model.model}/${id}/`, { method: "DELETE" }),
+  // Fetches one parent's inline children (e.g. the Roles under a Company),
+  // filtered server-side by the real FK field name — unlike `list`'s
+  // `filter_<name>` params, this isn't restricted to list_filter membership.
+  listChildren: (model: AdminModel, fkName: string, parentId: number) =>
+    request<{ results: AdminObject[]; total: number }>(
+      `/api/admin/${model.app_label}/${model.model}/?page=1&search=&${encodeURIComponent(fkName)}=${parentId}`
+    ),
+  deletePreview: (model: AdminModel, id: number) =>
+    request<AdminDeletePreview>(`/api/admin/${model.app_label}/${model.model}/${id}/delete-preview/`),
   action: (model: AdminModel, action: string, ids: number[]) =>
     request<{ detail: string }>(`/api/admin/${model.app_label}/${model.model}/${action}/`, { method: "POST", body: JSON.stringify({ ids }) }),
+  lookup: (appLabel: string, modelName: string, q: string) =>
+    request<{ results: AdminLookupResult[] }>(`/api/admin/${appLabel}/${modelName}/lookup/?q=${encodeURIComponent(q)}`),
+  history: (model: AdminModel, id: number) =>
+    request<{ entries: AdminHistoryEntry[] }>(`/api/admin/${model.app_label}/${model.model}/${id}/history/`),
+
+  // Bypasses the shared request() wrapper (same reason as
+  // organizations.uploadQuestions): a multipart body needs its own
+  // browser-set Content-Type boundary, not the wrapper's fixed JSON header.
+  uploadSpreadsheet: async (file: File): Promise<{ detail: string }> => {
+    const access = tokens.getAccess();
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch(`${API_URL}/api/admin/companies/company/upload-spreadsheet/`, {
+      method: "POST",
+      headers: access ? { Authorization: `Bearer ${access}` } : {},
+      body: form,
+    });
+    const body = await res.json().catch(() => undefined);
+    if (!res.ok) throw new ApiError(res.status, extractDetail(body) || `Request failed (${res.status})`, undefined, body);
+    return body;
+  },
+
+  uploadSponsorshipEmails: async (campaignId: number, file: File): Promise<{ detail: string }> => {
+    const access = tokens.getAccess();
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch(`${API_URL}/api/admin/subscriptions/sponsorshipcampaign/${campaignId}/upload-emails/`, {
+      method: "POST",
+      headers: access ? { Authorization: `Bearer ${access}` } : {},
+      body: form,
+    });
+    const body = await res.json().catch(() => undefined);
+    if (!res.ok) throw new ApiError(res.status, extractDetail(body) || `Request failed (${res.status})`, undefined, body);
+    return body;
+  },
 };
 
 // ── Company endpoints ─────────────────────────────────────────────────────────
