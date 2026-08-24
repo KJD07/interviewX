@@ -6,6 +6,7 @@ from django.contrib import admin, messages as django_messages
 from django.contrib.admin.models import ADDITION, CHANGE, DELETION, LogEntry
 from django.contrib.admin.utils import get_deleted_objects, label_for_field
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.db import models
 from django.http import Http404
 from rest_framework.exceptions import PermissionDenied
@@ -115,7 +116,8 @@ def _field_metadata(model_admin, model, form, request):
     for name, field in form.base_fields.items():
         seen.add(name)
         model_field = next((candidate for candidate in model._meta.get_fields() if candidate.name == name), None)
-        choices = [{"value": str(value), "label": label} for value, label in (getattr(field, "choices", None) or [])]
+        is_relation = isinstance(model_field, (models.ForeignKey, models.OneToOneField, models.ManyToManyField))
+        choices = [] if is_relation else [{"value": str(value), "label": str(label)} for value, label in (getattr(field, "choices", None) or [])]
         options = []
         is_m2m = False
         if isinstance(model_field, (models.ForeignKey, models.OneToOneField)):
@@ -129,11 +131,11 @@ def _field_metadata(model_admin, model, form, request):
         is_password = _is_user_model(model) and name == "password"
         fields.append({
             "name": name,
-            "label": field.label or name.replace("_", " ").title(),
+            "label": str(field.label or name.replace("_", " ").title()),
             "type": "PasswordField" if is_password else ("ManyToManyField" if is_m2m else field_type),
             "required": field.required,
             "readonly": name in readonly or model_field is None,
-            "help_text": field.help_text,
+            "help_text": str(field.help_text or ""),
             "choices": choices,
             "options": options,
             "is_m2m": is_m2m,
@@ -271,6 +273,9 @@ class AdminSchemaView(APIView):
     permission_classes = [IsAdminUser]
 
     def get(self, request):
+        cached = cache.get("admin-schema-v2")
+        if cached is not None:
+            return Response(cached)
         groups = {}
         for model, model_admin in admin.site._registry.items():
             if not model_admin.has_view_permission(request):
@@ -300,7 +305,9 @@ class AdminSchemaView(APIView):
                 ],
                 **_permission_flags(model_admin, request),
             })
-        return Response({"groups": [{"app_label": key, "models": value} for key, value in groups.items()]})
+        payload = {"groups": [{"app_label": key, "models": value} for key, value in groups.items()]}
+        cache.set("admin-schema-v2", payload, timeout=3600)
+        return Response(payload)
 
 
 class AdminModelView(APIView):
