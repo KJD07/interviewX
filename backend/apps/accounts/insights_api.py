@@ -14,7 +14,7 @@ from apps.subscriptions.models import PaymentOrder
 from .models import ReferralVisit
 
 User = get_user_model()
-SOURCES = ("linkedin", "reddit", "instagram", "chatgpt", "other")
+SOURCES = ("linkedin", "reddit", "instagram", "chatgpt", "direct", "other")
 
 
 class ReferralVisitView(APIView):
