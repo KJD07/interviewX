@@ -4,7 +4,7 @@ from decimal import Decimal
 from django import forms
 from django.contrib import admin, messages as django_messages
 from django.contrib.admin.models import ADDITION, CHANGE, DELETION, LogEntry
-from django.contrib.admin.utils import get_deleted_objects, label_for_field
+from django.contrib.admin.utils import get_deleted_objects, label_for_field, model_format_dict
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.db import models
@@ -269,6 +269,16 @@ def _list_filter_metadata(model_admin, model, request):
     return result
 
 
+def _action_label(description, model):
+    """Some built-in actions (e.g. Django's own delete_selected) ship a raw
+    "%(verbose_name_plural)s"-style template meant to be interpolated with
+    model_format_dict(opts) — mirrors get_action_choices()."""
+    try:
+        return str(description) % model_format_dict(model._meta)
+    except (TypeError, KeyError, ValueError):
+        return str(description)
+
+
 class AdminSchemaView(APIView):
     permission_classes = [IsAdminUser]
 
@@ -300,7 +310,7 @@ class AdminSchemaView(APIView):
                 "fieldsets": _fieldsets_metadata(model_admin, known_names),
                 "inlines": _inline_metadata(model, model_admin),
                 "actions": [
-                    {"name": name, "label": str(action[2])}
+                    {"name": name, "label": _action_label(action[2], model)}
                     for name, action in model_admin.get_actions(request).items()
                 ],
                 **_permission_flags(model_admin, request),
@@ -495,18 +505,29 @@ class AdminActionView(APIView):
             raise Http404("Admin action not found")
         queryset = model_admin.get_queryset(request).filter(pk__in=request.data.get("ids", []))
         count = queryset.count()
-        # get_actions() deliberately returns the *unbound* function (Django grabs it
-        # off self.__class__, not self) so callers must pass model_admin explicitly —
-        # same calling convention as Django admin's own response_action().
-        action[0](model_admin, request, queryset)
 
-        texts = []
+        # Capture message_user() calls directly rather than reading them back
+        # via django.contrib.messages.get_messages(): that framework's storage
+        # is cookie/session-backed, which isn't reliable for a stateless JWT
+        # API called cross-origin from the frontend (no guarantee the session
+        # cookie round-trips), and silently drops messages when it doesn't.
+        captured = []
+        original_message_user = model_admin.message_user
+
+        def _capture_message_user(req, message, level=django_messages.INFO, extra_tags="", fail_silently=False):
+            captured.append(str(message))
+
+        model_admin.message_user = _capture_message_user
         try:
-            for message in django_messages.get_messages(request._request):
-                texts.append(str(message))
-        except Exception:
-            pass
-        detail = "\n".join(texts) if texts else f"{count} object(s) processed."
+            # get_actions() deliberately returns the *unbound* function (Django
+            # grabs it off self.__class__, not self) so callers must pass
+            # model_admin explicitly — same convention as admin's own
+            # response_action().
+            action[0](model_admin, request, queryset)
+        finally:
+            model_admin.message_user = original_message_user
+
+        detail = "\n".join(captured) if captured else f"{count} object(s) processed."
         return Response({"detail": detail})
 
 
