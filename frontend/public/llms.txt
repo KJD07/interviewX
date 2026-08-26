@@ -1,0 +1,41 @@
+# EvaluLabs
+
+> EvaluLabs (https://www.evalulabs.com) is an AI mock interview platform. You
+> pick a company and role, an AI interviewer runs a full-length session using
+> questions real candidates were actually asked there, and you get scored on
+> communication, technical depth and problem solving with written feedback.
+
+Not to be confused with Evalulab (evalulab.com), an unrelated clinical testing
+company for cosmetics based in Montreal.
+
+## What makes it different
+
+- Questions are contributed by verified sources: people who work at the company
+  or interviewed there recently, confirmed via company email or offer letter.
+  Nothing in the bank is scraped or model-invented.
+- The AI interviewer adopts each company's interviewing tone, so pacing and
+  follow-up pressure match the real panel.
+- Voice mode: answer out loud with real-time transcription.
+- Scoring uses an anchored 0-10 rubric across communication, technical depth,
+  problem solving and overall readiness. Vague or blank answers score low by
+  design, so the score is trackable over time.
+- A progress dashboard tracks readiness across companies and roles.
+
+## Plans
+
+- Free: a monthly allowance of AI mock interviews with scoring and feedback. No
+  card required.
+- Paid tiers: detailed insights, topic-level breakdowns, higher monthly limits.
+- Top-up packs: extra interviews that roll over and do not expire on renewal.
+- Institutional sponsorships: colleges and companies can grant a full plan to
+  everyone on their email domain, with a per-cycle interview limit they set.
+
+## Pages
+
+- [Home](https://www.evalulabs.com/): product overview and FAQ.
+- [Companies](https://www.evalulabs.com/companies): browse companies and roles to practise against.
+- [Skills](https://www.evalulabs.com/skills): practise by topic — system design, data structures, behavioural and more.
+- [Pricing](https://www.evalulabs.com/pricing): plan tiers, limits and top-up packs.
+- [About](https://www.evalulabs.com/about): how the interview loop and question sourcing work.
+- [Enterprise](https://www.evalulabs.com/enterprise): college and company sponsorships.
+- [Contact](https://www.evalulabs.com/contact): support and sponsorship enquiries.

@@ -150,6 +150,20 @@ section is a catch-up, not a phase-by-phase log like the ones above.
 - #8 — companies and skills selection pages had no search or pagination,
   just one long list. Added real-time search and 5-per-page pagination to
   both (client-side, shared hook).
+- SEO/AEO baseline. The site previously served no `robots.txt` and no
+  `sitemap.xml` (both 404), and every one of the 19 routes shared a single
+  title/description from the root layout — there was no per-page metadata
+  anywhere, no canonicals, no OpenGraph/Twitter cards and no structured data.
+  Added `app/robots.ts`, `app/sitemap.ts`, a generated `/og.png` share card,
+  and `lib/seo.ts` as the single source of truth for metadata. Because every
+  page is a client component (which cannot export `metadata`), per-route
+  titles are supplied by thin server `layout.tsx` wrappers — one per route,
+  with authenticated surfaces marked `noIndex`. For AEO: Organization /
+  WebSite / SoftwareApplication JSON-LD, a homepage FAQ section with FAQPage
+  markup (native `<details>`, so answers are in the SSR HTML without JS), and
+  `public/llms.txt`. The schema carries an explicit `alternateName` and the
+  FAQ disambiguates EvaluLabs from `evalulab.com`, an unrelated Montreal
+  cosmetics lab that currently owns the "evalulabs" SERP.
 
 ## Next
 Open GitHub issues:
