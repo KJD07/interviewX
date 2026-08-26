@@ -7,6 +7,7 @@ import {
   BRAND_DESCRIPTION,
   SITE_NAME,
   SITE_URL,
+  TWITTER_HANDLE,
   organizationSchema,
   softwareApplicationSchema,
   websiteSchema,
@@ -59,6 +60,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
+    site: TWITTER_HANDLE,
+    creator: TWITTER_HANDLE,
     title: "EvaluLabs | AI Mock Interviews with Real, Verified Questions",
     description: BRAND_DESCRIPTION,
     images: [`${SITE_URL}/og.png`],

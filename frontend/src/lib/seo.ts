@@ -8,7 +8,8 @@ import type { Metadata } from "next";
 
 export const SITE_URL = "https://www.evalulabs.com";
 export const SITE_NAME = "EvaluLabs";
-export const TWITTER_HANDLE = "@evalulabs";
+export const TWITTER_HANDLE = "@evaluLabs";
+export const TWITTER_URL = "https://x.com/evaluLabs";
 export const LINKEDIN_URL = "https://www.linkedin.com/company/evalulabs/";
 
 /** Brand-defining sentence. Reused by metadata, JSON-LD and llms.txt. */
@@ -100,7 +101,7 @@ export function organizationSchema() {
       height: 512,
     },
     description: BRAND_DESCRIPTION,
-    sameAs: [LINKEDIN_URL],
+    sameAs: [LINKEDIN_URL, TWITTER_URL],
     contactPoint: [
       {
         "@type": "ContactPoint",
