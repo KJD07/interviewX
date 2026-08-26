@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import MarketingNav from "@/components/MarketingNav";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import LiveCodeFeature from "@/components/LiveCodeFeature";
+import FaqSection from "@/components/FaqSection";
 import icon from "@/app/icon.png";
 
 const FEATURES = [
@@ -196,6 +197,8 @@ export default function Home() {
           ))}
         </div>
       </section>
+
+      <FaqSection />
 
       <section className="mx-auto max-w-5xl px-6 pb-28">
         <ScrollReveal>
