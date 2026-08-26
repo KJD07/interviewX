@@ -175,21 +175,28 @@ function Bubble({ msg, speaking }: { msg: Message; speaking?: boolean }) {
       )}
       <div className="max-w-[75%]">
         {msg.workspace?.content ? (
-          <pre
-            className="rounded-2xl px-4 py-3 text-xs leading-relaxed overflow-x-auto whitespace-pre-wrap"
-            style={
-              isUser
-                ? { background: "var(--accent)", color: "var(--accent-ink)", borderBottomRightRadius: 4 }
-                : {
-                    background: "var(--surface)",
-                    border: "1px solid var(--border-mid)",
-                    color: "var(--ink)",
-                    borderBottomLeftRadius: 4,
-                  }
-            }
-          >
-            <code>{msg.workspace.content}</code>
-          </pre>
+          <>
+            {msg.workspace.draft && (
+              <p className="text-[11px] mb-1 text-right" style={{ color: "var(--ink-faint)" }}>
+                Draft snapshot — not submitted yet
+              </p>
+            )}
+            <pre
+              className="rounded-2xl px-4 py-3 text-xs leading-relaxed overflow-x-auto whitespace-pre-wrap"
+              style={
+                isUser
+                  ? { background: "var(--accent)", color: "var(--accent-ink)", borderBottomRightRadius: 4 }
+                  : {
+                      background: "var(--surface)",
+                      border: "1px solid var(--border-mid)",
+                      color: "var(--ink)",
+                      borderBottomLeftRadius: 4,
+                    }
+              }
+            >
+              <code>{msg.workspace.content}</code>
+            </pre>
+          </>
         ) : (
           <div
             className="rounded-2xl px-4 py-3 text-sm leading-relaxed"
@@ -440,11 +447,27 @@ export default function InterviewPage() {
         if (s.transcript && s.transcript.length > 0) {
           const transcript = s.transcript as Message[];
           setMessages(transcript);
-          // If the AI's last turn opened a workspace and the candidate hasn't
-          // submitted anything for it yet, restore that panel on reload.
-          const last = transcript[transcript.length - 1];
-          if (last.role === "ai" && last.workspace && !last.workspace.content) {
-            setOpenWorkspace({ type: last.workspace.type, language: last.workspace.language });
+          // Restore the workspace panel on reload if the candidate still owes
+          // an answer for it. Looking only at the very last turn isn't enough:
+          // clarifying questions and draft check-ins both push AI/candidate
+          // turns on top of the one that opened the panel, and none of those
+          // mean the question has been answered. So walk back to the AI turn
+          // that opened the workspace and reopen it unless a real (non-draft)
+          // submission came after it.
+          const opened = transcript
+            .map((m, i) => ({ m, i }))
+            .filter(({ m }) => m.role === "ai" && m.workspace && !m.workspace.content)
+            .pop();
+          if (opened) {
+            const submitted = transcript
+              .slice(opened.i + 1)
+              .some((m) => m.role === "user" && m.workspace?.content && !m.workspace.draft);
+            if (!submitted) {
+              setOpenWorkspace({
+                type: opened.m.workspace!.type,
+                language: opened.m.workspace!.language,
+              });
+            }
           }
         }
         // If session already ended, redirect to results
@@ -594,7 +617,11 @@ export default function InterviewPage() {
   const handleWorkspaceCheckIn = useCallback(
     (content: string) => {
       if (!openWorkspace) return;
-      handleSend("", { type: openWorkspace.type, content, language: openWorkspace.language }, true);
+      handleSend(
+        "",
+        { type: openWorkspace.type, content, language: openWorkspace.language, draft: true },
+        true
+      );
     },
     [openWorkspace, handleSend]
   );
@@ -1469,25 +1496,33 @@ export default function InterviewPage() {
 
         {/* ── Input bar ── */}
         <div
-          className="px-4 py-3 shrink-0 border-t"
+          className="px-4 py-3 shrink-0 border-t max-h-[72vh] overflow-y-auto"
           style={{ borderColor: "var(--surface)" }}
         >
-          {openWorkspace ? (
-            openWorkspace.type === "coding" ? (
+          {/* The workspace sits ABOVE the reply box rather than replacing it —
+              a candidate has to be able to ask clarifying questions while
+              working on a design/coding problem (on a system-design question
+              that's most of the exercise), and the panel stays open until
+              they actually submit. */}
+          {openWorkspace &&
+            (openWorkspace.type === "coding" ? (
               <CodeWorkspace
                 language={openWorkspace.language ?? "javascript"}
                 onSubmit={handleWorkspaceSubmit}
                 onCheckIn={handleWorkspaceCheckIn}
                 submitting={workspaceSubmitting}
+                busy={sending || aiTyping || timeUp}
               />
             ) : (
               <SystemDesignWorkspace
                 onSubmit={handleWorkspaceSubmit}
                 onCheckIn={handleWorkspaceCheckIn}
                 submitting={workspaceSubmitting}
+                busy={sending || aiTyping || timeUp}
               />
-            )
-          ) : voiceMode ? (
+            ))}
+
+          {voiceMode && !openWorkspace ? (
             <div className="flex flex-col items-center gap-2 py-2">
               <button
                 onClick={() => {
@@ -1539,7 +1574,7 @@ export default function InterviewPage() {
           ) : (
             <>
               <div
-                className="flex items-end gap-3 rounded-xl px-4 py-3"
+                className={`flex items-end gap-3 rounded-xl px-4 py-3 ${openWorkspace ? "mt-3" : ""}`}
                 style={{
                   background: "var(--surface)",
                   border: "1px solid var(--border-mid)",
@@ -1557,6 +1592,8 @@ export default function InterviewPage() {
                   placeholder={
                     timeUp
                       ? "Time's up — wrapping up your interview…"
+                      : openWorkspace
+                      ? "Ask a clarifying question — scope, scale, constraints…"
                       : "Type your answer… (Enter to send, Shift+Enter for newline)"
                   }
                   disabled={sending || aiTyping || timeUp}
@@ -1589,6 +1626,8 @@ export default function InterviewPage() {
           <p className="text-center text-xs mt-2" style={{ color: "var(--ink-faint)" }}>
             {timeUp
               ? "Time's up — your interview is being scored…"
+              : openWorkspace
+              ? "Ask as many clarifying questions as you need — the workspace stays open until you submit"
               : secondsLeft !== null
               ? `${formatCountdown(secondsLeft)} left · AI is evaluating your answers in real time`
               : `AI is evaluating your answers in real time · ${user?.username ?? ""}`}

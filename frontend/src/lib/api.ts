@@ -153,6 +153,10 @@ export interface WorkspacePayload {
   type: "coding" | "system_design";
   content?: string;
   language?: string;
+  // True for the auto-sent mid-attempt snapshots (see the workspace
+  // components' check-in debounce) — the candidate hasn't submitted yet, so
+  // the panel stays open and the AI is told not to grade it.
+  draft?: boolean;
 }
 
 export interface InterviewSession {

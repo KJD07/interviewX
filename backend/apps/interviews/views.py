@@ -236,11 +236,27 @@ def _format_workspace_submission(message: str, workspace: dict) -> str:
     as a formatted block rather than sent as a separate field.
     """
     content = (workspace.get("content") or "").strip()
+    # A draft is an auto-sent snapshot of what the candidate has typed so far
+    # (see the workspace components' check-in debounce), not something they
+    # chose to hand in. Label it as such so the interviewer prompt doesn't
+    # grade it or move on from the question — the workspace is still open on
+    # their screen and they haven't answered yet.
+    draft = bool(workspace.get("draft"))
     if workspace.get("type") == "coding":
         language = workspace.get("language") or "javascript"
-        block = f"[Candidate submitted code — language: {language}]\n```{language}\n{content}\n```"
+        header = (
+            f"[Candidate's in-progress code, not submitted yet — language: {language}]"
+            if draft
+            else f"[Candidate submitted code — language: {language}]"
+        )
+        block = f"{header}\n```{language}\n{content}\n```"
     else:
-        block = f"[Candidate submitted a system design write-up]\n{content}"
+        header = (
+            "[Candidate's in-progress system design write-up, not submitted yet]"
+            if draft
+            else "[Candidate submitted a system design write-up]"
+        )
+        block = f"{header}\n{content}"
     return f"{message}\n\n{block}" if message else block
 
 
@@ -452,8 +468,17 @@ class ChatView(APIView):
     def post(self, request, session_id):
         user_message = request.data.get("message", "").strip()[:MAX_ANSWER_CHARS]
         workspace = request.data.get("workspace") or None
-        if workspace and not (workspace.get("content") or "").strip():
+        if not isinstance(workspace, dict) or not (workspace.get("content") or "").strip():
             workspace = None
+        else:
+            # Whitelist the keys we persist — this dict is client-supplied and
+            # gets stored verbatim in the transcript JSONField.
+            workspace = {
+                "type": "coding" if workspace.get("type") == "coding" else "system_design",
+                "content": workspace.get("content"),
+                "language": workspace.get("language"),
+                "draft": bool(workspace.get("draft")),
+            }
         if not user_message and not workspace:
             return Response(
                 {"detail": "message is required."},
