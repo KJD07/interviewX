@@ -129,8 +129,12 @@ section is a catch-up, not a phase-by-phase log like the ones above.
 - Skill-based interviews (Premium/Max only) — practice a single skill
   (React, SQL, Docker, etc.) instead of a full company loop, via `/skills`
   and `seed_skills`
-- Basic voice mode — Web Speech API based speech-to-text/text-to-speech
-  during interviews (this is the spec's Phase 8, in early form)
+- Voice — Web Speech API speech-to-text/text-to-speech during interviews
+  (this is the spec's Phase 8, in early form). The two halves are separate
+  switches: the interviewer **always speaks its turns out loud** (on by
+  default, silenced only by the header's AI-voice mute or a browser with no
+  `speechSynthesis`), while "Answer by voice" is opt-in and only controls
+  the candidate's mic. Typing an answer still gets a spoken reply.
 - Full-screen "focus mode" during interviews — auto-ends the interview if
   the candidate exits full screen or switches tabs
 - Progress/analytics page (`/progress`) with score history charts

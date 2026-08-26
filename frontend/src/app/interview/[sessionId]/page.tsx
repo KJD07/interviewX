@@ -371,6 +371,15 @@ export default function InterviewPage() {
   );
 
   // ── Voice state ──────────────────────────────────────────────────────────
+  // Two independent switches, deliberately not one "voice mode":
+  //   • speechEnabled — the interviewer speaks its turns out loud. ON by
+  //     default and independent of how the candidate answers, so a candidate
+  //     who types still *hears* the interviewer (that's what makes it feel
+  //     like an interview rather than a chatbot). Only an explicit mute or a
+  //     browser without speechSynthesis silences it.
+  //   • voiceMode — the candidate answers by microphone instead of the
+  //     keyboard. This one is opt-in and only controls the mic.
+  const [speechEnabled, setSpeechEnabled] = useState(true);
   const [voiceMode, setVoiceMode] = useState(false);
   const [micSupported, setMicSupported] = useState(true);
   const [ttsSupported, setTtsSupported] = useState(true);
@@ -394,6 +403,8 @@ export default function InterviewPage() {
   const hasSpokenOnceRef = useRef(false); // true once the user has produced any speech in this interview
   const finalTranscriptRef = useRef("");
   const voiceModeRef = useRef(false); // mirrors voiceMode for use inside async callbacks
+  const speechEnabledRef = useRef(true); // mirrors speechEnabled for use inside async callbacks
+  const hasSpokenOpeningRef = useRef(false); // has the interviewer's opening line been spoken yet
   const shouldListenRef = useRef(false); // whether we *want* to be listening right now
   const voiceModeBeforeWorkspaceRef = useRef(false); // was voice mode on right before a workspace auto-disabled it, so we can resume it once the workspace closes
 
@@ -416,6 +427,10 @@ export default function InterviewPage() {
   useEffect(() => {
     voiceModeRef.current = voiceMode;
   }, [voiceMode]);
+
+  useEffect(() => {
+    speechEnabledRef.current = speechEnabled;
+  }, [speechEnabled]);
 
   // Feature detection
   useEffect(() => {
@@ -578,8 +593,10 @@ export default function InterviewPage() {
           setOpenWorkspace(null);
         }
 
-        // Speak the AI's reply out loud if we're in voice mode
-        if (voiceModeRef.current && ttsSupported) {
+        // The interviewer always speaks its reply out loud — whether the
+        // candidate answered by typing or by microphone. Speaking is tied to
+        // the mute switch alone, never to voiceMode.
+        if (speechEnabledRef.current && ttsSupported) {
           speak(res.ai_message);
         }
       } catch (err) {
@@ -638,11 +655,16 @@ export default function InterviewPage() {
 
   const speak = useCallback((text: string) => {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
+    if (!speechEnabledRef.current) return; // candidate muted the interviewer
 
     // Belt-and-suspenders: make sure the mic is actually dead before we
     // start talking, in case a recognition instance is still winding down.
-    micMutedRef.current = true;
-    stopListening();
+    // Only relevant in voice mode — in text mode there's no mic running for
+    // the AI's own voice to leak into.
+    if (voiceModeRef.current) {
+      micMutedRef.current = true;
+      stopListening();
+    }
 
     window.speechSynthesis.cancel(); // stop anything currently playing
 
@@ -857,15 +879,34 @@ export default function InterviewPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sending, aiTyping, timeUp, isAiSpeaking, handleSend]);
 
+  // Mute/unmute the interviewer's voice. Independent of voiceMode: muting
+  // here never turns the mic off, and unmuting never turns it on.
+  const toggleSpeech = () => {
+    if (speechEnabled) {
+      speechEnabledRef.current = false;
+      window.speechSynthesis?.cancel();
+      setIsAiSpeaking(false);
+      setSpeechEnabled(false);
+      // Cancelling mid-sentence skips the utterance's onend, which is what
+      // normally re-arms the mic after the AI finishes — so re-arm it here.
+      if (voiceModeRef.current && shouldListenRef.current && !timeUp) {
+        micMutedRef.current = false;
+        startListening();
+      }
+    } else {
+      speechEnabledRef.current = true;
+      setSpeechEnabled(true);
+    }
+  };
+
   // Toggle voice mode on/off
   const toggleVoiceMode = () => {
     if (voiceMode) {
-      // Turning OFF
+      // Turning OFF only stops the mic — the interviewer keeps speaking,
+      // because going back to typing is not a request for silence.
       shouldListenRef.current = false;
       micMutedRef.current = true;
       stopListening();
-      window.speechSynthesis?.cancel();
-      setIsAiSpeaking(false);
       setVoiceMode(false);
     } else {
       // Turning ON
@@ -877,6 +918,20 @@ export default function InterviewPage() {
       }
     }
   };
+
+  // Speak the interviewer's opening question — and, on a mid-interview
+  // reload, whatever it last said — as soon as the candidate is past the
+  // full-screen prompt. That click is also the user gesture browsers require
+  // before speechSynthesis is allowed to make any sound, so this is the
+  // earliest moment the AI can actually be heard.
+  useEffect(() => {
+    if (showFullscreenPrompt || hasSpokenOpeningRef.current) return;
+    if (!speechEnabled || !ttsSupported || timeUp || sending || aiTyping) return;
+    const last = messages[messages.length - 1];
+    if (!last || last.role !== "ai" || !last.text) return;
+    hasSpokenOpeningRef.current = true;
+    speak(last.text);
+  }, [showFullscreenPrompt, messages, speechEnabled, ttsSupported, timeUp, sending, aiTyping, speak]);
 
   // Clean up mic/speech on unmount
   useEffect(() => {
@@ -1389,18 +1444,66 @@ export default function InterviewPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Voice mode toggle */}
+            {/* Interviewer voice (speaker) toggle — independent of how the
+                candidate answers: the AI speaks its turns whether they type
+                or talk, and this is the only way to silence it. */}
+            {ttsSupported && (
+              <button
+                onClick={toggleSpeech}
+                title={
+                  speechEnabled
+                    ? "Mute the interviewer's voice"
+                    : "Unmute the interviewer's voice"
+                }
+                aria-pressed={speechEnabled}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-opacity"
+                style={
+                  speechEnabled
+                    ? { background: "var(--surface)", color: "var(--ink)", border: "1px solid var(--border-mid)" }
+                    : { background: "var(--surface)", color: "var(--ink-faint)", border: "1px solid var(--border-mid)" }
+                }
+              >
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                  <path
+                    d="M8.5 2.5 5 5.5H2.5v5H5l3.5 3v-11Z"
+                    stroke="currentColor"
+                    strokeWidth="1.3"
+                    strokeLinejoin="round"
+                  />
+                  {speechEnabled ? (
+                    <path
+                      d="M11 5.5a3.5 3.5 0 0 1 0 5M12.8 3.5a6 6 0 0 1 0 9"
+                      stroke="currentColor"
+                      strokeWidth="1.3"
+                      strokeLinecap="round"
+                    />
+                  ) : (
+                    <path
+                      d="M11 6l3.5 4M14.5 6 11 10"
+                      stroke="currentColor"
+                      strokeWidth="1.3"
+                      strokeLinecap="round"
+                    />
+                  )}
+                </svg>
+                <span className="hidden sm:inline">
+                  {speechEnabled ? (isAiSpeaking ? "Speaking…" : "AI voice on") : "AI voice muted"}
+                </span>
+              </button>
+            )}
+
+            {/* Answer-by-voice toggle — mic only. The AI speaks either way. */}
             <button
               onClick={toggleVoiceMode}
-              disabled={!micSupported || !ttsSupported || !!openWorkspace}
+              disabled={!micSupported || !!openWorkspace}
               title={
-                !micSupported || !ttsSupported
-                  ? "Voice not supported in this browser — try Chrome or Edge"
+                !micSupported
+                  ? "Microphone input isn't supported in this browser — try Chrome or Edge"
                   : openWorkspace
-                  ? "Voice mode is unavailable while the coding/system-design workspace is open"
+                  ? "Answering by voice is unavailable while the coding/system-design workspace is open"
                   : voiceMode
-                  ? "Switch back to text mode"
-                  : "Switch to voice mode"
+                  ? "Switch back to typing your answers"
+                  : "Answer out loud instead of typing"
               }
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-opacity disabled:opacity-30"
               style={
@@ -1422,7 +1525,9 @@ export default function InterviewPage() {
                   strokeLinecap="round"
                 />
               </svg>
-              {voiceMode ? "Voice mode on" : "Voice mode"}
+              <span className="hidden sm:inline">
+                {voiceMode ? "Answering by voice" : "Answer by voice"}
+              </span>
             </button>
 
             <button
@@ -1592,6 +1697,8 @@ export default function InterviewPage() {
                   placeholder={
                     timeUp
                       ? "Time's up — wrapping up your interview…"
+                      : isAiSpeaking
+                      ? "The interviewer is speaking — you can start typing your answer…"
                       : openWorkspace
                       ? "Ask a clarifying question — scope, scale, constraints…"
                       : "Type your answer… (Enter to send, Shift+Enter for newline)"
