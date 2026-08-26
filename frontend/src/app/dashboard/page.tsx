@@ -140,10 +140,13 @@ export default function DashboardPage() {
     return v !== undefined && (best === undefined || v > best) ? v : best;
   }, undefined);
 
-  const statCards = [
+  const statCards: { label: string; value: string | number; lime?: boolean }[] = [
     { label: "Interviews", value: analyticsCompleted.length },
     { label: "Avg. overall", value: analyticsAvgOverall !== undefined ? `${analyticsAvgOverall}/10` : "—" },
     { label: "Avg. communication", value: analyticsAvgComm !== undefined ? `${analyticsAvgComm}/10` : "—" },
+    ...(analyticsAvgTech !== undefined
+      ? [{ label: "Avg. technical", value: `${analyticsAvgTech}/10` }]
+      : []),
     { label: "Best score", value: analyticsBestOverall !== undefined ? `${analyticsBestOverall}/10` : "—", lime: true },
   ];
 
@@ -212,8 +215,8 @@ export default function DashboardPage() {
 
           {/* Paid plans: analytics skeleton while sessions are loading */}
           {hasInsights && loadingSessions && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 mb-8 fade-up">
-              {[1, 2, 3, 4].map((n) => <SkeletonStatCard key={n} />)}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 mb-8 fade-up">
+              {[1, 2, 3, 4, 5].map((n) => <SkeletonStatCard key={n} />)}
             </div>
           )}
 
@@ -244,7 +247,7 @@ export default function DashboardPage() {
 
               <div className={showSnapshot ? "block" : "hidden"}>
                 <div className="px-4 pb-4 sm:px-5 sm:pb-5">
-                  <div className="grid grid-cols-2 xl:grid-cols-4 gap-3.5 mb-3.5">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
                     {statCards.map((stat) => (
                       <div
                         key={stat.label}
@@ -264,22 +267,6 @@ export default function DashboardPage() {
                       </div>
                     ))}
                   </div>
-
-                  {analyticsAvgTech !== undefined && (
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-                      <div
-                        className="rounded-[16px] p-4 shadow-sm"
-                        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-                      >
-                        <p className="font-display text-[24px] sm:text-[30px] leading-none font-semibold tracking-tight tabular-nums mb-2" style={{ color: "var(--ink)" }}>
-                          {analyticsAvgTech}/10
-                        </p>
-                        <p className="text-[11px] sm:text-[12px]" style={{ color: "var(--ink-dim)" }}>
-                          Avg. technical
-                        </p>
-                      </div>
-                    </div>
-                  )}
 
                   <div className="sm:hidden mt-4">
                     <button
