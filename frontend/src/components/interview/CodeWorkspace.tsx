@@ -31,11 +31,15 @@ export default function CodeWorkspace({
   onSubmit,
   onCheckIn,
   submitting,
+  busy,
 }: {
   language: string;
   onSubmit: (code: string) => void;
   onCheckIn: (code: string) => void;
   submitting: boolean;
+  // A chat message (e.g. a clarifying question) is in flight — block Submit
+  // so the candidate can't stack two turns on top of each other.
+  busy?: boolean;
 }) {
   const [code, setCode] = useState(PLACEHOLDER[language.toLowerCase()] ?? "// Write your function here\n");
   const [monacoReady, setMonacoReady] = useState(false);
@@ -97,7 +101,7 @@ export default function CodeWorkspace({
           <textarea
             value={code}
             onChange={(e) => handleChange(e.target.value)}
-            rows={12}
+            rows={8}
             className="w-full px-4 py-3 text-sm font-mono focus:outline-none"
             style={{ background: "var(--surface)", color: "var(--ink)" }}
             spellCheck={false}
@@ -119,10 +123,13 @@ export default function CodeWorkspace({
           }}
         />
       )}
-      <div className="flex justify-end px-4 py-2.5" style={{ borderTop: "1px solid var(--border-mid)" }}>
+      <div className="flex items-center justify-end sm:justify-between gap-3 px-4 py-2.5" style={{ borderTop: "1px solid var(--border-mid)" }}>
+        <p className="hidden sm:block text-[11px] leading-snug" style={{ color: "var(--ink-faint)" }}>
+          Stuck on the requirements? Ask the interviewer in the chat below.
+        </p>
         <button
           onClick={handleSubmit}
-          disabled={submitting || !code.trim()}
+          disabled={submitting || busy || !code.trim()}
           className="px-4 py-1.5 rounded-full text-sm font-semibold transition-opacity disabled:opacity-40"
           style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
         >

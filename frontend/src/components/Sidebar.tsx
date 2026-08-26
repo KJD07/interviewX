@@ -1,11 +1,10 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { planOf, hasSkills } from "@/lib/plans";
-import TopupModal from "@/components/TopupModal";
 import icon from "@/app/icon.png";
 
 function GridIcon() {
@@ -64,7 +63,6 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const plan = planOf(user?.subscription_plan);
-  const [showTopup, setShowTopup] = useState(false);
   const bonusInterviews = user?.bonus_interviews ?? 0;
 
   useEffect(() => {
@@ -134,38 +132,29 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
 
       <div className="space-y-3 shrink-0">
         <div
-          className="rounded-2xl p-[18px]"
+          className="rounded-xl px-3.5 py-2.5 flex items-center justify-between gap-2"
           style={{ background: "var(--hero-bg)" }}
         >
-          <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--ink-faint)" }}>
-            Plan
-          </p>
-          <div className="flex items-baseline justify-between gap-2 mb-1">
-            <span className="font-display text-[19px] font-semibold tracking-tight" style={{ color: "var(--hero-text)" }}>
+          <span className="flex items-baseline gap-1.5 min-w-0">
+            <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--ink-faint)" }}>
+              Plan
+            </span>
+            <span className="font-display text-[14px] font-semibold tracking-tight truncate" style={{ color: "var(--hero-text)" }}>
               {plan.label}
             </span>
-            <Link
-              href="/pricing"
-              className="text-xs pb-px transition-opacity hover:opacity-70"
-              style={{ color: "var(--lime)", borderBottom: "1px solid var(--lime)" }}
-            >
-              Manage
-            </Link>
-          </div>
-
-          {bonusInterviews > 0 && (
-            <p className="text-xs mt-1" style={{ color: "var(--ink-faint)" }}>
-              +{bonusInterviews} bonus {bonusInterviews === 1 ? "interview" : "interviews"}
-            </p>
-          )}
-
-          <button
-            onClick={() => setShowTopup(true)}
-            className="text-[12.5px] mt-1 pb-px block transition-opacity hover:opacity-70"
-            style={{ color: "var(--ink-faint)", borderBottom: "1px dashed rgba(184,184,174,0.4)" }}
+            {bonusInterviews > 0 && (
+              <span className="text-[11px] shrink-0" style={{ color: "var(--ink-faint)" }}>
+                +{bonusInterviews}
+              </span>
+            )}
+          </span>
+          <Link
+            href="/pricing"
+            className="text-[11.5px] shrink-0 pb-px transition-opacity hover:opacity-70"
+            style={{ color: "var(--lime)", borderBottom: "1px solid var(--lime)" }}
           >
-            + Buy more interviews
-          </button>
+            Manage
+          </Link>
         </div>
 
         <div className="flex items-center justify-between px-1 py-1">
@@ -191,7 +180,6 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
         </div>
       </div>
 
-      {showTopup && <TopupModal onClose={() => setShowTopup(false)} />}
       </aside>
 
       {/* Mobile drawer */}
@@ -231,28 +219,23 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
 
               <div className="mt-auto pt-4 border-t shrink-0" style={{ borderColor: 'var(--border)' }}>
                 <div className="space-y-3">
-                  <div className="rounded-2xl p-[18px]" style={{ background: "var(--hero-bg)" }}>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--ink-faint)" }}>
-                      Plan
-                    </p>
-                    <div className="flex items-baseline justify-between gap-2 mb-1">
-                      <span className="font-display text-[19px] font-semibold tracking-tight" style={{ color: "var(--hero-text)" }}>
+                  <div className="rounded-xl px-3.5 py-2.5 flex items-center justify-between gap-2" style={{ background: "var(--hero-bg)" }}>
+                    <span className="flex items-baseline gap-1.5 min-w-0">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--ink-faint)" }}>
+                        Plan
+                      </span>
+                      <span className="font-display text-[14px] font-semibold tracking-tight truncate" style={{ color: "var(--hero-text)" }}>
                         {plan.label}
                       </span>
-                      <Link href="/pricing" className="text-xs pb-px transition-opacity hover:opacity-70" style={{ color: "var(--lime)", borderBottom: "1px solid var(--lime)" }}>
-                        Manage
-                      </Link>
-                    </div>
-
-                    {bonusInterviews > 0 && (
-                      <p className="text-xs mt-1" style={{ color: "var(--ink-faint)" }}>
-                        +{bonusInterviews} bonus {bonusInterviews === 1 ? "interview" : "interviews"}
-                      </p>
-                    )}
-
-                    <button onClick={() => setShowTopup(true)} className="text-[12.5px] mt-1 pb-px block transition-opacity hover:opacity-70" style={{ color: "var(--ink-faint)", borderBottom: "1px dashed rgba(184,184,174,0.4)" }}>
-                      + Buy more interviews
-                    </button>
+                      {bonusInterviews > 0 && (
+                        <span className="text-[11px] shrink-0" style={{ color: "var(--ink-faint)" }}>
+                          +{bonusInterviews}
+                        </span>
+                      )}
+                    </span>
+                    <Link href="/pricing" className="text-[11.5px] shrink-0 pb-px transition-opacity hover:opacity-70" style={{ color: "var(--lime)", borderBottom: "1px solid var(--lime)" }}>
+                      Manage
+                    </Link>
                   </div>
 
                   <div className="flex items-center justify-between px-1 py-1">
