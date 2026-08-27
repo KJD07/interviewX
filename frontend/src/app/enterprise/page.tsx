@@ -631,6 +631,36 @@ function EnterprisePageContent({ view = "overview" }: { view?: "overview" | "can
 
           {dashboard && (
             <>
+              {view === "overview" && (
+                <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--ink-faint)" }}>
+                      Enterprise dashboard
+                    </p>
+                    <h1 className="font-display text-2xl font-bold" style={{ color: "var(--ink)" }}>
+                      {dashboard.organization.name}
+                    </h1>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider"
+                      style={{ background: "var(--surface-2)", color: "var(--ink-dim)" }}
+                    >
+                      {dashboard.role}
+                    </span>
+                    <span
+                      className="text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider"
+                      style={{
+                        background: dashboard.organization.is_active ? "var(--success-bg)" : "#F7EAE7",
+                        color: dashboard.organization.is_active ? "var(--success)" : "var(--danger)",
+                      }}
+                    >
+                      {dashboard.organization.is_active ? "Active" : "Inactive"}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {view !== "questions" && (
                 <div
                   className="rounded-2xl px-5 py-4 mb-6 shadow-[0_4px_16px_rgba(28,26,22,0.05)]"
