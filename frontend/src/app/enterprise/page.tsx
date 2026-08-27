@@ -253,6 +253,7 @@ function InviteForm({ dashboard, onInvited }: { dashboard: OrgDashboard; onInvit
           className="text-sm px-3 py-2 rounded-lg border flex-1 min-w-0 w-full sm:min-w-[200px]"
           style={{ borderColor: "var(--border-mid)", color: "var(--ink)", background: "var(--surface)" }}
         />
+      <div className="flex items-center gap-2 w-full sm:w-auto">
         <input
           type="number"
           min={1}
@@ -262,6 +263,8 @@ function InviteForm({ dashboard, onInvited }: { dashboard: OrgDashboard; onInvit
           style={{ borderColor: "var(--border-mid)", color: "var(--ink)", background: "var(--surface)" }}
           title="Expires in (days)"
         />
+        <span className="text-sm whitespace-nowrap" style={{ color: "var(--ink-dim)" }}>day(s)</span>
+      </div>
         <button
           onClick={handleInvite}
           disabled={!roundId || !email || busy}
