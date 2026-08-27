@@ -48,7 +48,7 @@ function Card({ title, subtitle, action, children }: {
       style={{ border: "1px solid var(--border)", background: "var(--surface)" }}
     >
       <div
-        className="flex items-start justify-between gap-4 px-6 py-5"
+        className="flex items-start justify-between gap-4 px-4 sm:px-6 py-5"
         style={{ borderBottom: "1px solid var(--border)" }}
       >
         <div>
@@ -57,7 +57,7 @@ function Card({ title, subtitle, action, children }: {
         </div>
         {action}
       </div>
-      <div className="px-6 py-5">{children}</div>
+      <div className="px-4 sm:px-6 py-5">{children}</div>
     </div>
   );
 }
@@ -159,12 +159,12 @@ function QuestionBankCard({ dashboard }: { dashboard: OrgDashboard }) {
               <div key={role.id} className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
                 <button
                   onClick={() => setOpenRole(isOpen ? null : role.id)}
-                  className="w-full flex items-center justify-between px-4 py-3 text-left transition-colors"
+                  className="w-full flex items-start sm:items-center justify-between gap-3 px-4 py-3 text-left transition-colors"
                   style={{ background: "var(--surface-2)" }}
                 >
-                  <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>{role.title}</span>
-                  <span className="flex items-center gap-3">
-                    <span className="text-xs" style={{ color: "var(--ink-faint)" }}>
+                  <span className="text-sm font-medium min-w-0 break-words" style={{ color: "var(--ink)" }}>{role.title}</span>
+                  <span className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs text-right" style={{ color: "var(--ink-faint)" }}>
                       {role.rounds.length} round(s) · {roleQuestionCount} question(s)
                     </span>
                     <span
@@ -234,7 +234,7 @@ function InviteForm({ dashboard, onInvited }: { dashboard: OrgDashboard; onInvit
           value={roundId}
           onChange={(e) => setRoundId(e.target.value ? Number(e.target.value) : "")}
           disabled={rounds.length === 0}
-          className="text-sm px-3 py-2 rounded-lg border disabled:opacity-40"
+          className="text-sm px-3 py-2 rounded-lg border disabled:opacity-40 w-full sm:w-auto"
           style={{ borderColor: "var(--border-mid)", color: "var(--ink)", background: "var(--surface)" }}
         >
           <option value="">Select round…</option>
@@ -249,7 +249,7 @@ function InviteForm({ dashboard, onInvited }: { dashboard: OrgDashboard; onInvit
           placeholder="candidate@email.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="text-sm px-3 py-2 rounded-lg border flex-1 min-w-[200px]"
+          className="text-sm px-3 py-2 rounded-lg border flex-1 min-w-0 w-full sm:min-w-[200px]"
           style={{ borderColor: "var(--border-mid)", color: "var(--ink)", background: "var(--surface)" }}
         />
         <input
@@ -257,7 +257,7 @@ function InviteForm({ dashboard, onInvited }: { dashboard: OrgDashboard; onInvit
           min={1}
           value={expiresInDays}
           onChange={(e) => setExpiresInDays(Number(e.target.value) || 1)}
-          className="text-sm px-3 py-2 rounded-lg border w-24"
+          className="text-sm px-3 py-2 rounded-lg border w-full sm:w-24"
           style={{ borderColor: "var(--border-mid)", color: "var(--ink)", background: "var(--surface)" }}
           title="Expires in (days)"
         />
@@ -386,7 +386,7 @@ function InvitesTable({ invites, liveCameraEnabled }: { invites: OrgCandidateInv
           {search.results.length === 0 ? (
             <p className="text-sm" style={{ color: "var(--ink-dim)" }}>No candidates match "{search.query}".</p>
           ) : (
-            <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+            <div className="hidden md:block rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
               <div
                 className="grid text-xs font-medium uppercase tracking-wider px-4 py-2.5"
                 style={{
@@ -468,6 +468,42 @@ function InvitesTable({ invites, liveCameraEnabled }: { invites: OrgCandidateInv
                         <CandidateDetail invite={inv} />
                       </div>
                     </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {search.results.length > 0 && (
+            <div className="md:hidden space-y-3">
+              {search.results.map((inv) => {
+                const isOpen = expandedId === inv.id;
+                return (
+                  <div key={inv.id} className="rounded-xl p-4" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                    <button
+                      onClick={() => setExpandedId(isOpen ? null : inv.id)}
+                      className="w-full text-left"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="text-sm font-medium break-all" style={{ color: "var(--ink)" }}>{inv.candidate_email}</span>
+                        <StatusBadge status={inv.candidate_status} />
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs" style={{ color: "var(--ink-dim)" }}>
+                        <span>{inv.role_title} — {inv.round_title}</span>
+                        <span>Score: {formatScores(inv.scores) ?? "—"}</span>
+                        <span>Expires {formatDate(inv.expires_at)}</span>
+                      </div>
+                    </button>
+                    {liveCameraEnabled && inv.candidate_status === "live" && inv.session && (
+                      <Link
+                        href={`/enterprise/live/${inv.session}`}
+                        className="inline-flex mt-3 text-xs font-semibold px-3 py-1.5 rounded-full"
+                        style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
+                      >
+                        Watch live
+                      </Link>
+                    )}
+                    {isOpen && <CandidateDetail invite={inv} />}
                   </div>
                 );
               })}
