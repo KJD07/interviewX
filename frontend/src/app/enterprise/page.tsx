@@ -523,7 +523,9 @@ function EnterprisePricingCard() {
   );
 }
 
-export default function EnterprisePage() {
+type EnterpriseView = "overview" | "candidate" | "questions";
+
+export function EnterprisePageContent({ view = "overview" }: { view?: EnterpriseView }) {
   const [dashboard, setDashboard] = useState<OrgDashboard | null>(null);
   const [invites, setInvites] = useState<OrgCandidateInvite[]>([]);
   const [loading, setLoading] = useState(true);
@@ -567,15 +569,11 @@ export default function EnterprisePage() {
     [dashboard]
   );
 
-  const daysToContractEnd = dashboard
-    ? Math.ceil((new Date(dashboard.organization.contract_ends).getTime() - Date.now()) / 86400000)
-    : null;
-
   return (
     <ProtectedRoute>
-      <AppShell>
+      <AppShell enterprise>
       <div className="min-h-screen" style={{ background: "var(--page)" }}>
-        <main className="max-w-5xl mx-auto px-6 py-10 fade-up">
+        <main className={`max-w-5xl mx-auto px-6 ${view === "overview" ? "pt-16 sm:pt-20" : "pt-10"} pb-10 fade-up`}>
 
           {loading && <p className="text-sm" style={{ color: "var(--ink-dim)" }}>Loading…</p>}
 
@@ -598,73 +596,47 @@ export default function EnterprisePage() {
 
           {dashboard && (
             <>
-              {/* Header */}
-              <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--ink-faint)" }}>
-                    Enterprise dashboard
-                  </p>
-                  <h1 className="font-display text-2xl font-bold" style={{ color: "var(--ink)" }}>
-                    {dashboard.organization.name}
-                  </h1>
+              {view !== "questions" && (
+                <div
+                  className="rounded-2xl px-5 py-4 mb-6 shadow-[0_4px_16px_rgba(28,26,22,0.05)]"
+                  style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>
+                      Candidate quota
+                    </span>
+                    <span className="text-sm tabular-nums" style={{ color: "var(--ink-dim)" }}>
+                      {quotaUsed} / {quotaTotal} used
+                    </span>
+                  </div>
+                  <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--surface-2)" }}>
+                    <div className="h-full rounded-full" style={{ width: `${quotaPct}%`, background: quotaTone }} />
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span
-                    className="text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider"
-                    style={{ background: "var(--surface-2)", color: "var(--ink-dim)" }}
-                  >
-                    {dashboard.role}
-                  </span>
-                  <span
-                    className="text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider"
-                    style={{
-                      background: dashboard.organization.is_active ? "var(--success-bg)" : "#F7EAE7",
-                      color: dashboard.organization.is_active ? "var(--success)" : "var(--danger)",
-                    }}
-                  >
-                    {dashboard.organization.is_active ? "Active" : "Inactive"}
-                  </span>
-                </div>
-              </div>
+              )}
 
-              {/* Quota bar */}
-              <div
-                className="rounded-2xl px-5 py-4 mb-6 shadow-[0_4px_16px_rgba(28,26,22,0.05)]"
-                style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>
-                    Candidate quota
-                  </span>
-                  <span className="text-sm tabular-nums" style={{ color: "var(--ink-dim)" }}>
-                    {quotaUsed} / {quotaTotal} used
-                  </span>
+              {view === "overview" && (
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">
+                    <StatCard label="Roles in bank" value={dashboard.question_bank.length} />
+                    <StatCard label="Questions" value={totalQuestions} />
+                    <StatCard label="Pending" value={counts.pending ?? 0} />
+                    <StatCard label="Live" value={counts.started ?? 0} tone="var(--accent)" />
+                    <StatCard label="Finished" value={counts.completed ?? 0} tone="var(--success)" />
                 </div>
-                <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--surface-2)" }}>
-                  <div className="h-full rounded-full" style={{ width: `${quotaPct}%`, background: quotaTone }} />
+              )}
+
+              {view === "candidate" && (
+                <div className="space-y-6">
+                  <InviteForm dashboard={dashboard} onInvited={load} />
+                  <InvitesTable invites={invites} liveCameraEnabled={dashboard.organization.live_camera_enabled} />
                 </div>
-                <p className="text-xs mt-2" style={{ color: "var(--ink-faint)" }}>
-                  Contract ends {formatDate(dashboard.organization.contract_ends)}
-                  {daysToContractEnd !== null && daysToContractEnd >= 0 && ` · ${daysToContractEnd} day(s) left`}
-                  {daysToContractEnd !== null && daysToContractEnd < 0 && " · expired"}
-                </p>
-              </div>
-
-              {/* Stat cards */}
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">
-                <StatCard label="Roles in bank" value={dashboard.question_bank.length} />
-                <StatCard label="Questions" value={totalQuestions} />
-                <StatCard label="Pending" value={counts.pending ?? 0} />
-                <StatCard label="Live" value={counts.started ?? 0} tone="var(--accent)" />
-                <StatCard label="Finished" value={counts.completed ?? 0} tone="var(--success)" />
-              </div>
-
-              <div className="space-y-6">
-                <InviteForm dashboard={dashboard} onInvited={load} />
-                <InvitesTable invites={invites} liveCameraEnabled={dashboard.organization.live_camera_enabled} />
-                <QuestionBankCard dashboard={dashboard} />
-                <UploadCard onUploaded={load} />
-              </div>
+              )}
+              {view === "questions" && (
+                <div className="space-y-6">
+                  <QuestionBankCard dashboard={dashboard} />
+                  <UploadCard onUploaded={load} />
+                </div>
+              )}
             </>
           )}
         </main>
@@ -672,4 +644,8 @@ export default function EnterprisePage() {
       </AppShell>
     </ProtectedRoute>
   );
+}
+
+export default function EnterprisePage() {
+  return <EnterprisePageContent />;
 }

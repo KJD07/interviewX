@@ -45,6 +45,24 @@ function TrendIcon() {
   );
 }
 
+function QuestionsIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M3 4.5A1.5 1.5 0 014.5 3h9A1.5 1.5 0 0115 4.5v6a1.5 1.5 0 01-1.5 1.5H9l-3.5 3v-3H4.5A1.5 1.5 0 013 10.5v-6z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M6 6.5h6M6 9h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function UserIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="6" r="2.5" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M4 15c.6-2.3 2.2-3.5 5-3.5s4.4 1.2 5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function LogoutIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -54,11 +72,12 @@ function LogoutIcon() {
 }
 
 type SidebarProps = {
+  enterprise?: boolean;
   mobileOpen?: boolean;
   onClose?: () => void;
 };
 
-export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
+export default function Sidebar({ enterprise = false, mobileOpen, onClose }: SidebarProps) {
   const { user, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -75,14 +94,20 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
     };
   }, [mobileOpen]);
 
-  const NAV_ITEMS = [
-    { href: "/dashboard", label: "Dashboard", icon: GridIcon },
-    { href: "/companies", label: "Companies", icon: BuildingIcon },
-    ...(hasSkills(user?.subscription_plan)
-      ? [{ href: "/skills", label: "Skills", icon: SparkleIcon }]
-      : []),
-    { href: "/progress", label: "Progress", icon: TrendIcon },
-  ];
+  const NAV_ITEMS = enterprise
+    ? [
+        { href: "/enterprise", label: "Dashboard", icon: GridIcon },
+        { href: "/enterprise/candidate", label: "Candidate", icon: UserIcon },
+        { href: "/enterprise/questions", label: "Question bank", icon: QuestionsIcon },
+      ]
+    : [
+        { href: "/dashboard", label: "Dashboard", icon: GridIcon },
+        { href: "/companies", label: "Companies", icon: BuildingIcon },
+        ...(hasSkills(user?.subscription_plan)
+          ? [{ href: "/skills", label: "Skills", icon: SparkleIcon }]
+          : []),
+        { href: "/progress", label: "Progress", icon: TrendIcon },
+      ];
 
   const handleLogout = () => {
     logout();
@@ -90,6 +115,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   };
 
   const initial = (user?.username || "?").charAt(0).toUpperCase();
+  const planLabel = enterprise ? "Enterprise" : plan.label;
 
   return (
     <>
@@ -110,7 +136,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
 
         <nav className="space-y-1 overflow-y-auto min-h-0 flex-1 pr-1">
           {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-            const active = pathname === href || pathname?.startsWith(href + "/");
+            const active = enterprise ? pathname === href : pathname === href || pathname?.startsWith(href + "/");
             return (
               <Link
                 key={href}
@@ -140,7 +166,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
               Plan
             </span>
             <span className="font-display text-[14px] font-semibold tracking-tight truncate" style={{ color: "var(--hero-text)" }}>
-              {plan.label}
+              {planLabel}
             </span>
             {bonusInterviews > 0 && (
               <span className="text-[11px] shrink-0" style={{ color: "var(--ink-faint)" }}>
@@ -148,13 +174,15 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
               </span>
             )}
           </span>
-          <Link
-            href="/pricing"
-            className="text-[11.5px] shrink-0 pb-px transition-opacity hover:opacity-70"
-            style={{ color: "var(--lime)", borderBottom: "1px solid var(--lime)" }}
-          >
-            Manage
-          </Link>
+          {!enterprise && (
+            <Link
+              href="/pricing"
+              className="text-[11.5px] shrink-0 pb-px transition-opacity hover:opacity-70"
+              style={{ color: "var(--lime)", borderBottom: "1px solid var(--lime)" }}
+            >
+              Manage
+            </Link>
+          )}
         </div>
 
         <div className="flex items-center justify-between px-1 py-1">
@@ -197,7 +225,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
 
               <nav className="space-y-1 overflow-y-auto flex-1 min-h-0 pr-1 pb-2">
                 {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-                  const active = pathname === href || pathname?.startsWith(href + "/");
+                  const active = enterprise ? pathname === href : pathname === href || pathname?.startsWith(href + "/");
                   return (
                     <Link
                       key={href}
@@ -225,7 +253,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
                         Plan
                       </span>
                       <span className="font-display text-[14px] font-semibold tracking-tight truncate" style={{ color: "var(--hero-text)" }}>
-                        {plan.label}
+                        {planLabel}
                       </span>
                       {bonusInterviews > 0 && (
                         <span className="text-[11px] shrink-0" style={{ color: "var(--ink-faint)" }}>
@@ -233,9 +261,11 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
                         </span>
                       )}
                     </span>
-                    <Link href="/pricing" className="text-[11.5px] shrink-0 pb-px transition-opacity hover:opacity-70" style={{ color: "var(--lime)", borderBottom: "1px solid var(--lime)" }}>
-                      Manage
-                    </Link>
+                    {!enterprise && (
+                      <Link href="/pricing" className="text-[11.5px] shrink-0 pb-px transition-opacity hover:opacity-70" style={{ color: "var(--lime)", borderBottom: "1px solid var(--lime)" }}>
+                        Manage
+                      </Link>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-between px-1 py-1">
