@@ -48,17 +48,23 @@ class OrgCandidateInviteSerializer(serializers.ModelSerializer):
     candidate_status = serializers.SerializerMethodField()
     # Only populated once the linked session has actually been scored.
     scores = serializers.SerializerMethodField()
+    # AI feedback and (paid-plan-gated at grading time) topic/improvement
+    # insights — same fields InterviewSessionSerializer exposes, surfaced
+    # here too so the dashboard can show a per-candidate detail dropdown
+    # without a second request.
+    feedback = serializers.SerializerMethodField()
+    insights = serializers.SerializerMethodField()
 
     class Meta:
         model = OrgCandidateInvite
         fields = [
             "id", "candidate_email", "round", "round_title", "role_title",
-            "token", "status", "candidate_status", "scores", "session",
-            "created_at", "expires_at",
+            "token", "status", "candidate_status", "scores", "feedback",
+            "insights", "session", "created_at", "expires_at",
         ]
         read_only_fields = [
-            "id", "token", "status", "candidate_status", "scores", "session",
-            "created_at", "round_title", "role_title",
+            "id", "token", "status", "candidate_status", "scores", "feedback",
+            "insights", "session", "created_at", "round_title", "role_title",
         ]
 
     def get_candidate_status(self, obj):
@@ -73,6 +79,16 @@ class OrgCandidateInviteSerializer(serializers.ModelSerializer):
     def get_scores(self, obj):
         if obj.session_id and obj.session.status == "completed":
             return obj.session.scores
+        return None
+
+    def get_feedback(self, obj):
+        if obj.session_id and obj.session.status == "completed":
+            return obj.session.feedback
+        return None
+
+    def get_insights(self, obj):
+        if obj.session_id and obj.session.status == "completed":
+            return obj.session.insights
         return None
 
     def validate_round(self, round_obj):
