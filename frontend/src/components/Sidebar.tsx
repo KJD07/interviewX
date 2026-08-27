@@ -211,10 +211,19 @@ export default function Sidebar({ enterprise = false, mobileOpen, onClose }: Sid
       </aside>
 
       {/* Mobile drawer */}
-      {mobileOpen && (
-        <div className="md:hidden fixed inset-0 z-50 flex">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]" onClick={onClose} />
-          <div className="relative w-[18rem] max-w-[85vw] h-[100dvh] max-h-[100dvh] overflow-hidden" style={{ background: 'var(--page)' }}>
+      <div
+        className={`md:hidden fixed inset-0 z-50 flex transition-opacity duration-300 ease-out ${
+          mobileOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+        }`}
+        aria-hidden={!mobileOpen}
+      >
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]" onClick={onClose} />
+        <div
+          className={`relative w-[18rem] max-w-[85vw] h-[100dvh] max-h-[100dvh] overflow-hidden shadow-[8px_0_28px_rgba(28,26,22,0.12)] transition-transform duration-300 ease-out ${
+            mobileOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+          style={{ background: 'var(--page)' }}
+        >
             <div className="flex flex-col h-full px-5 py-6 border-r" style={{ borderColor: 'var(--border)' }}>
               <div className="mb-6 shrink-0">
                 <Link href="/" className="font-display flex items-center gap-2.5 text-[18px] font-semibold tracking-tight px-1.5 mb-4 shrink-0" style={{ color: 'var(--ink)' }}>
@@ -286,7 +295,6 @@ export default function Sidebar({ enterprise = false, mobileOpen, onClose }: Sid
             </div>
           </div>
         </div>
-      )}
     </>
   );
 }
