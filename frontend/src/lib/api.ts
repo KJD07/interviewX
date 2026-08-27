@@ -181,6 +181,9 @@ export interface InterviewSession {
   // True only for sessions started via an org candidate invite
   // (apps.enterprise.OrgCandidateInvite) — gates webcam-based proctoring.
   is_proctored?: boolean;
+  // Superuser-only opt-in (Organization.live_camera_enabled) — gates
+  // WebRTC-publishing this candidate's camera for org members to watch live.
+  live_camera_enabled?: boolean;
 }
 
 export type ProctoringEventType =
@@ -759,6 +762,9 @@ export interface Organization {
   candidates_used: number;
   contract_ends: string;
   is_active: boolean;
+  // Superuser-only opt-in (set via Django admin) — lets this org's members
+  // watch a candidate's live camera feed while their interview is live.
+  live_camera_enabled: boolean;
 }
 
 export interface OrgDashboard {
@@ -786,6 +792,10 @@ export interface OrgCandidateInvite {
   role_title: string;
   token: string;
   status: "pending" | "started" | "completed" | "expired";
+  // Pending/Live/Finished/Expired — derived from the linked session's own
+  // status rather than `status` above (see OrgCandidateInviteSerializer).
+  candidate_status: "pending" | "live" | "finished" | "expired";
+  scores: Record<string, number> | null;
   session: number | null;
   created_at: string;
   expires_at: string;

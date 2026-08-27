@@ -52,6 +52,11 @@ export function useProctoring(session: InterviewSession | null) {
   // Seconds left to reconnect the camera after a mid-interview disconnect,
   // or null when no disconnect grace period is active.
   const [disconnectSecondsLeft, setDisconnectSecondsLeft] = useState<number | null>(null);
+  // Mirrors streamRef reactively so callers (useLiveCameraPublisher) can
+  // react to the camera becoming available/unavailable without polling a
+  // ref. Reuses this same getUserMedia stream rather than requesting a
+  // second one, so enabling live viewing never doubles camera/CPU usage.
+  const [liveStream, setLiveStream] = useState<MediaStream | null>(null);
 
   const streamRef = useRef<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -155,6 +160,7 @@ export function useProctoring(session: InterviewSession | null) {
 
     const attachStream = (stream: MediaStream) => {
       streamRef.current = stream;
+      if (!cancelled) setLiveStream(stream);
       stream.getVideoTracks().forEach((track) => {
         track.onended = handleDisconnect;
       });
@@ -170,6 +176,7 @@ export function useProctoring(session: InterviewSession | null) {
       if (cancelled || disconnectActiveRef.current) return;
       disconnectActiveRef.current = true;
       streamRef.current = null;
+      setLiveStream(null);
 
       // No live stream left to pull a clip from — logged without one.
       report("other", { note: "camera_disconnected" });
@@ -225,6 +232,7 @@ export function useProctoring(session: InterviewSession | null) {
       clearDisconnectTimers();
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
+      setLiveStream(null);
       videoRef.current = null;
     };
   }, [enabled, consentGiven, report, blockInterview]);
@@ -419,5 +427,9 @@ export function useProctoring(session: InterviewSession | null) {
     // period is counting down; the caller can surface this as a countdown
     // banner distinct from the (self-dismissing) violation `warning` above.
     disconnectSecondsLeft,
+    // The live getUserMedia stream, or null while unavailable/not yet
+    // granted. Consumed by useLiveCameraPublisher — never request a second
+    // camera stream just to publish it live.
+    liveStream,
   };
 }

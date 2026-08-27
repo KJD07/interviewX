@@ -793,6 +793,19 @@ def _score_and_complete_session(session: InterviewSession, *, time_expired: bool
     session.save(
         update_fields=["scores", "feedback", "insights", "status", "ended_at", "time_expired"]
     )
+
+    # Local import to avoid a module-level circular import (apps.enterprise
+    # imports several names from this module). A session started via an org
+    # invite (apps.enterprise.OrgCandidateInvite) never otherwise transitions
+    # its invite past "started" — OrgInviteStartView sets that, but nothing
+    # else advances it to "completed" once the interview actually finishes,
+    # so the org dashboard's Pending/Live/Finished view needs this here.
+    from apps.enterprise.models import OrgCandidateInvite
+
+    OrgCandidateInvite.objects.filter(session=session).exclude(
+        status=OrgCandidateInvite.Status.COMPLETED
+    ).update(status=OrgCandidateInvite.Status.COMPLETED)
+
     return session
 
 

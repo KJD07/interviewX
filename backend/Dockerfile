@@ -16,4 +16,7 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "4", "--threads", "8", "--worker-class", "gthread", "--timeout", "60"]
+# daphne (ASGI), not gunicorn (WSGI) — see docker-compose.yml's backend
+# command for why (apps.enterprise's live-camera WebSocket signaling needs
+# to share this same port/process).
+CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "config.asgi:application"]

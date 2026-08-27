@@ -134,7 +134,7 @@ class OrgCandidateInviteListCreateView(APIView):
         if membership is None:
             return Response({"detail": "Not a member of any organization."}, status=status.HTTP_404_NOT_FOUND)
         invites = OrgCandidateInvite.objects.filter(organization=membership.organization).select_related(
-            "round__role"
+            "round__role", "session"
         )
         return Response(OrgCandidateInviteSerializer(invites, many=True).data)
 

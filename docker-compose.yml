@@ -22,7 +22,14 @@ services:
       context: ./backend
     container_name: aiis_backend
     restart: unless-stopped
-    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4 --threads 8 --worker-class gthread --timeout 60
+    # daphne (ASGI) rather than gunicorn (WSGI) — needed so the WebSocket
+    # signaling for apps.enterprise's live-camera viewer can share the same
+    # port as normal HTTP/DRF traffic (see config/asgi.py). Single process:
+    # the in-memory channel layer (see CHANNEL_LAYERS) only relays messages
+    # within one process, and this is a low-throughput signaling channel,
+    # not a bottleneck for the pilot scale this targets — revisit with
+    # channels_redis + multiple daphne processes if that changes.
+    command: daphne -b 0.0.0.0 -p 8000 config.asgi:application
     volumes:
       - ./backend:/app
     ports:

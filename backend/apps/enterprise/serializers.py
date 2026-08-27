@@ -10,7 +10,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
         model = Organization
         fields = [
             "id", "name", "candidate_quota", "candidates_used",
-            "contract_ends", "is_active",
+            "contract_ends", "is_active", "live_camera_enabled",
         ]
         read_only_fields = fields
 
@@ -40,14 +40,40 @@ class OrgRoleSerializer(serializers.ModelSerializer):
 class OrgCandidateInviteSerializer(serializers.ModelSerializer):
     round_title = serializers.CharField(source="round.title", read_only=True)
     role_title = serializers.CharField(source="round.role.title", read_only=True)
+    # Pending/Live/Finished/Expired for the dashboard — derived rather than
+    # trusting invite.status alone, since invite.status only ever transitions
+    # pending -> started (see OrgInviteStartView) and started -> completed is
+    # driven by the linked InterviewSession's own status instead (see
+    # apps.interviews.views._score_and_complete_session).
+    candidate_status = serializers.SerializerMethodField()
+    # Only populated once the linked session has actually been scored.
+    scores = serializers.SerializerMethodField()
 
     class Meta:
         model = OrgCandidateInvite
         fields = [
             "id", "candidate_email", "round", "round_title", "role_title",
-            "token", "status", "session", "created_at", "expires_at",
+            "token", "status", "candidate_status", "scores", "session",
+            "created_at", "expires_at",
         ]
-        read_only_fields = ["id", "token", "status", "session", "created_at", "round_title", "role_title"]
+        read_only_fields = [
+            "id", "token", "status", "candidate_status", "scores", "session",
+            "created_at", "round_title", "role_title",
+        ]
+
+    def get_candidate_status(self, obj):
+        if obj.status == OrgCandidateInvite.Status.PENDING:
+            return "pending"
+        if obj.status == OrgCandidateInvite.Status.EXPIRED:
+            return "expired"
+        if obj.session_id and obj.session.status == "in_progress":
+            return "live"
+        return "finished"
+
+    def get_scores(self, obj):
+        if obj.session_id and obj.session.status == "completed":
+            return obj.session.scores
+        return None
 
     def validate_round(self, round_obj):
         organization = self.context["organization"]
