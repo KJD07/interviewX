@@ -34,6 +34,12 @@ ALLOWED_HOSTS = os.environ.get(
 ).split(",")
 
 INSTALLED_APPS = [
+    # Must precede django.contrib.staticfiles so `runserver` picks up the
+    # ASGI dev server; daphne is also what actually serves the app in
+    # docker-compose (see backend service command) so websocket routing
+    # (apps.enterprise's live-camera signaling) works alongside normal
+    # HTTP/DRF views on the same port.
+    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -51,6 +57,7 @@ INSTALLED_APPS = [
     "apps.subscriptions",
     "apps.reviews",
     "apps.enterprise",
+    "channels",
 ]
 
 MIDDLEWARE = [
@@ -85,6 +92,19 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
+
+# In-process relay only (no Redis) — fine for the single-daphne-process
+# deploy this app runs (see docker-compose.yml), since it only needs to
+# route two peers' WebRTC signaling messages within one process. Traffic is
+# tiny (a handful of small JSON messages per live-view session, never the
+# video itself), so this is not a scaling bottleneck for the pilot scale
+# apps.enterprise.Organization targets. Move to channels_redis (+ a redis
+# service) if this backend is ever run as more than one process.
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    }
+}
 
 DATABASES = {
     "default": {

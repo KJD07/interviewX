@@ -10,10 +10,23 @@ class OrganizationMemberInline(admin.TabularInline):
 
 @admin.register(Organization)
 class OrganizationAdmin(admin.ModelAdmin):
-    list_display = ("name", "contact_email", "candidates_used", "candidate_quota", "contract_ends", "is_active")
-    list_filter = ("is_active",)
+    list_display = (
+        "name", "contact_email", "candidates_used", "candidate_quota",
+        "contract_ends", "is_active", "live_camera_enabled",
+    )
+    list_filter = ("is_active", "live_camera_enabled")
     search_fields = ("name", "contact_email")
     inlines = [OrganizationMemberInline]
+
+    def get_readonly_fields(self, request, obj=None):
+        # live_camera_enabled is deliberately not exposed to org admins/
+        # recruiters anywhere in the app — only a Django superuser can flip
+        # it, and only through this admin. A staff (non-superuser) user still
+        # sees the field (it's informative) but can't edit it.
+        readonly = list(super().get_readonly_fields(request, obj))
+        if not request.user.is_superuser:
+            readonly.append("live_camera_enabled")
+        return readonly
 
 
 @admin.register(OrganizationMember)

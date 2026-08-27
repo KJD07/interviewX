@@ -9,6 +9,7 @@ import type { InterviewSession, WorkspacePayload } from "@/lib/api";
 import CodeWorkspace from "@/components/interview/CodeWorkspace";
 import SystemDesignWorkspace from "@/components/interview/SystemDesignWorkspace";
 import { useProctoring } from "@/hooks/useProctoring";
+import { useLiveCameraPublisher } from "@/hooks/useLiveCameraPublisher";
 import icon from "@/app/icon.png";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -345,7 +346,12 @@ export default function InterviewPage() {
     blocked: proctoringBlocked,
     blockedReason: proctoringBlockedReason,
     disconnectSecondsLeft: proctoringDisconnectSecondsLeft,
+    liveStream: proctoringLiveStream,
   } = useProctoring(session);
+  // No-op unless this org has superuser-opt-in live viewing turned on
+  // (session.live_camera_enabled) — reuses the same camera stream above
+  // rather than requesting a second one.
+  useLiveCameraPublisher(session, proctoringLiveStream);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [aiTyping, setAiTyping] = useState(false);

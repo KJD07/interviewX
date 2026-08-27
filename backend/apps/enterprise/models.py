@@ -28,6 +28,17 @@ class Organization(models.Model):
         help_text="Org access is disabled once this passes, unless extended."
     )
     is_active = models.BooleanField(default=True)
+    # Opt-in, superuser-only feature: lets this org's members watch a
+    # candidate's live camera feed (WebRTC) while their proctored interview
+    # is in progress, on top of the existing flagged-moment clip capture
+    # (see ProctoringEvent). Off by default for every org — deliberately not
+    # exposed anywhere in the org-facing API/dashboard as something an org
+    # admin/recruiter can toggle themselves; only a Django superuser can flip
+    # it, from the admin (see OrganizationAdmin.get_readonly_fields).
+    live_camera_enabled = models.BooleanField(
+        default=False,
+        help_text="Superuser-only. Lets this org's members watch a candidate's live camera feed during their interview.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

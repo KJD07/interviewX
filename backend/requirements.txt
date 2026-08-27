@@ -13,3 +13,8 @@ whitenoise==6.7.0
 openpyxl==3.1.5
 django-storages==1.14.4
 boto3==1.35.36
+# WebRTC signaling for apps.enterprise's superuser-opt-in live camera
+# viewer (see Organization.live_camera_enabled) — relays SDP/ICE messages
+# only, actual video never touches the backend.
+channels==4.1.0
+daphne==4.1.2

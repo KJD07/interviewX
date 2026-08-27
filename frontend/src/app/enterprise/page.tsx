@@ -4,6 +4,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import AppShell from "@/components/AppShell";
 import PaginationControls from "@/components/PaginationControls";
 import { useSearchAndPaginate } from "@/hooks/useSearchAndPaginate";
+import Link from "next/link";
 import { organizations, ApiError } from "@/lib/api";
 import type { OrgDashboard, OrgCandidateInvite, OrgRound, OrgRole } from "@/lib/api";
 import { useCurrency, formatPrice } from "@/lib/currency";
@@ -14,20 +15,25 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
-const STATUS_STYLE: Record<OrgCandidateInvite["status"], { label: string; bg: string; color: string }> = {
+const STATUS_STYLE: Record<OrgCandidateInvite["candidate_status"], { label: string; bg: string; color: string }> = {
   pending: { label: "Pending", bg: "var(--surface-2)", color: "var(--ink-dim)" },
-  started: { label: "In progress", bg: "var(--accent-glow)", color: "var(--accent)" },
-  completed: { label: "Completed", bg: "var(--success-bg)", color: "var(--success)" },
+  live: { label: "Live", bg: "var(--accent-glow)", color: "var(--accent)" },
+  finished: { label: "Finished", bg: "var(--success-bg)", color: "var(--success)" },
   expired: { label: "Expired", bg: "#F7EAE7", color: "var(--danger)" },
 };
 
-function StatusBadge({ status }: { status: OrgCandidateInvite["status"] }) {
+function StatusBadge({ status }: { status: OrgCandidateInvite["candidate_status"] }) {
   const s = STATUS_STYLE[status];
   return (
     <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: s.bg, color: s.color }}>
       {s.label}
     </span>
   );
+}
+
+function formatScores(scores: Record<string, number> | null) {
+  if (!scores || scores.overall === undefined) return null;
+  return `${scores.overall}/10`;
 }
 
 function Card({ title, subtitle, action, children }: {
@@ -269,11 +275,14 @@ function InviteForm({ dashboard, onInvited }: { dashboard: OrgDashboard; onInvit
   );
 }
 
-function InvitesTable({ invites }: { invites: OrgCandidateInvite[] }) {
+function InvitesTable({ invites, liveCameraEnabled }: { invites: OrgCandidateInvite[]; liveCameraEnabled: boolean }) {
   const search = useSearchAndPaginate(
     invites,
-    (inv) => `${inv.candidate_email} ${inv.role_title} ${inv.round_title} ${inv.status}`
+    (inv) => `${inv.candidate_email} ${inv.role_title} ${inv.round_title} ${inv.candidate_status}`
   );
+  const columns = liveCameraEnabled
+    ? "1.3fr 1.3fr 90px 70px 110px 90px"
+    : "1.4fr 1.4fr 100px 80px 90px";
 
   return (
     <Card title="Candidates" subtitle={`${invites.length} invite(s) sent`}>
@@ -297,7 +306,7 @@ function InvitesTable({ invites }: { invites: OrgCandidateInvite[] }) {
               <div
                 className="grid text-xs font-medium uppercase tracking-wider px-4 py-2.5"
                 style={{
-                  gridTemplateColumns: "1.4fr 1.4fr 100px 90px",
+                  gridTemplateColumns: columns,
                   background: "var(--surface-2)",
                   color: "var(--ink-dim)",
                   borderBottom: "1px solid var(--border)",
@@ -306,6 +315,8 @@ function InvitesTable({ invites }: { invites: OrgCandidateInvite[] }) {
                 <span>Candidate</span>
                 <span>Role / round</span>
                 <span>Status</span>
+                <span>Score</span>
+                {liveCameraEnabled && <span>Live view</span>}
                 <span className="text-right">Expires</span>
               </div>
               {search.results.map((inv, i) => (
@@ -313,7 +324,7 @@ function InvitesTable({ invites }: { invites: OrgCandidateInvite[] }) {
                   key={inv.id}
                   className="grid items-center px-4 py-3"
                   style={{
-                    gridTemplateColumns: "1.4fr 1.4fr 100px 90px",
+                    gridTemplateColumns: columns,
                     borderBottom: i < search.results.length - 1 ? "1px solid var(--border)" : "none",
                     background: i % 2 === 0 ? "transparent" : "var(--surface-2)",
                   }}
@@ -322,7 +333,25 @@ function InvitesTable({ invites }: { invites: OrgCandidateInvite[] }) {
                   <span className="text-sm truncate" style={{ color: "var(--ink-dim)" }}>
                     {inv.role_title} — {inv.round_title}
                   </span>
-                  <StatusBadge status={inv.status} />
+                  <StatusBadge status={inv.candidate_status} />
+                  <span className="text-sm tabular-nums" style={{ color: "var(--ink-dim)" }}>
+                    {formatScores(inv.scores) ?? "—"}
+                  </span>
+                  {liveCameraEnabled && (
+                    <span>
+                      {inv.candidate_status === "live" && inv.session ? (
+                        <Link
+                          href={`/enterprise/live/${inv.session}`}
+                          className="text-xs font-semibold px-2.5 py-1 rounded-full"
+                          style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
+                        >
+                          Watch live
+                        </Link>
+                      ) : (
+                        <span className="text-xs" style={{ color: "var(--ink-faint)" }}>—</span>
+                      )}
+                    </span>
+                  )}
                   <span className="text-xs text-right" style={{ color: "var(--ink-faint)" }}>{formatDate(inv.expires_at)}</span>
                 </div>
               ))}
@@ -510,13 +539,13 @@ export default function EnterprisePage() {
                 <StatCard label="Roles in bank" value={dashboard.question_bank.length} />
                 <StatCard label="Questions" value={totalQuestions} />
                 <StatCard label="Pending" value={counts.pending ?? 0} />
-                <StatCard label="In progress" value={counts.started ?? 0} tone="var(--accent)" />
-                <StatCard label="Completed" value={counts.completed ?? 0} tone="var(--success)" />
+                <StatCard label="Live" value={counts.started ?? 0} tone="var(--accent)" />
+                <StatCard label="Finished" value={counts.completed ?? 0} tone="var(--success)" />
               </div>
 
               <div className="space-y-6">
                 <InviteForm dashboard={dashboard} onInvited={load} />
-                <InvitesTable invites={invites} />
+                <InvitesTable invites={invites} liveCameraEnabled={dashboard.organization.live_camera_enabled} />
                 <QuestionBankCard dashboard={dashboard} />
                 <UploadCard onUploaded={load} />
               </div>

@@ -19,6 +19,11 @@ class InterviewSessionSerializer(serializers.ModelSerializer):
     # whether to activate webcam-based proctoring at all. Consumer sessions
     # always resolve False here.
     is_proctored = serializers.SerializerMethodField()
+    # Superuser-opt-in-only (apps.enterprise.Organization.live_camera_enabled)
+    # — tells the frontend whether to WebRTC-publish this candidate's camera
+    # stream for org members to watch live. False for every consumer session
+    # and for proctored sessions whose org hasn't had the flag turned on.
+    live_camera_enabled = serializers.SerializerMethodField()
 
     class Meta:
         model = InterviewSession
@@ -38,11 +43,16 @@ class InterviewSessionSerializer(serializers.ModelSerializer):
             "ended_at",
             "time_expired",
             "is_proctored",
+            "live_camera_enabled",
         ]
         read_only_fields = ["id", "user", "started_at", "duration_minutes", "time_expired"]
 
     def get_is_proctored(self, obj):
         return obj.org_invite.exists()
+
+    def get_live_camera_enabled(self, obj):
+        invite = obj.org_invite.select_related("organization").first()
+        return bool(invite and invite.organization.live_camera_enabled)
 
     def create(self, validated_data):
         validated_data["user"] = self.context["request"].user
