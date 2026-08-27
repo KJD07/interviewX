@@ -30,6 +30,10 @@ export default function LiveCameraViewPage() {
   const sessionId = Number(params.sessionId);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [state, setState] = useState<ViewState>("connecting");
+  // Some mobile browsers still refuse programmatic play() even on a muted
+  // video (no direct user gesture on this call) — surfaced as a black
+  // frame with `state` already "live". Falls back to a manual tap.
+  const [needsTap, setNeedsTap] = useState(false);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -39,6 +43,7 @@ export default function LiveCameraViewPage() {
 
     const connect = () => {
       setState("connecting");
+      setNeedsTap(false);
       ws = new WebSocket(wsUrl(sessionId));
 
       ws.onopen = () => {
@@ -84,7 +89,11 @@ export default function LiveCameraViewPage() {
           pc?.close();
           pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
           pc.ontrack = (e) => {
-            if (videoRef.current) videoRef.current.srcObject = e.streams[0];
+            const video = videoRef.current;
+            if (video) {
+              video.srcObject = e.streams[0];
+              video.play().catch(() => setNeedsTap(true));
+            }
             setState("live");
           };
           pc.onicecandidate = (e) => {
@@ -124,7 +133,23 @@ export default function LiveCameraViewPage() {
               style={{ border: "1px solid var(--border)", background: "var(--surface)" }}
             >
               <div className="relative aspect-video" style={{ background: "#111" }}>
-                <video ref={videoRef} autoPlay playsInline muted={false} className="w-full h-full object-contain" />
+                {/* No audio track is ever published (the candidate's camera
+                    capture is video-only), so muting costs nothing and is
+                    required for autoplay to reliably start on mobile
+                    browsers — an unmuted <video> is the classic cause of a
+                    "connected but black" live view. */}
+                <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-contain" />
+                {state === "live" && needsTap && (
+                  <button
+                    onClick={() => {
+                      videoRef.current?.play().then(() => setNeedsTap(false)).catch(() => {});
+                    }}
+                    className="absolute inset-0 flex items-center justify-center text-sm font-semibold text-white"
+                    style={{ background: "rgba(0,0,0,0.5)" }}
+                  >
+                    Tap to play
+                  </button>
+                )}
                 {state !== "live" && (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <p className="text-sm text-white/80">{STATE_COPY[state]}</p>
