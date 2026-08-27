@@ -26,7 +26,7 @@ const STATUS_STYLE: Record<OrgCandidateInvite["candidate_status"], { label: stri
 function StatusBadge({ status }: { status: OrgCandidateInvite["candidate_status"] }) {
   const s = STATUS_STYLE[status];
   return (
-    <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: s.bg, color: s.color }}>
+    <span className="inline-flex w-fit justify-self-start items-center justify-center whitespace-nowrap text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: s.bg, color: s.color }}>
       {s.label}
     </span>
   );

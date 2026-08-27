@@ -126,7 +126,7 @@ export default function Sidebar({ enterprise = false, mobileOpen, onClose }: Sid
       >
         <div className="flex flex-col min-h-0 flex-1">
         <Link
-          href="/dashboard"
+          href="/"
           className="font-display flex items-center gap-2.5 text-[19px] font-semibold tracking-tight px-1.5 mb-9 shrink-0"
           style={{ color: "var(--ink)" }}
         >
@@ -217,7 +217,7 @@ export default function Sidebar({ enterprise = false, mobileOpen, onClose }: Sid
           <div className="relative w-[18rem] max-w-[85vw] h-[100dvh] max-h-[100dvh] overflow-hidden" style={{ background: 'var(--page)' }}>
             <div className="flex flex-col h-full px-5 py-6 border-r" style={{ borderColor: 'var(--border)' }}>
               <div className="mb-6 shrink-0">
-                <Link href="/dashboard" className="font-display flex items-center gap-2.5 text-[18px] font-semibold tracking-tight px-1.5 mb-4 shrink-0" style={{ color: 'var(--ink)' }}>
+                <Link href="/" className="font-display flex items-center gap-2.5 text-[18px] font-semibold tracking-tight px-1.5 mb-4 shrink-0" style={{ color: 'var(--ink)' }}>
                   <Image src={icon} alt="EvaluLabs" width={24} height={24} className="rounded-md" priority />
                   EvaluLabs
                 </Link>
