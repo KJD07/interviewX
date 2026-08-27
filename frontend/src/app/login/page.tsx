@@ -1,14 +1,20 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { Suspense, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { ApiError } from "@/lib/api";
 import GoogleSignInButton from "@/components/GoogleSignInButton";
 
-export default function LoginPage() {
+function getRedirectPath(next: string | null) {
+  return next?.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+}
+
+function LoginContent() {
   const { login, user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectPath = getRedirectPath(searchParams.get("next"));
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,8 +23,8 @@ export default function LoginPage() {
 
   // Already logged in → go to dashboard
   useEffect(() => {
-    if (user) router.replace("/dashboard");
-  }, [user, router]);
+    if (user) router.replace(redirectPath);
+  }, [user, router, redirectPath]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +32,7 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       await login(email, password);
-      router.push("/dashboard");
+      router.push(redirectPath);
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.code === "EMAIL_NOT_VERIFIED") {
@@ -62,6 +68,7 @@ export default function LoginPage() {
 
         <div className="mb-6">
           <GoogleSignInButton
+            redirectPath={redirectPath}
             onError={useCallback((msg: string) => setError(msg), [setError])}
             onStart={useCallback(() => setSubmitting(true), [setSubmitting])}
           />
@@ -168,5 +175,13 @@ export default function LoginPage() {
         </p>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginContent />
+    </Suspense>
   );
 }
