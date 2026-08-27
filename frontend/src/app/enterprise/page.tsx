@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AppShell from "@/components/AppShell";
 import PaginationControls from "@/components/PaginationControls";
@@ -559,9 +560,7 @@ function EnterprisePricingCard() {
   );
 }
 
-type EnterpriseView = "overview" | "candidate" | "questions";
-
-export function EnterprisePageContent({ view = "overview" }: { view?: EnterpriseView }) {
+function EnterprisePageContent({ view = "overview" }: { view?: "overview" | "candidate" | "questions" }) {
   const [dashboard, setDashboard] = useState<OrgDashboard | null>(null);
   const [invites, setInvites] = useState<OrgCandidateInvite[]>([]);
   const [loading, setLoading] = useState(true);
@@ -683,5 +682,11 @@ export function EnterprisePageContent({ view = "overview" }: { view?: Enterprise
 }
 
 export default function EnterprisePage() {
-  return <EnterprisePageContent />;
+  const pathname = usePathname();
+  const view = pathname.endsWith("/candidate")
+    ? "candidate"
+    : pathname.endsWith("/questions")
+      ? "questions"
+      : "overview";
+  return <EnterprisePageContent view={view} />;
 }
