@@ -796,6 +796,8 @@ export interface OrgCandidateInvite {
   // status rather than `status` above (see OrgCandidateInviteSerializer).
   candidate_status: "pending" | "live" | "finished" | "expired";
   scores: Record<string, number> | null;
+  feedback: string | null;
+  insights: InterviewInsights | null;
   session: number | null;
   created_at: string;
   expires_at: string;

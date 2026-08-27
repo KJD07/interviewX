@@ -275,11 +275,95 @@ function InviteForm({ dashboard, onInvited }: { dashboard: OrgDashboard; onInvit
   );
 }
 
+const SCORE_LABELS: Record<string, string> = {
+  overall: "Overall",
+  communication: "Communication",
+  technical: "Technical",
+  problem_solving: "Problem solving",
+};
+
+function CandidateDetail({ invite }: { invite: OrgCandidateInvite }) {
+  const scoreEntries = invite.scores
+    ? Object.entries(invite.scores).filter(([key]) => key in SCORE_LABELS)
+    : [];
+
+  return (
+    <div className="px-4 pb-5 pt-1">
+      <div className="rounded-xl p-4 space-y-4" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+        {scoreEntries.length > 0 ? (
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--ink-faint)" }}>
+              Score breakdown
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {scoreEntries.map(([key, value]) => (
+                <div key={key} className="rounded-lg px-3 py-2" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                  <p className="font-display text-lg font-bold tabular-nums" style={{ color: "var(--ink)" }}>{value}/10</p>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--ink-dim)" }}>{SCORE_LABELS[key]}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm" style={{ color: "var(--ink-faint)" }}>
+            No scores yet — this candidate hasn't finished their interview.
+          </p>
+        )}
+
+        {invite.feedback && (
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--ink-faint)" }}>
+              AI suggestion
+            </p>
+            <p className="text-sm whitespace-pre-line" style={{ color: "var(--ink)" }}>{invite.feedback}</p>
+          </div>
+        )}
+
+        {invite.insights?.improvement_areas && invite.insights.improvement_areas.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--ink-faint)" }}>
+              Improvement areas
+            </p>
+            <ul className="space-y-1.5">
+              {invite.insights.improvement_areas.map((item, i) => (
+                <li key={i} className="text-sm" style={{ color: "var(--ink-dim)" }}>
+                  <span className="font-medium" style={{ color: "var(--ink)" }}>{item.area}:</span> {item.suggestion}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {invite.insights?.topics && invite.insights.topics.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--ink-faint)" }}>
+              Topics covered
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {invite.insights.topics.map((topic, i) => (
+                <span
+                  key={i}
+                  className="text-xs px-2.5 py-1 rounded-full"
+                  style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--ink-dim)" }}
+                  title={topic.note}
+                >
+                  {topic.name} · {topic.score}/10
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function InvitesTable({ invites, liveCameraEnabled }: { invites: OrgCandidateInvite[]; liveCameraEnabled: boolean }) {
   const search = useSearchAndPaginate(
     invites,
     (inv) => `${inv.candidate_email} ${inv.role_title} ${inv.round_title} ${inv.candidate_status}`
   );
+  const [expandedId, setExpandedId] = useState<number | null>(null);
   const columns = liveCameraEnabled
     ? "1.3fr 1.3fr 90px 70px 110px 90px"
     : "1.4fr 1.4fr 100px 80px 90px";
@@ -319,42 +403,74 @@ function InvitesTable({ invites, liveCameraEnabled }: { invites: OrgCandidateInv
                 {liveCameraEnabled && <span>Live view</span>}
                 <span className="text-right">Expires</span>
               </div>
-              {search.results.map((inv, i) => (
-                <div
-                  key={inv.id}
-                  className="grid items-center px-4 py-3"
-                  style={{
-                    gridTemplateColumns: columns,
-                    borderBottom: i < search.results.length - 1 ? "1px solid var(--border)" : "none",
-                    background: i % 2 === 0 ? "transparent" : "var(--surface-2)",
-                  }}
-                >
-                  <span className="text-sm truncate" style={{ color: "var(--ink)" }}>{inv.candidate_email}</span>
-                  <span className="text-sm truncate" style={{ color: "var(--ink-dim)" }}>
-                    {inv.role_title} — {inv.round_title}
-                  </span>
-                  <StatusBadge status={inv.candidate_status} />
-                  <span className="text-sm tabular-nums" style={{ color: "var(--ink-dim)" }}>
-                    {formatScores(inv.scores) ?? "—"}
-                  </span>
-                  {liveCameraEnabled && (
-                    <span>
-                      {inv.candidate_status === "live" && inv.session ? (
-                        <Link
-                          href={`/enterprise/live/${inv.session}`}
-                          className="text-xs font-semibold px-2.5 py-1 rounded-full"
-                          style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
+              {search.results.map((inv, i) => {
+                const isOpen = expandedId === inv.id;
+                return (
+                  <div
+                    key={inv.id}
+                    style={{
+                      borderBottom: i < search.results.length - 1 ? "1px solid var(--border)" : "none",
+                      background: i % 2 === 0 ? "transparent" : "var(--surface-2)",
+                    }}
+                  >
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setExpandedId(isOpen ? null : inv.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setExpandedId(isOpen ? null : inv.id);
+                        }
+                      }}
+                      className="w-full grid items-center px-4 py-3 text-left cursor-pointer"
+                      style={{ gridTemplateColumns: columns }}
+                    >
+                      <span className="text-sm truncate flex items-center gap-1.5" style={{ color: "var(--ink)" }}>
+                        <span
+                          className="text-xs transition-transform duration-200"
+                          style={{ color: "var(--ink-faint)", transform: isOpen ? "rotate(90deg)" : "none" }}
                         >
-                          Watch live
-                        </Link>
-                      ) : (
-                        <span className="text-xs" style={{ color: "var(--ink-faint)" }}>—</span>
+                          ▸
+                        </span>
+                        {inv.candidate_email}
+                      </span>
+                      <span className="text-sm truncate" style={{ color: "var(--ink-dim)" }}>
+                        {inv.role_title} — {inv.round_title}
+                      </span>
+                      <StatusBadge status={inv.candidate_status} />
+                      <span className="text-sm tabular-nums" style={{ color: "var(--ink-dim)" }}>
+                        {formatScores(inv.scores) ?? "—"}
+                      </span>
+                      {liveCameraEnabled && (
+                        <span>
+                          {inv.candidate_status === "live" && inv.session ? (
+                            <Link
+                              href={`/enterprise/live/${inv.session}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-xs font-semibold px-2.5 py-1 rounded-full"
+                              style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
+                            >
+                              Watch live
+                            </Link>
+                          ) : (
+                            <span className="text-xs" style={{ color: "var(--ink-faint)" }}>—</span>
+                          )}
+                        </span>
                       )}
-                    </span>
-                  )}
-                  <span className="text-xs text-right" style={{ color: "var(--ink-faint)" }}>{formatDate(inv.expires_at)}</span>
-                </div>
-              ))}
+                      <span className="text-xs text-right" style={{ color: "var(--ink-faint)" }}>{formatDate(inv.expires_at)}</span>
+                    </div>
+                    <div
+                      className="grid transition-all duration-300 ease-in-out"
+                      style={{ gridTemplateRows: isOpen ? "1fr" : "0fr", opacity: isOpen ? 1 : 0 }}
+                    >
+                      <div className="overflow-hidden">
+                        <CandidateDetail invite={inv} />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
 
