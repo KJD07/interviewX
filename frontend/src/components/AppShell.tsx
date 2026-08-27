@@ -44,7 +44,7 @@ export default function AppShell({ children, enterprise = false }: { children: R
               <path d="M3 6h14M3 10h14M3 14h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
-          <a href="/dashboard" className="font-display text-[18px] font-semibold" style={{ color: 'var(--ink)' }}>
+          <a href="/" className="font-display text-[18px] font-semibold" style={{ color: 'var(--ink)' }}>
             EvaluLabs
           </a>
           <div style={{ width: 36 }} />
