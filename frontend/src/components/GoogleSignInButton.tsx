@@ -18,12 +18,13 @@ declare global {
 }
 
 interface Props {
+  redirectPath?: string;
   onError?: (message: string) => void;
   onStart?: () => void;
   adminOnly?: boolean;
 }
 
-export default function GoogleSignInButton({ onError, onStart, adminOnly = false }: Props) {
+export default function GoogleSignInButton({ redirectPath = "/dashboard", onError, onStart, adminOnly = false }: Props) {
   const { loginWithGoogle, loginWithGoogleAdmin } = useAuth();
   const buttonRef = useRef<HTMLDivElement>(null);
   const [scriptLoaded, setScriptLoaded] = useState(false);
@@ -51,7 +52,7 @@ export default function GoogleSignInButton({ onError, onStart, adminOnly = false
           await signIn(response.credential);
           // Full reload keeps this simple and matches the rest of the app's
           // "redirect after auth" pattern used on the login/register pages.
-          window.location.href = "/dashboard";
+          window.location.href = redirectPath;
         } catch (err) {
           onError?.(
             err instanceof ApiError ? err.detail : "Google sign-in failed. Please try again."
@@ -67,7 +68,7 @@ export default function GoogleSignInButton({ onError, onStart, adminOnly = false
       shape: "rectangular",
       text: "continue_with",
     });
-  }, [scriptLoaded, loginWithGoogle, loginWithGoogleAdmin, adminOnly, onError, onStart]);
+  }, [scriptLoaded, loginWithGoogle, loginWithGoogleAdmin, adminOnly, redirectPath, onError, onStart]);
 
   if (!GOOGLE_CLIENT_ID) return null;
 
