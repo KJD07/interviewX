@@ -61,18 +61,20 @@ const FAQS = [
 function FaqItem({ id, question, answer }: { id: string; question: string; answer: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="border-b border-[var(--border)] py-5">
+    <div className="border-b border-[var(--border-mid)]">
       <button
         type="button"
         aria-expanded={open}
         aria-controls={id}
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full cursor-pointer items-center justify-between gap-6 text-left"
+        className="group flex w-full cursor-pointer items-center justify-between gap-5 px-0.5 py-[19px] text-left"
       >
-        <h3 className="text-base font-semibold text-[var(--ink)] sm:text-lg">{question}</h3>
+        <h3 className="text-base font-semibold text-[var(--ink)] transition-colors group-hover:text-[var(--olive)]">
+          {question}
+        </h3>
         <span
           aria-hidden="true"
-          className={`shrink-0 text-xl text-[var(--ink-faint)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          className={`shrink-0 font-mono text-base text-[var(--ink-faint)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
             open ? "rotate-45" : ""
           }`}
         >
@@ -89,7 +91,7 @@ function FaqItem({ id, question, answer }: { id: string; question: string; answe
       >
         <div className="overflow-hidden">
           <p
-            className={`mt-3 max-w-2xl text-sm leading-relaxed text-[var(--ink-dim)] transition-opacity duration-300 ease-out sm:text-[15px] ${
+            className={`mb-[22px] max-w-[560px] text-[15px] leading-relaxed text-[var(--ink-dim)] transition-opacity duration-300 ease-out ${
               open ? "opacity-100" : "opacity-0"
             }`}
           >
@@ -103,14 +105,20 @@ function FaqItem({ id, question, answer }: { id: string; question: string; answe
 
 export default function FaqSection() {
   return (
-    <section id="faq" className="mx-auto max-w-3xl px-6 pb-28">
+    <section
+      id="faq"
+      className="mx-auto grid max-w-[1180px] grid-cols-1 gap-10 px-6 py-[88px] sm:px-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-[52px]"
+    >
       <StructuredData schema={faqSchema(FAQS)} />
 
-      <h2 className="font-display text-3xl font-semibold text-[var(--ink)] sm:text-4xl">
-        Frequently asked questions
-      </h2>
+      <div>
+        <div className="font-label mb-3.5">FAQ</div>
+        <h2 className="font-display text-[30px] font-bold leading-[1.04] tracking-[-0.032em] text-[var(--ink)] sm:text-[38px]">
+          Questions we get a lot.
+        </h2>
+      </div>
 
-      <div className="mt-10 border-t border-[var(--border)]">
+      <div>
         {FAQS.map((faq, i) => (
           <FaqItem key={faq.question} id={`faq-a-${i}`} question={faq.question} answer={faq.answer} />
         ))}

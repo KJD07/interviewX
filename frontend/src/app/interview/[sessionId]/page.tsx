@@ -1427,13 +1427,13 @@ export default function InterviewPage() {
               <span
                 className="block w-2 h-2 rounded-full"
                 style={{
-                  background: "#22c55e",
-                  boxShadow: "0 0 0 3px rgba(34,197,94,0.2)",
+                  background: "var(--success)",
+                  boxShadow: "0 0 0 3px rgba(63,143,94,0.2)",
                   animation: "pulse 2s ease-in-out infinite",
                 }}
               />
               <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }`}</style>
-              <span className="text-xs" style={{ color: "#22c55e" }}>
+              <span className="text-xs" style={{ color: "var(--success)" }}>
                 Live
               </span>
             </span>

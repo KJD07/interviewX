@@ -40,12 +40,12 @@ export default function RealInterviewReportsCard() {
 
   return (
     <div
-      className="card-hover rounded-3xl p-5 mb-8 shadow-[0_8px_32px_rgba(28,26,22,0.06)]"
-      style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+      className="card-hover h-full rounded-[16px] p-[22px]"
+      style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
     >
       <div className="flex items-start justify-between gap-4 mb-1">
         <div>
-          <h2 className="font-display text-base font-semibold" style={{ color: "var(--ink)" }}>
+          <h2 className="font-display text-xl font-semibold tracking-[-0.02em]" style={{ color: "var(--ink)" }}>
             Report a real interview
           </h2>
           <p className="text-sm mt-1" style={{ color: "var(--ink-dim)" }}>

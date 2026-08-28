@@ -16,7 +16,7 @@ export function GET() {
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          background: "#f6f5f1",
+          background: "#f2f0ea",
           padding: "72px",
           fontFamily: "sans-serif",
         }}
@@ -27,10 +27,10 @@ export function GET() {
               width: "44px",
               height: "44px",
               borderRadius: "10px",
-              background: "#14140f",
+              background: "#0c0c0b",
             }}
           />
-          <div style={{ fontSize: "34px", fontWeight: 700, color: "#14140f" }}>
+          <div style={{ fontSize: "34px", fontWeight: 700, color: "#0c0c0b" }}>
             EvaluLabs
           </div>
         </div>
@@ -41,7 +41,7 @@ export function GET() {
               fontSize: "70px",
               fontWeight: 700,
               lineHeight: 1.05,
-              color: "#14140f",
+              color: "#0c0c0b",
               letterSpacing: "-0.02em",
             }}
           >
@@ -52,7 +52,7 @@ export function GET() {
               fontSize: "70px",
               fontWeight: 700,
               lineHeight: 1.05,
-              color: "#14140f",
+              color: "#0c0c0b",
               letterSpacing: "-0.02em",
             }}
           >

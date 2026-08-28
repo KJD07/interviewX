@@ -35,8 +35,8 @@ function ArrowLeft() {
 
 const ROUND_COLORS: Record<string, { bg: string; color: string; label: string }> = {
   technical:    { bg: "rgba(99,102,241,0.12)",  color: "var(--accent)",   label: "Technical"    },
-  behavioral:   { bg: "rgba(34,197,94,0.10)",   color: "#22c55e",         label: "Behavioral"   },
-  system_design:{ bg: "rgba(245,158,11,0.12)",  color: "#f59e0b",         label: "System Design"},
+  behavioral:   { bg: "rgba(63,143,94,0.10)",   color: "var(--success)",         label: "Behavioral"   },
+  system_design:{ bg: "rgba(180,115,30,0.12)",  color: "var(--warn)",         label: "System Design"},
   hr:           { bg: "rgba(100,116,139,0.15)", color: "var(--ink-dim)",    label: "HR"           },
 };
 
@@ -96,23 +96,23 @@ function ListCard({
     <button
       onClick={onClick}
       disabled={disabled}
-      className="company-row w-full text-left rounded-2xl px-4 py-4 sm:px-6 sm:py-5 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 disabled:opacity-40"
+      className="company-row w-full text-left px-4 py-4 sm:px-[22px] flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 disabled:opacity-40 border-b last:border-b-0"
       style={{
         background: "var(--surface)",
-        border: "1px solid var(--border)",
+        borderColor: "var(--border)",
       }}
     >
       <div className="flex items-center gap-3 sm:gap-4 min-w-0 w-full sm:w-auto">
         {avatarLabel && (
           <span
-            className="company-avatar w-10 h-10 sm:w-11 sm:h-11 rounded-[10px] flex items-center justify-center text-[14px] sm:text-[15px] font-semibold tracking-tight shrink-0"
-            style={{ background: "var(--surface-2)", color: "var(--ink)" }}
+            className="company-avatar w-[38px] h-[38px] rounded-[11px] flex items-center justify-center font-mono text-[13px] font-bold shrink-0"
+            style={{ background: "var(--page)", border: "1px solid var(--border)", color: "var(--ink)" }}
           >
             {avatarLabel}
           </span>
         )}
         <div className="min-w-0 flex-1">
-          <p className="company-title text-base sm:text-[17.5px] font-semibold leading-snug break-words" style={{ color: "var(--ink)", letterSpacing: "-0.015em" }}>
+          <p className="company-title font-display text-[17px] sm:text-[19px] font-semibold leading-snug break-words tracking-[-0.02em]" style={{ color: "var(--ink)" }}>
             {title}
           </p>
           {subtitle && (
@@ -142,8 +142,8 @@ function formatTone(tone: string) {
 function TonePill({ tone }: { tone: string }) {
   return (
     <span
-      className="company-tonepill text-[11.5px] px-3 py-1 rounded-full font-medium"
-      style={{ background: "var(--surface-2)", color: "var(--ink)" }}
+      className="company-tonepill font-mono text-[10px] uppercase tracking-[0.08em] px-[11px] py-1.5 rounded-full"
+      style={{ background: "var(--page)", border: "1px solid var(--border)", color: "var(--ink-dim)" }}
     >
       {formatTone(tone)}
     </span>
@@ -364,7 +364,7 @@ export default function CompaniesPage() {
             <>
               <div className="mb-8">
                 <h1
-                  className="font-display text-[28px] sm:text-[44px] font-semibold leading-none"
+                  className="font-display text-[32px] sm:text-[44px] font-bold leading-none"
                   style={{ color: "var(--ink)", letterSpacing: "-0.035em" }}
                 >
                   Choose a company
@@ -380,24 +380,24 @@ export default function CompaniesPage() {
               {companyList.length > 0 && (
                 <div className="flex flex-col sm:flex-row items-stretch gap-2 mb-3.5">
                   <div
-                    className="flex-1 rounded-[18px] p-2 flex items-center gap-3"
-                    style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+                    className="flex-1 rounded-full px-5 flex items-center gap-3"
+                    style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
                   >
-                    <span className="pl-3" style={{ color: "var(--ink-faint)" }}>⌕</span>
+                    <span style={{ color: "var(--ink-faint)" }}>⌕</span>
                     <input
                       type="text"
                       value={companySearch.query}
                       onChange={(e) => companySearch.setQuery(e.target.value)}
                       placeholder={`Search ${companyList.length}+ companies…`}
-                      className="flex-1 bg-transparent outline-none text-[14.5px] py-2.5 min-w-0"
+                      className="flex-1 bg-transparent outline-none text-[15px] py-3.5 min-w-0"
                       style={{ color: "var(--ink)" }}
                     />
                   </div>
                   <div className="relative shrink-0">
                     <button
                       onClick={() => setSortMenuOpen((v) => !v)}
-                      className="w-full sm:w-auto px-4 py-2.5 rounded-full text-[13px] font-medium flex items-center justify-center gap-1.5"
-                      style={{ background: "transparent", border: "1px solid var(--border-mid)", color: "var(--ink)" }}
+                      className="w-full sm:w-auto px-5 py-3.5 rounded-full text-sm font-semibold flex items-center justify-center gap-2"
+                      style={{ background: "var(--surface)", border: "1px solid var(--border-mid)", color: "var(--ink)" }}
                     >
                       {sortDesc ? "Z-A" : "A-Z"}
                       <span style={{ color: "var(--ink-faint)" }}>▾</span>
@@ -443,7 +443,10 @@ export default function CompaniesPage() {
                 </p>
               ) : (
                 <>
-                  <div className="flex flex-col gap-[10px]">
+                  <div
+                    className="rounded-[16px] overflow-hidden"
+                    style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
+                  >
                     {companySearch.results.map((c) => (
                       <ListCard
                         key={c.id}
@@ -484,7 +487,10 @@ export default function CompaniesPage() {
                   No roles available for this company yet.
                 </p>
               ) : (
-                <div className="space-y-3">
+                <div
+                  className="rounded-[16px] overflow-hidden"
+                  style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
+                >
                   {view.company.roles.map((role) => (
                     <ListCard
                       key={role.id}

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,26 +6,32 @@
 
 :root {
   /* Neutral shell — same for every plan */
-  --page:        #F6F5F1;
+  --page:        #F2F0EA;
   --surface:     #FFFFFF;
-  --surface-2:   #EDEBE3;
-  --border:      rgba(20, 20, 15, 0.08);
-  --border-mid:  rgba(20, 20, 15, 0.15);
-  --ink:         #14140F;
-  --ink-dim:     #4A4A40;
-  --ink-faint:   #8A8A7E;
-  --danger:      #C0392B;
-  --success:     #3F6B4F;
-  --success-bg:  #EEF1E9;
+  --surface-2:   #EBE9E1;
+  --border:      rgba(12, 12, 11, 0.09);
+  --border-mid:  rgba(12, 12, 11, 0.16);
+  --ink:         #0C0C0B;
+  --ink-dim:     #54534B;
+  --ink-faint:   #8B8A81;
+  --danger:      #B3402A;
+  --success:     #3F8F5E;
+  --success-bg:  rgba(63, 143, 94, 0.12);
 
   /* Default accent (used pre-login / free) — overridden per-plan below */
-  --accent:      #14140F;
-  --accent-dim:  #3B3B33;
-  --accent-glow: rgba(20, 20, 15, 0.08);
-  --accent-ink:  #F6F5F1; /* text color to use ON TOP of var(--accent) */
-  --hero-bg:     #14140F;
-  --hero-text:   #F6F5F1;
-  --lime:        #E8FF3D;
+  --accent:      #0C0C0B;
+  --accent-dim:  #282720;
+  --accent-glow: rgba(12, 12, 11, 0.09);
+  --accent-ink:  #F2F0EA; /* text color to use ON TOP of var(--accent) */
+  --hero-bg:     #0C0C0B;
+  --hero-text:   #F2F0EA;
+  --lime:        #D8FA4B;
+  /* Olive — the ink-on-light companion to --lime (links, em, mono labels on
+     light surfaces, where lime itself has no contrast). */
+  --olive:       #6F7A1F;
+  --warn:        #B4731E;
+  /* Faintly warmer than --surface: table headers, row hover, inset fields. */
+  --surface-alt: #FBFAF7;
 
   /* Focus ring / cursor blink accent — previously referenced but never
      defined anywhere, which silently broke input focus rings app-wide. */
@@ -41,22 +47,25 @@
 [data-plan="pro"],
 [data-plan="premium"],
 [data-plan="max"] {
-  --page:        #F6F5F1;
+  --page:        #F2F0EA;
   --surface:     #FFFFFF;
-  --surface-2:   #EDEBE3;
-  --border:      rgba(20, 20, 15, 0.08);
-  --border-mid:  rgba(20, 20, 15, 0.15);
-  --ink:         #14140F;
-  --ink-dim:     #4A4A40;
-  --ink-faint:   #8A8A7E;
+  --surface-2:   #EBE9E1;
+  --border:      rgba(12, 12, 11, 0.09);
+  --border-mid:  rgba(12, 12, 11, 0.16);
+  --ink:         #0C0C0B;
+  --ink-dim:     #54534B;
+  --ink-faint:   #8B8A81;
 
-  --accent:      #14140F;
-  --accent-dim:  #3B3B33;
-  --accent-glow: rgba(20, 20, 15, 0.08);
-  --accent-ink:  #F6F5F1;
-  --hero-bg:     #14140F;
-  --hero-text:   #F6F5F1;
-  --lime:        #E8FF3D;
+  --accent:      #0C0C0B;
+  --accent-dim:  #282720;
+  --accent-glow: rgba(12, 12, 11, 0.09);
+  --accent-ink:  #F2F0EA;
+  --hero-bg:     #0C0C0B;
+  --hero-text:   #F2F0EA;
+  --lime:        #D8FA4B;
+  --olive:       #6F7A1F;
+  --warn:        #B4731E;
+  --surface-alt: #FBFAF7;
   --indigo:      var(--accent);
   --indigo-glow: var(--accent-glow);
 }
@@ -66,7 +75,7 @@
 }
 
 html {
-  font-family: 'Sora', system-ui, sans-serif;
+  font-family: 'Instrument Sans', system-ui, sans-serif;
   background-color: var(--page);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
@@ -83,16 +92,42 @@ body {
 }
 
 .font-display {
-  font-family: 'Sora', system-ui, sans-serif;
-  letter-spacing: -0.02em;
+  font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+  letter-spacing: -0.03em;
 }
 
 .font-accent {
-  font-family: 'Space Grotesk', serif;
+  font-family: 'Bricolage Grotesque', system-ui, sans-serif;
   font-style: italic;
   font-weight: 500;
-  color: var(--ink-dim);
+  color: var(--olive);
 }
+
+/* Small uppercase mono eyebrow — the design's recurring section label. */
+.font-label {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+::selection {
+  background: var(--lime);
+  color: var(--ink);
+}
+
+/* Decorative motion used by the dark CTA panels and live-status dots. */
+@keyframes elFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+@keyframes elPulse {
+  0%, 100% { opacity: 0.3; }
+  50%      { opacity: 1; }
+}
+.el-float { animation: elFloat 9s ease-in-out infinite; }
+.el-pulse { animation: elPulse 2.4s ease-in-out infinite; }
 
 /* Cursor blink — the signature animation */
 @keyframes blink {
@@ -149,18 +184,18 @@ a, button {
   .fade-up { animation: none; }
   .cursor-blink::after { animation: none; }
   .skeleton { animation: none; }
+  .el-float, .el-pulse { animation: none; }
   a, button { transition: none; }
 }
 
 /* Dashboard session rows — themed hover/zebra, no hardcoded dark-slate colors */
 .dash-row:hover {
-  background: var(--surface-2) !important;
+  background: var(--surface-alt) !important;
 }
 
-/* Company/role list rows — invert to a dark card with a lime accent on hover.
-   The row AND every child that recolors share one duration and curve, so the
-   card resolves as a single movement instead of the text and pills snapping
-   ahead of the background. */
+/* Company/role list rows — hairline rows in one card. Hover warms the row
+   and nudges the chevron; the row AND every child that recolors share one
+   duration and curve so it resolves as a single movement. */
 .company-row,
 .company-row .company-avatar,
 .company-row .company-title,
@@ -170,42 +205,18 @@ a, button {
   transition: background-color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
     border-color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
     color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1),
     transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .company-row:hover {
-  background: var(--ink) !important;
-  border-color: var(--ink) !important;
+  background: var(--surface-alt) !important;
 }
 .company-row:hover .company-avatar {
-  background: var(--lime) !important;
+  border-color: var(--border-mid) !important;
+}
+.company-row:not(:disabled):hover .company-chevron {
   color: var(--ink) !important;
-}
-.company-row:hover .company-title {
-  color: var(--page) !important;
-}
-.company-row:hover .company-subtitle {
-  color: #B8B8AE !important;
-}
-.company-row:hover .company-tonepill {
-  background: rgba(232, 255, 61, 0.15) !important;
-  color: var(--lime) !important;
-}
-.company-row:hover .company-chevron {
-  color: var(--lime) !important;
   transform: translateX(3px);
-}
-
-/* Lift is guarded on :not(:disabled) — a locked row still inverts but must
-   not look pressable. */
-.company-row:not(:disabled):hover {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 34px rgba(20, 20, 15, 0.14);
-}
-.company-row:not(:disabled):active {
-  transform: translateY(0);
-  box-shadow: 0 4px 12px rgba(20, 20, 15, 0.1);
 }
 
 /* Shared card hover — one lift/shadow curve for every card surface in the
@@ -219,7 +230,7 @@ a, button {
 }
 .card-hover:hover {
   transform: translateY(-3px);
-  box-shadow: 0 16px 38px rgba(20, 20, 15, 0.1);
+  box-shadow: 0 16px 38px rgba(12, 12, 11, 0.1);
   border-color: var(--border-mid);
 }
 
@@ -236,9 +247,7 @@ a, button {
   .card-hover {
     transition: none;
   }
-  .company-row:hover .company-chevron,
-  .company-row:not(:disabled):hover,
-  .company-row:not(:disabled):active,
+  .company-row:not(:disabled):hover .company-chevron,
   .card-hover:hover {
     transform: none;
   }
