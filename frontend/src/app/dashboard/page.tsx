@@ -251,7 +251,7 @@ export default function DashboardPage() {
                     {statCards.map((stat) => (
                       <div
                         key={stat.label}
-                        className="rounded-[16px] p-4 shadow-sm transition-all duration-200 hover:-translate-y-[1px]"
+                        className="card-hover rounded-[16px] p-4 shadow-sm"
                         style={
                           stat.lime
                             ? { background: "var(--lime)" }

@@ -59,13 +59,23 @@ function FaqItem({ q, a, defaultOpen = false }: { q: string; a: ReactNode; defau
       <AnimatePresence initial={false}>
         {open && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            initial={{ height: 0 }}
+            animate={{ height: "auto" }}
+            exit={{ height: 0 }}
+            transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden"
           >
-            <p className="mt-3 text-sm leading-relaxed text-[var(--ink-dim)]">{a}</p>
+            {/* Fade/slide lives on the inner element, not the clipping one:
+                animating height and opacity together made the answer read as
+                half-present for the whole open, which is what felt janky. */}
+            <motion.p
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0, transition: { duration: 0.26, ease: [0.22, 1, 0.36, 1], delay: 0.06 } }}
+              exit={{ opacity: 0, y: -6, transition: { duration: 0.14, ease: "easeIn" } }}
+              className="mt-3 text-sm leading-relaxed text-[var(--ink-dim)]"
+            >
+              {a}
+            </motion.p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -198,7 +208,7 @@ export default function Pricing() {
         )}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-stretch">
           <ScrollReveal>
-            <div className="flex h-full flex-col rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-8">
+            <div className="card-hover flex h-full flex-col rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-8">
               <p className="mb-5 text-[13px] font-semibold uppercase tracking-wider text-[var(--ink-faint)]">{PLANS.free.label}</p>
               <div className="mb-6 flex items-baseline gap-1.5">
                 <span className="font-display text-4xl font-semibold tracking-tight text-[var(--ink)]">{formatPrice(0, currency)}</span>
@@ -229,7 +239,7 @@ export default function Pricing() {
             return (
               <ScrollReveal key={planId} delay={(i + 1) * 0.08}>
                 <div
-                  className={`relative flex h-full flex-col rounded-3xl p-8 ${
+                  className={`card-hover relative flex h-full flex-col rounded-3xl p-8 ${
                     isBestValue
                       ? "bg-[var(--ink)] text-[var(--page)]"
                       : "border border-[var(--border)] bg-[var(--surface)]"

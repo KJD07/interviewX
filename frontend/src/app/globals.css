@@ -157,7 +157,23 @@ a, button {
   background: var(--surface-2) !important;
 }
 
-/* Company/role list rows — invert to a dark card with a lime accent on hover */
+/* Company/role list rows — invert to a dark card with a lime accent on hover.
+   The row AND every child that recolors share one duration and curve, so the
+   card resolves as a single movement instead of the text and pills snapping
+   ahead of the background. */
+.company-row,
+.company-row .company-avatar,
+.company-row .company-title,
+.company-row .company-subtitle,
+.company-row .company-tonepill,
+.company-row .company-chevron {
+  transition: background-color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 .company-row:hover {
   background: var(--ink) !important;
   border-color: var(--ink) !important;
@@ -178,4 +194,52 @@ a, button {
 }
 .company-row:hover .company-chevron {
   color: var(--lime) !important;
+  transform: translateX(3px);
+}
+
+/* Lift is guarded on :not(:disabled) — a locked row still inverts but must
+   not look pressable. */
+.company-row:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 34px rgba(20, 20, 15, 0.14);
+}
+.company-row:not(:disabled):active {
+  transform: translateY(0);
+  box-shadow: 0 4px 12px rgba(20, 20, 15, 0.1);
+}
+
+/* Shared card hover — one lift/shadow curve for every card surface in the
+   app, so cards on different pages move identically. */
+.card-hover {
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 38px rgba(20, 20, 15, 0.1);
+  border-color: var(--border-mid);
+}
+
+/* Reduced-motion overrides for the two blocks above. They have to sit at the
+   end of the file: the earlier media query is authored before these rules, so
+   equal-specificity source order would otherwise re-enable them. */
+@media (prefers-reduced-motion: reduce) {
+  .company-row,
+  .company-row .company-avatar,
+  .company-row .company-title,
+  .company-row .company-subtitle,
+  .company-row .company-tonepill,
+  .company-row .company-chevron,
+  .card-hover {
+    transition: none;
+  }
+  .company-row:hover .company-chevron,
+  .company-row:not(:disabled):hover,
+  .company-row:not(:disabled):active,
+  .card-hover:hover {
+    transform: none;
+  }
 }
