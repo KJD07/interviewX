@@ -147,7 +147,7 @@ export default function Home() {
           {FEATURES.slice(0, 4).map((f, i) => (
             <ScrollReveal key={f.title} delay={(i % 3) * 0.08}>
               <div
-                className={`flex h-full flex-col justify-between rounded-3xl p-7 transition-colors duration-300 ${
+                className={`card-hover flex h-full flex-col justify-between rounded-3xl p-7 ${
                   i === 1
                     ? "bg-[var(--lime)] hover:brightness-95"
                     : "border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--border-mid)]"
@@ -166,7 +166,7 @@ export default function Home() {
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           {FEATURES.slice(4).map((f, i) => (
             <ScrollReveal key={f.title} delay={i * 0.08}>
-              <div className="flex h-full items-center gap-5 rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-7 transition-colors duration-300 hover:border-[var(--border-mid)]">
+              <div className="card-hover flex h-full items-center gap-5 rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-7">
                 <span className="flex-shrink-0 text-3xl text-[var(--accent-dim)]">{f.icon}</span>
                 <div>
                   <h3 className="font-display text-lg font-semibold text-[var(--ink)]">{f.title}</h3>

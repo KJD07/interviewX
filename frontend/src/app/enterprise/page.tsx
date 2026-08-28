@@ -5,6 +5,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import AppShell from "@/components/AppShell";
 import PaginationControls from "@/components/PaginationControls";
 import { useSearchAndPaginate } from "@/hooks/useSearchAndPaginate";
+import { Skeleton } from "@/components/Skeleton";
 import Link from "next/link";
 import { organizations, ApiError } from "@/lib/api";
 import type { OrgDashboard, OrgCandidateInvite, OrgRound, OrgRole } from "@/lib/api";
@@ -45,7 +46,7 @@ function Card({ title, subtitle, action, children }: {
 }) {
   return (
     <div
-      className="rounded-3xl overflow-hidden shadow-[0_8px_32px_rgba(28,26,22,0.06)]"
+      className="card-hover rounded-3xl overflow-hidden shadow-[0_8px_32px_rgba(28,26,22,0.06)]"
       style={{ border: "1px solid var(--border)", background: "var(--surface)" }}
     >
       <div
@@ -66,7 +67,7 @@ function Card({ title, subtitle, action, children }: {
 function StatCard({ label, value, tone }: { label: string; value: string | number; tone?: string }) {
   return (
     <div
-      className="rounded-2xl px-4 py-4 shadow-[0_4px_16px_rgba(28,26,22,0.05)]"
+      className="card-hover rounded-2xl px-4 py-4 shadow-[0_4px_16px_rgba(28,26,22,0.05)]"
       style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
     >
       <p className="font-display text-2xl font-bold tabular-nums" style={{ color: tone ?? "var(--ink)" }}>
@@ -563,6 +564,78 @@ function EnterprisePricingCard() {
   );
 }
 
+/* Loading state mirrors the dashboard's: a shimmer of the real layout for the
+   view being loaded, rather than a bare "Loading…" line, so the page doesn't
+   jump when the data lands. */
+function EnterpriseSkeleton({ view }: { view: "overview" | "candidate" | "questions" }) {
+  return (
+    <div className="fade-up">
+      {view === "overview" && (
+        <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
+          <div>
+            <Skeleton className="h-3 w-40 rounded mb-2.5" />
+            <Skeleton className="h-7 w-56 rounded-lg" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-6 w-20 rounded-full" />
+            <Skeleton className="h-6 w-16 rounded-full" />
+          </div>
+        </div>
+      )}
+
+      {view !== "questions" && (
+        <div
+          className="rounded-2xl px-5 py-4 mb-6"
+          style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+        >
+          <div className="flex items-center justify-between mb-2.5">
+            <Skeleton className="h-4 w-32 rounded" />
+            <Skeleton className="h-4 w-24 rounded" />
+          </div>
+          <Skeleton className="h-2 w-full rounded-full" />
+        </div>
+      )}
+
+      {view === "overview" && (
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <div
+              key={n}
+              className="rounded-2xl px-4 py-4"
+              style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+            >
+              <Skeleton className="h-7 w-12 rounded-lg mb-2" />
+              <Skeleton className="h-3 w-20 rounded" />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {view !== "overview" && (
+        <div className="space-y-6">
+          {[1, 2].map((n) => (
+            <div
+              key={n}
+              className="rounded-3xl overflow-hidden"
+              style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+            >
+              <div className="px-6 py-5" style={{ borderBottom: "1px solid var(--border)" }}>
+                <Skeleton className="h-4 w-36 rounded mb-2" />
+                <Skeleton className="h-3 w-52 rounded" />
+              </div>
+              <div className="px-6 py-5 space-y-3">
+                <Skeleton className="h-10 w-full rounded-xl" />
+                <Skeleton className="h-10 w-full rounded-xl" />
+                <Skeleton className="h-10 w-3/4 rounded-xl" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function EnterprisePageContent({ view = "overview" }: { view?: "overview" | "candidate" | "questions" }) {
   const [dashboard, setDashboard] = useState<OrgDashboard | null>(null);
   const [invites, setInvites] = useState<OrgCandidateInvite[]>([]);
@@ -613,7 +686,7 @@ function EnterprisePageContent({ view = "overview" }: { view?: "overview" | "can
       <div className="min-h-screen" style={{ background: "var(--page)" }}>
         <main className={`max-w-5xl mx-auto px-6 ${view === "overview" ? "pt-16 sm:pt-20" : "pt-10"} pb-10 fade-up`}>
 
-          {loading && <p className="text-sm" style={{ color: "var(--ink-dim)" }}>Loading…</p>}
+          {loading && <EnterpriseSkeleton view={view} />}
 
           {notMember && !loading && (
             <div

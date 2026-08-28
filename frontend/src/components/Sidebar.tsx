@@ -7,67 +7,86 @@ import { useAuth } from "@/context/AuthContext";
 import { planOf, hasSkills } from "@/lib/plans";
 import icon from "@/app/icon.png";
 
+// Nav glyphs — one 20x20 grid, solid fills with knocked-out counters, all
+// inheriting currentColor so NavGlyph's active/idle colors keep driving them.
 function GridIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-      <rect x="2" y="2" width="6" height="6" rx="1.2" stroke="currentColor" strokeWidth="1.5" />
-      <rect x="10" y="2" width="6" height="6" rx="1.2" stroke="currentColor" strokeWidth="1.5" />
-      <rect x="2" y="10" width="6" height="6" rx="1.2" stroke="currentColor" strokeWidth="1.5" />
-      <rect x="10" y="10" width="6" height="6" rx="1.2" stroke="currentColor" strokeWidth="1.5" />
+    <svg width="17" height="17" viewBox="0 0 20 20" fill="currentColor">
+      <rect x="2.75" y="2.75" width="6" height="14.5" rx="2" />
+      <rect x="11.25" y="2.75" width="6" height="5.25" rx="2" />
+      <rect x="11.25" y="12" width="6" height="5.25" rx="2" />
     </svg>
   );
 }
 
 function BuildingIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-      <rect x="3" y="2" width="9" height="14" rx="1" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M6 5.5h1M11 5.5h1M6 8.5h1M11 8.5h1M6 11.5h1M11 11.5h1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      <path d="M12 16v-3.5h3V16" stroke="currentColor" strokeWidth="1.5" />
+    <svg width="17" height="17" viewBox="0 0 20 20" fill="currentColor" fillRule="evenodd">
+      <path d="M4.75 2.5h6a2 2 0 0 1 2 2v12.75h-10V4.5a2 2 0 0 1 2-2Zm.75 3.75h1.75V8H5.5V6.25Zm3.5 0h1.75V8H9V6.25Zm-3.5 3.5h1.75v1.75H5.5V9.75Zm3.5 0h1.75v1.75H9V9.75Zm-.5 3.5h-1.5v4h1.5v-4Z" />
+      <path d="M12.5 8.5h3.25a1.75 1.75 0 0 1 1.75 1.75v7H12.5V8.5Zm1.25 3h1.75v1.75h-1.75V11.5Z" />
     </svg>
   );
 }
 
 function SparkleIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-      <path d="M9 2l1.4 4.6L15 8l-4.6 1.4L9 14l-1.4-4.6L3 8l4.6-1.4L9 2z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+    <svg width="17" height="17" viewBox="0 0 20 20" fill="currentColor">
+      <path d="M8 2.5c0 3.05 2.45 5.5 5.5 5.5-3.05 0-5.5 2.45-5.5 5.5 0-3.05-2.45-5.5-5.5-5.5 3.05 0 5.5-2.45 5.5-5.5Z" />
+      <path d="M14.75 12.25c0 1.5 1.25 2.75 2.75 2.75-1.5 0-2.75 1.25-2.75 2.75 0-1.5-1.25-2.75-2.75-2.75 1.5 0 2.75-1.25 2.75-2.75Z" />
     </svg>
   );
 }
 
 function TrendIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-      <path d="M2 13l4.5-5 3 3L16 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M12 4h4v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    <svg width="17" height="17" viewBox="0 0 20 20" fill="currentColor">
+      <rect x="2.75" y="11" width="3.25" height="6.25" rx="1.4" />
+      <rect x="8.375" y="8" width="3.25" height="9.25" rx="1.4" />
+      <rect x="14" y="4.5" width="3.25" height="12.75" rx="1.4" />
     </svg>
   );
 }
 
 function QuestionsIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-      <path d="M3 4.5A1.5 1.5 0 014.5 3h9A1.5 1.5 0 0115 4.5v6a1.5 1.5 0 01-1.5 1.5H9l-3.5 3v-3H4.5A1.5 1.5 0 013 10.5v-6z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-      <path d="M6 6.5h6M6 9h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    <svg width="17" height="17" viewBox="0 0 20 20" fill="currentColor" fillRule="evenodd">
+      <path d="M4.25 2.5h11.5A2.25 2.25 0 0 1 18 4.75v7A2.25 2.25 0 0 1 15.75 14H9.75L6 17.25V14H4.25A2.25 2.25 0 0 1 2 11.75v-7A2.25 2.25 0 0 1 4.25 2.5Zm1.5 4h8.5v1.75h-8.5V6.5Zm0 3.25h5.75v1.75H5.75V9.75Z" />
     </svg>
   );
 }
 
 function UserIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-      <circle cx="9" cy="6" r="2.5" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M4 15c.6-2.3 2.2-3.5 5-3.5s4.4 1.2 5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    <svg width="17" height="17" viewBox="0 0 20 20" fill="currentColor">
+      <circle cx="10" cy="6.25" r="3.25" />
+      <path d="M10 11.25c3.4 0 5.75 1.6 6.55 4.6a1 1 0 0 1-.97 1.25H4.42a1 1 0 0 1-.97-1.25c.8-3 3.15-4.6 6.55-4.6Z" />
     </svg>
   );
 }
 
 function LogoutIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M6 2H3.5a1 1 0 00-1 1v10a1 1 0 001 1H6M10.5 11.5L14 8l-3.5-3.5M14 8H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+      <path d="M4.75 2.5H9v2H5v11h4v2H4.75A1.75 1.75 0 0 1 3 15.75V4.25A1.75 1.75 0 0 1 4.75 2.5Z" />
+      <path d="M12.9 5.65 17.25 10l-4.35 4.35-1.45-1.45 1.9-1.9H7.75v-2h5.6l-1.9-1.9 1.45-1.45Z" />
     </svg>
+  );
+}
+
+// Active rows carry the glyph in an ink badge with a lime fill instead of a
+// tinted pill. 30px badge + 6px row padding keeps the 42px row height the
+// tinted pill had, so nav spacing is unchanged.
+function NavGlyph({ Icon, active }: { Icon: () => JSX.Element; active: boolean }) {
+  return (
+    <span
+      className="w-[30px] h-[30px] rounded-[10px] flex items-center justify-center shrink-0 transition-colors duration-200 ease-out"
+      style={{
+        background: active ? "var(--ink)" : "transparent",
+        color: active ? "var(--lime)" : "var(--ink-faint)",
+      }}
+    >
+      <Icon />
+    </span>
   );
 }
 
@@ -141,14 +160,13 @@ export default function Sidebar({ enterprise = false, mobileOpen, onClose }: Sid
               <Link
                 key={href}
                 href={href}
-                className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-[15px] transition-all duration-200 ease-out hover:opacity-80"
+                className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-[15px] transition-all duration-200 ease-out hover:opacity-80"
                 style={{
-                  background: active ? "var(--surface-2)" : "transparent",
                   color: active ? "var(--ink)" : "var(--ink-dim)",
                   fontWeight: active ? 600 : 500,
                 }}
               >
-                <Icon />
+                <NavGlyph Icon={Icon} active={active} />
                 {label}
               </Link>
             );
@@ -240,14 +258,13 @@ export default function Sidebar({ enterprise = false, mobileOpen, onClose }: Sid
                       key={href}
                       href={href}
                       onClick={onClose}
-                      className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-[15px] transition-all duration-200 ease-out hover:opacity-80"
+                      className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-[15px] transition-all duration-200 ease-out hover:opacity-80"
                       style={{
-                        background: active ? "var(--surface-2)" : "transparent",
                         color: active ? "var(--ink)" : "var(--ink-dim)",
                         fontWeight: active ? 600 : 500,
                       }}
                     >
-                      <Icon />
+                      <NavGlyph Icon={Icon} active={active} />
                       {label}
                     </Link>
                   );

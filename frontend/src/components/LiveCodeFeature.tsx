@@ -23,7 +23,7 @@ export default function LiveCodeFeature() {
 
   return (
     <div
-      className="flex h-full flex-col justify-between overflow-hidden rounded-[24px] p-6"
+      className="card-hover flex h-full flex-col justify-between overflow-hidden rounded-[24px] p-6"
       style={{ background: "var(--hero-bg)", color: "var(--hero-text)" }}
     >
       <div>

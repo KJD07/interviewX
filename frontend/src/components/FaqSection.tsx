@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import StructuredData from "@/components/StructuredData";
 import { faqSchema } from "@/lib/seo";
 
@@ -6,8 +9,11 @@ import { faqSchema } from "@/lib/seo";
  * self-contained answers that an assistant can quote without needing the rest
  * of the page, mirrored into FAQPage JSON-LD.
  *
- * Uses native <details> rather than React state so every answer is present in
- * the server-rendered HTML for crawlers that don't run JavaScript.
+ * Every answer is rendered unconditionally and collapsed with CSS, so it is
+ * present in the server-rendered HTML for crawlers that don't run JavaScript
+ * (the reason this used to be a native <details>). The open/close is animated
+ * instead, which <details> cannot do: the browser un-hides its content in one
+ * frame, so the panel snapped open and everything below it jumped.
  */
 const FAQS = [
   {
@@ -52,6 +58,49 @@ const FAQS = [
   },
 ];
 
+function FaqItem({ id, question, answer }: { id: string; question: string; answer: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border-b border-[var(--border)] py-5">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full cursor-pointer items-center justify-between gap-6 text-left"
+      >
+        <h3 className="text-base font-semibold text-[var(--ink)] sm:text-lg">{question}</h3>
+        <span
+          aria-hidden="true"
+          className={`shrink-0 text-xl text-[var(--ink-faint)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+            open ? "rotate-45" : ""
+          }`}
+        >
+          +
+        </span>
+      </button>
+      {/* Collapsed with grid-template-rows rather than max-height: the answer
+          stays in the DOM at its natural height, so there is no guessed cap to
+          clip long answers and no snap at the end of the transition. */}
+      <div
+        id={id}
+        className="grid transition-[grid-template-rows] duration-[340ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
+        style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
+      >
+        <div className="overflow-hidden">
+          <p
+            className={`mt-3 max-w-2xl text-sm leading-relaxed text-[var(--ink-dim)] transition-opacity duration-300 ease-out sm:text-[15px] ${
+              open ? "opacity-100" : "opacity-0"
+            }`}
+          >
+            {answer}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function FaqSection() {
   return (
     <section id="faq" className="mx-auto max-w-3xl px-6 pb-28">
@@ -62,23 +111,8 @@ export default function FaqSection() {
       </h2>
 
       <div className="mt-10 border-t border-[var(--border)]">
-        {FAQS.map((faq) => (
-          <details key={faq.question} className="group border-b border-[var(--border)] py-5">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-6 text-left">
-              <h3 className="text-base font-semibold text-[var(--ink)] sm:text-lg">
-                {faq.question}
-              </h3>
-              <span
-                aria-hidden="true"
-                className="shrink-0 text-xl text-[var(--ink-faint)] transition-transform duration-300 group-open:rotate-45"
-              >
-                +
-              </span>
-            </summary>
-            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[var(--ink-dim)] sm:text-[15px]">
-              {faq.answer}
-            </p>
-          </details>
+        {FAQS.map((faq, i) => (
+          <FaqItem key={faq.question} id={`faq-a-${i}`} question={faq.question} answer={faq.answer} />
         ))}
       </div>
     </section>

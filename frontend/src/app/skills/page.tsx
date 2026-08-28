@@ -66,7 +66,7 @@ function ListCard({
     <button
       onClick={onClick}
       disabled={disabled}
-      className="company-row w-full text-left rounded-2xl px-6 py-5 flex items-center justify-between gap-4 transition-colors disabled:opacity-40"
+      className="company-row w-full text-left rounded-2xl px-6 py-5 flex items-center justify-between gap-4 disabled:opacity-40"
       style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
     >
       <div className="flex items-center gap-4 min-w-0">
