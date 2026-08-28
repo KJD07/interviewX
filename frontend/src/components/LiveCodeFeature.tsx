@@ -23,27 +23,31 @@ export default function LiveCodeFeature() {
 
   return (
     <div
-      className="card-hover flex h-full flex-col justify-between overflow-hidden rounded-[24px] p-6"
+      className="card-hover flex h-full flex-col justify-between overflow-hidden rounded-[20px] p-[26px]"
       style={{ background: "var(--hero-bg)", color: "var(--hero-text)" }}
     >
       <div>
-        <span className="inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide" style={{ background: "rgba(232,255,61,0.15)", color: "var(--lime)" }}>
-          <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--lime)" }} />
+        <span
+          className="inline-flex w-fit items-center rounded-[5px] px-[9px] py-1 font-mono text-[10px] font-bold uppercase tracking-[0.12em]"
+          style={{ background: "var(--lime)", color: "var(--ink)" }}
+        >
           Editable demo
         </span>
-        <h3 className="font-display mt-4 text-xl font-semibold leading-tight">Live coding editor</h3>
-        <p className="mt-2 text-sm leading-relaxed" style={{ color: "rgba(246,245,241,0.6)" }}>
-          Real coding rounds run in a real editor, syntax highlighting, multiple languages, no context switching to a
-          notepad. Try it right here.
+        <h3 className="font-display mt-[18px] text-[26px] font-bold leading-tight tracking-[-0.02em]">
+          Live coding editor
+        </h3>
+        <p className="mt-2.5 text-sm leading-[1.55]" style={{ color: "#A3A29A" }}>
+          Coding rounds run in a real editor — syntax highlighting, multiple languages, no
+          switching to a notepad.
         </p>
       </div>
-      <div className="mt-6 overflow-hidden rounded-2xl border" style={{ borderColor: "rgba(246,245,241,0.08)" }}>
+      <div className="mt-5 overflow-hidden rounded-[14px] border" style={{ borderColor: "rgba(255,255,255,0.09)" }}>
         <div
-          className="flex items-center justify-between px-4 py-2 text-xs font-semibold"
-          style={{ background: "#1E1E18", color: "rgba(246,245,241,0.5)", borderBottom: "1px solid rgba(246,245,241,0.08)" }}
+          className="flex items-center justify-between px-3.5 py-2.5 font-mono text-[11px]"
+          style={{ background: "#17171A", color: "#7E7D74", borderBottom: "1px solid rgba(255,255,255,0.09)" }}
         >
           <span>solution.js</span>
-          <span>Edit the code, it&apos;s live</span>
+          <span style={{ color: "var(--lime)" }}>edit me →</span>
         </div>
         <MonacoEditor
           height="220px"

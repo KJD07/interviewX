@@ -16,7 +16,7 @@ function ScoreRing({ value, label }: { value: number | undefined; label: string 
   const radius = 28;
   const circ = 2 * Math.PI * radius;
   const filled = (score / 10) * circ;
-  const color = score >= 7 ? "#22c55e" : score >= 5 ? "#f59e0b" : "var(--danger)";
+  const color = score >= 7 ? "var(--success)" : score >= 5 ? "var(--warn)" : "var(--danger)";
 
   return (
     <div className="flex min-w-0 flex-col items-center gap-2 text-center">
@@ -186,9 +186,9 @@ export default function ResultsPage() {
   const overallColor =
     overall !== undefined
       ? overall >= 7
-        ? "#22c55e"
+        ? "var(--success)"
         : overall >= 5
-        ? "#f59e0b"
+        ? "var(--warn)"
         : "var(--danger)"
       : "var(--ink-dim)";
 
@@ -232,7 +232,7 @@ export default function ResultsPage() {
               </h1>
               <span
                 className="text-xs font-medium px-2.5 py-1 rounded-full"
-                style={{ background: "rgba(34,197,94,0.1)", color: "#22c55e" }}
+                style={{ background: "rgba(63,143,94,0.1)", color: "var(--success)" }}
               >
                 Completed
               </span>
@@ -357,7 +357,7 @@ export default function ResultsPage() {
                   </p>
                   <div className="space-y-3">
                     {s.insights.topics.map((t, i) => {
-                      const color = t.score >= 7 ? "#22c55e" : t.score >= 5 ? "#f59e0b" : "var(--danger)";
+                      const color = t.score >= 7 ? "var(--success)" : t.score >= 5 ? "var(--warn)" : "var(--danger)";
                       return (
                         <div key={i} className="flex items-start gap-3">
                           <span

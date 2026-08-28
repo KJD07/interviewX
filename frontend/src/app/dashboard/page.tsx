@@ -14,9 +14,9 @@ import { useSearchAndPaginate } from "@/hooks/useSearchAndPaginate";
 import { Skeleton, SkeletonStatCard, SkeletonTable } from "@/components/Skeleton";
 
 const STATUS_MAP = {
-  in_progress: { label: "In progress", bg: "#FBF8D6", color: "#6B6B3D", dot: "#D4B94A" },
-  completed: { label: "Completed", bg: "#DEF3E0", color: "#3FA562", dot: "#3FA562" },
-  abandoned: { label: "Abandoned", bg: "var(--surface-2)", color: "var(--ink-dim)", dot: "var(--ink-faint)" },
+  in_progress: { label: "In progress", bg: "rgba(180,115,30,0.14)", color: "#7A5A12", dot: "var(--warn)", pulse: true },
+  completed: { label: "Completed", bg: "var(--success-bg)", color: "#2F6B48", dot: "var(--success)", pulse: false },
+  abandoned: { label: "Abandoned", bg: "var(--surface-2)", color: "var(--ink-dim)", dot: "var(--ink-faint)", pulse: false },
 } as const;
 
 function StatusBadge({ status }: { status: InterviewSession["status"] }) {
@@ -26,7 +26,10 @@ function StatusBadge({ status }: { status: InterviewSession["status"] }) {
       className="inline-flex items-center justify-center justify-self-start gap-1.5 text-xs font-medium leading-none px-2.5 py-1.5 rounded-full whitespace-nowrap"
       style={{ background: s.bg, color: s.color }}
     >
-      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: s.dot }} />
+      <span
+        className={`w-1.5 h-1.5 rounded-full shrink-0 ${s.pulse ? "el-pulse" : ""}`}
+        style={{ background: s.dot }}
+      />
       {s.label}
     </span>
   );
@@ -34,13 +37,14 @@ function StatusBadge({ status }: { status: InterviewSession["status"] }) {
 
 function ScorePill({ value, variant = "default" }: { value: number | undefined; variant?: "default" | "overall" }) {
   if (value === undefined) return <span style={{ color: "var(--ink-faint)" }}>—</span>;
-  const color =
-    value <= 2 ? "var(--danger)" :
-    variant === "overall" ? "#B8862F" :
-    value >= 7 ? "var(--success)" : "var(--ink)";
+  // Same anchors the grader uses: 0-2 is a fail, 3-5 shaky, 6+ solid.
+  const color = value >= 6 ? "var(--success)" : value >= 3 ? "var(--warn)" : "var(--danger)";
   return (
-    <span className="font-semibold tabular-nums" style={{ color }}>
-      {value}<span className="text-xs font-normal" style={{ color: "var(--ink-faint)" }}>/10</span>
+    <span
+      className="font-mono tabular-nums"
+      style={{ color, fontWeight: variant === "overall" ? 700 : 500, fontSize: variant === "overall" ? 15 : 14 }}
+    >
+      {value}<span className="text-[11px] font-normal" style={{ color: "var(--ink-faint)" }}>/10</span>
     </span>
   );
 }
@@ -111,6 +115,9 @@ export default function DashboardPage() {
     const v = s.scores?.overall;
     return v !== undefined && (best === undefined || v > best) ? v : best;
   }, undefined);
+
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   const statusFilteredSessions =
     statusFilter === "all" ? sessions : sessions.filter((s) => s.status === statusFilter);
@@ -188,16 +195,19 @@ export default function DashboardPage() {
         <main className="max-w-6xl mx-auto px-4 sm:px-8 py-10 fade-up">
 
           {/* Header row */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between mb-[30px] gap-4">
             <div className="w-full sm:w-auto">
-              <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight mb-2 sm:mb-0" style={{ color: "var(--ink)" }}>
+              <div className="font-label mb-2.5">
+                {greeting}, {user?.username}
+              </div>
+              <h1 className="font-display text-[34px] sm:text-[44px] font-bold leading-none tracking-[-0.035em]" style={{ color: "var(--ink)" }}>
                 {hasInsights ? "Dashboard" : "Home"}
               </h1>
             </div>
-            <div className="flex w-full sm:w-auto items-center gap-3 flex-col sm:flex-row">
+            <div className="flex w-full sm:w-auto items-center gap-2.5 flex-col sm:flex-row">
               <button
                 onClick={() => router.push("/pricing")}
-                className="w-full sm:w-auto px-4 py-2 rounded-full text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
+                className="w-full sm:w-auto px-[18px] py-3 rounded-full text-sm font-semibold transition-colors hover:bg-[var(--surface)]"
                 style={{ background: "transparent", color: "var(--ink)", border: "1px solid var(--border-mid)" }}
               >
                 {isPro ? "Manage subscription" : "Upgrade"}
@@ -205,10 +215,10 @@ export default function DashboardPage() {
               <button
                 onClick={() => router.push("/companies")}
                 disabled={limitReached}
-                className="w-full sm:w-auto px-4 py-2 rounded-full text-sm font-semibold transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:hover:scale-100"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-full text-sm font-semibold transition-colors hover:bg-[var(--accent-dim)] disabled:opacity-40"
                 style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
               >
-                + Start interview
+                <span style={{ color: "var(--lime)" }}>+</span> Start interview
               </button>
             </div>
           </div>
@@ -222,11 +232,9 @@ export default function DashboardPage() {
 
           {/* Paid plans: detailed analytics summary */}
           {hasInsights && !loadingSessions && !fetchError && completedSessions.length > 0 && (
-            <div className="mb-3 rounded-[18px] border shadow-sm" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+            <div className="mb-3.5 rounded-[18px] border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-4 sm:p-5">
-                <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--ink-dim)" }}>
-                  Performance snapshot
-                </p>
+                <p className="font-label">Performance snapshot</p>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => router.push("/progress")}
@@ -247,21 +255,20 @@ export default function DashboardPage() {
 
               <div className={showSnapshot ? "block" : "hidden"}>
                 <div className="px-4 pb-4 sm:px-5 sm:pb-5">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+                  <div
+                    className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-px overflow-hidden rounded-[16px]"
+                    style={{ background: "var(--border-mid)", border: "1px solid var(--border-mid)" }}
+                  >
                     {statCards.map((stat) => (
                       <div
                         key={stat.label}
-                        className="card-hover rounded-[16px] p-4 shadow-sm"
-                        style={
-                          stat.lime
-                            ? { background: "var(--lime)" }
-                            : { background: "var(--surface)", border: "1px solid var(--border)" }
-                        }
+                        className="h-full px-[22px] py-5"
+                        style={{ background: stat.lime ? "var(--lime)" : "var(--surface)" }}
                       >
-                        <p className="font-display text-[24px] sm:text-[30px] leading-none font-semibold tracking-tight tabular-nums mb-2" style={{ color: "var(--ink)" }}>
+                        <p className="font-display text-[26px] sm:text-[34px] leading-none font-bold tracking-[-0.035em] tabular-nums" style={{ color: "var(--ink)" }}>
                           {stat.value}
                         </p>
-                        <p className="text-[11px] sm:text-[12px]" style={{ color: stat.lime ? "var(--ink)" : "var(--ink-dim)" }}>
+                        <p className="text-[12px] mt-2" style={{ color: stat.lime ? "#3C4118" : "var(--ink-dim)" }}>
                           {stat.label}
                         </p>
                       </div>
@@ -285,7 +292,32 @@ export default function DashboardPage() {
           {/* Persistent entry point for submitting real-interview data — earns
               5 bonus interviews per approved report. Paid plans only, since
               submission itself is gated the same way server-side. */}
-          {hasInsights && !loadingSessions && !fetchError && <RealInterviewReportsCard />}
+          {hasInsights && !loadingSessions && !fetchError && (
+            <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-3.5 mb-[34px]">
+              <RealInterviewReportsCard />
+              <button
+                onClick={() => router.push("/progress")}
+                className="rounded-[16px] p-[22px] text-left flex flex-col justify-between transition-colors hover:bg-[#17171A]"
+                style={{ background: "var(--hero-bg)", color: "var(--hero-text)" }}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.16em]" style={{ color: "var(--lime)" }}>
+                    Readiness
+                  </span>
+                  <span className="font-mono text-[11px]" style={{ color: "#A3A29A" }}>
+                    {analyticsCompleted.length} completed
+                  </span>
+                </div>
+                <div className="flex items-end justify-between gap-3 mt-4">
+                  <span className="font-display text-[40px] font-bold leading-none tracking-[-0.04em] tabular-nums">
+                    {analyticsAvgOverall ?? "—"}
+                    <span className="text-[18px] font-medium" style={{ color: "#7E7D74" }}>/10</span>
+                  </span>
+                  <span className="text-[13px]" style={{ color: "#A3A29A" }}>View full progress →</span>
+                </div>
+              </button>
+            </div>
+          )}
 
           {/* Free plan: no dashboard/history — just their most recent plain score */}
           {!hasInsights ? (
@@ -404,51 +436,52 @@ export default function DashboardPage() {
             </div>
           ) : (
             <>
-              <div
-                className="mb-4 flex flex-col gap-3 rounded-2xl p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4"
-                style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-              >
-                <p className="flex items-center gap-1.5 px-1 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--ink-dim)" }}>
-                  <span style={{ color: "var(--ink-faint)" }}>◇</span> Sessions
-                </p>
-                <div className="grid w-full grid-cols-3 gap-2 sm:w-auto sm:flex sm:items-center">
-                  {[
-                    { key: "all" as const, label: "All" },
-                    { key: "completed" as const, label: "Completed" },
-                    { key: "in_progress" as const, label: "In progress" },
-                  ].map((opt) => {
-                    const active = statusFilter === opt.key;
-                    return (
-                      <button
-                        key={opt.key}
-                        onClick={() => setStatusFilter(opt.key)}
-                        className="whitespace-nowrap rounded-full px-2.5 py-2 text-center text-[12px] font-medium leading-none transition-colors sm:px-4 sm:py-1.5 sm:text-[13px]"
-                        style={
-                          active
-                            ? { background: "var(--accent)", color: "var(--accent-ink)" }
-                            : { background: "var(--surface)", color: "var(--ink)", border: "1px solid var(--border-mid)" }
-                        }
-                      >
-                        {opt.label}
-                      </button>
-                    );
-                  })}
+              <div className="mb-3.5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                <div className="flex items-baseline gap-3">
+                  <h2 className="font-display text-2xl font-bold tracking-[-0.025em]" style={{ color: "var(--ink)" }}>
+                    Sessions
+                  </h2>
+                  <span className="font-mono text-[11px]" style={{ color: "var(--ink-faint)" }}>
+                    {sessionSearch.matchCount}{" "}
+                    {sessionSearch.matchCount === 1 ? "session" : "sessions"}
+                  </span>
                 </div>
-              </div>
-
-              <div
-                className="rounded-2xl p-2 mb-4 flex items-center gap-3"
-                style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-              >
-                <span className="pl-3" style={{ color: "var(--ink-faint)" }}>⌕</span>
-                <input
-                  type="text"
-                  value={sessionSearch.query}
-                  onChange={(e) => sessionSearch.setQuery(e.target.value)}
-                  placeholder="Search sessions by company or role…"
-                  className="flex-1 bg-transparent outline-none text-[14.5px] py-2.5"
-                  style={{ color: "var(--ink)" }}
-                />
+                <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+                  <input
+                    type="text"
+                    value={sessionSearch.query}
+                    onChange={(e) => sessionSearch.setQuery(e.target.value)}
+                    placeholder="Search by company or role…"
+                    className="rounded-full px-4 py-2.5 text-sm outline-none sm:w-[260px]"
+                    style={{ background: "var(--surface)", border: "1px solid var(--border-mid)", color: "var(--ink)" }}
+                  />
+                  <div
+                    className="grid grid-cols-3 gap-1 rounded-full p-[3px] sm:flex sm:items-center"
+                    style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
+                  >
+                    {[
+                      { key: "all" as const, label: "All" },
+                      { key: "completed" as const, label: "Completed" },
+                      { key: "in_progress" as const, label: "In progress" },
+                    ].map((opt) => {
+                      const active = statusFilter === opt.key;
+                      return (
+                        <button
+                          key={opt.key}
+                          onClick={() => setStatusFilter(opt.key)}
+                          className="whitespace-nowrap rounded-full px-[15px] py-2 text-center text-[13px] leading-none transition-colors"
+                          style={
+                            active
+                              ? { background: "var(--accent)", color: "var(--accent-ink)", fontWeight: 600 }
+                              : { background: "transparent", color: "var(--ink-dim)", fontWeight: 500 }
+                          }
+                        >
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
 
               {sessionSearch.results.length === 0 ? (
@@ -532,17 +565,17 @@ export default function DashboardPage() {
 
                   <div className="hidden sm:block overflow-x-auto">
                     <div
-                      className="rounded-3xl overflow-hidden shadow-[0_8px_32px_rgba(28,26,22,0.06)]"
-                      style={{ border: "1px solid var(--border)", background: "var(--surface)" }}
+                      className="rounded-[16px] overflow-hidden"
+                      style={{ border: "1px solid var(--border-mid)", background: "var(--surface)" }}
                     >
                       {/* Table header */}
                       <div
-                        className="grid text-xs font-medium uppercase tracking-wider px-5 py-3"
+                        className="grid font-mono text-[10px] uppercase tracking-[0.14em] px-[22px] py-3"
                         style={{
                           gridTemplateColumns: "1fr 130px 70px 70px 80px 110px",
                           columnGap: "24px",
-                          background: "var(--surface-2)",
-                          color: "var(--ink-dim)",
+                          background: "var(--surface-alt)",
+                          color: "var(--ink-faint)",
                           borderBottom: "1px solid var(--border)",
                           minWidth: "920px",
                         }}
@@ -565,7 +598,7 @@ export default function DashboardPage() {
                                 : `/interview/${s.id}`
                             )
                           }
-                          className="dash-row grid items-center px-5 py-4 cursor-pointer transition-colors"
+                          className="dash-row grid items-center px-[22px] py-3.5 cursor-pointer transition-colors"
                           style={{
                             gridTemplateColumns: "1fr 130px 70px 70px 80px 110px",
                             columnGap: "24px",
@@ -576,11 +609,13 @@ export default function DashboardPage() {
                             minWidth: "920px",
                           }}
                         >
-                          <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>
-                            {s.company_name ?? `Session #${s.id}`}
+                          <span>
+                            <span className="block text-[15px] font-semibold" style={{ color: "var(--ink)" }}>
+                              {s.company_name ?? `Session #${s.id}`}
+                            </span>
                             {s.role_title && (
-                              <span className="ml-1.5 font-normal" style={{ color: "var(--ink-faint)" }}>
-                                · {s.role_title}
+                              <span className="block text-[13px]" style={{ color: "var(--ink-faint)" }}>
+                                {s.role_title}
                               </span>
                             )}
                           </span>

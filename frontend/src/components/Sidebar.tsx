@@ -73,20 +73,67 @@ function LogoutIcon() {
   );
 }
 
-// Active rows carry the glyph in an ink badge with a lime fill instead of a
-// tinted pill. 30px badge + 6px row padding keeps the 42px row height the
-// tinted pill had, so nav spacing is unchanged.
+// The active row itself is the ink slab, so the glyph only recolors: lime on
+// the dark row, faint ink on idle rows.
 function NavGlyph({ Icon, active }: { Icon: () => JSX.Element; active: boolean }) {
   return (
     <span
-      className="w-[30px] h-[30px] rounded-[10px] flex items-center justify-center shrink-0 transition-colors duration-200 ease-out"
-      style={{
-        background: active ? "var(--ink)" : "transparent",
-        color: active ? "var(--lime)" : "var(--ink-faint)",
-      }}
+      className="w-[22px] h-[22px] flex items-center justify-center shrink-0 transition-colors duration-200 ease-out"
+      style={{ color: active ? "var(--lime)" : "var(--ink-faint)" }}
     >
       <Icon />
     </span>
+  );
+}
+
+// Sidebar plan card: tier, "manage" link, and the monthly interview meter.
+function PlanCard({
+  planLabel,
+  enterprise,
+  used,
+  limit,
+  bonus,
+}: {
+  planLabel: string;
+  enterprise: boolean;
+  used: number;
+  limit: number | null;
+  bonus: number;
+}) {
+  const pct = limit && limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+  return (
+    <div className="rounded-[14px] px-4 py-3.5" style={{ background: "var(--hero-bg)" }}>
+      <div className="flex items-center justify-between mb-2.5">
+        <span className="font-mono text-[9px] uppercase tracking-[0.16em]" style={{ color: "#7E7D74" }}>
+          Plan
+        </span>
+        {!enterprise && (
+          <Link
+            href="/pricing"
+            className="font-mono text-[10px] underline transition-opacity hover:opacity-70"
+            style={{ color: "var(--lime)" }}
+          >
+            manage
+          </Link>
+        )}
+      </div>
+      <div
+        className="font-display text-[19px] font-bold tracking-[-0.02em] mb-2.5 truncate"
+        style={{ color: "var(--hero-text)" }}
+      >
+        {planLabel}
+        {bonus > 0 && <span className="text-[13px] font-medium" style={{ color: "#7E7D74" }}> +{bonus}</span>}
+      </div>
+      <div className="relative h-1 rounded-sm" style={{ background: "rgba(255,255,255,0.14)" }}>
+        <span
+          className="absolute inset-y-0 left-0 rounded-sm"
+          style={{ width: `${pct}%`, background: "var(--lime)" }}
+        />
+      </div>
+      <div className="font-mono text-[10px] mt-2 uppercase" style={{ color: "#7E7D74" }}>
+        {limit == null ? `${used} sessions used` : `${used} / ${limit} sessions used`}
+      </div>
+    </div>
   );
 }
 
@@ -135,13 +182,15 @@ export default function Sidebar({ enterprise = false, mobileOpen, onClose }: Sid
 
   const initial = (user?.username || "?").charAt(0).toUpperCase();
   const planLabel = enterprise ? "Enterprise" : plan.label;
+  const used = user?.interviews_this_month ?? 0;
+  const limit = user?.monthly_limit ?? plan.monthlyLimit;
 
   return (
     <>
       {/* Desktop sidebar */}
       <aside
-        className="hidden md:flex w-[260px] shrink-0 h-screen sticky top-0 flex-col px-5 py-7 border-r"
-        style={{ background: "var(--page)", borderColor: "var(--border)" }}
+        className="hidden md:flex w-[250px] shrink-0 h-screen sticky top-0 flex-col px-[18px] py-6 border-r"
+        style={{ background: "var(--surface-2)", borderColor: "var(--border-mid)" }}
       >
         <div className="flex flex-col min-h-0 flex-1">
         <Link
@@ -160,9 +209,10 @@ export default function Sidebar({ enterprise = false, mobileOpen, onClose }: Sid
               <Link
                 key={href}
                 href={href}
-                className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-[15px] transition-all duration-200 ease-out hover:opacity-80"
+                className="w-full flex items-center gap-[11px] px-3.5 py-[11px] rounded-[11px] text-[15px] transition-colors duration-200 ease-out"
                 style={{
-                  color: active ? "var(--ink)" : "var(--ink-dim)",
+                  background: active ? "var(--ink)" : "transparent",
+                  color: active ? "var(--page)" : "#3A3933",
                   fontWeight: active ? 600 : 500,
                 }}
               >
@@ -175,33 +225,7 @@ export default function Sidebar({ enterprise = false, mobileOpen, onClose }: Sid
       </div>
 
       <div className="space-y-3 shrink-0">
-        <div
-          className="rounded-xl px-3.5 py-2.5 flex items-center justify-between gap-2"
-          style={{ background: "var(--hero-bg)" }}
-        >
-          <span className="flex items-baseline gap-1.5 min-w-0">
-            <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--ink-faint)" }}>
-              Plan
-            </span>
-            <span className="font-display text-[14px] font-semibold tracking-tight truncate" style={{ color: "var(--hero-text)" }}>
-              {planLabel}
-            </span>
-            {bonusInterviews > 0 && (
-              <span className="text-[11px] shrink-0" style={{ color: "var(--ink-faint)" }}>
-                +{bonusInterviews}
-              </span>
-            )}
-          </span>
-          {!enterprise && (
-            <Link
-              href="/pricing"
-              className="text-[11.5px] shrink-0 pb-px transition-opacity hover:opacity-70"
-              style={{ color: "var(--lime)", borderBottom: "1px solid var(--lime)" }}
-            >
-              Manage
-            </Link>
-          )}
-        </div>
+        <PlanCard planLabel={planLabel} enterprise={enterprise} used={used} limit={limit} bonus={bonusInterviews} />
 
         <div className="flex items-center justify-between px-1 py-1">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -240,9 +264,9 @@ export default function Sidebar({ enterprise = false, mobileOpen, onClose }: Sid
           className={`relative w-[18rem] max-w-[85vw] h-[100dvh] max-h-[100dvh] overflow-hidden shadow-[8px_0_28px_rgba(28,26,22,0.12)] transition-transform duration-300 ease-out ${
             mobileOpen ? "translate-x-0" : "-translate-x-full"
           }`}
-          style={{ background: 'var(--page)' }}
+          style={{ background: 'var(--surface-2)' }}
         >
-            <div className="flex flex-col h-full px-5 py-6 border-r" style={{ borderColor: 'var(--border)' }}>
+            <div className="flex flex-col h-full px-5 py-6 border-r" style={{ borderColor: 'var(--border-mid)' }}>
               <div className="mb-6 shrink-0">
                 <Link href="/" className="font-display flex items-center gap-2.5 text-[18px] font-semibold tracking-tight px-1.5 mb-4 shrink-0" style={{ color: 'var(--ink)' }}>
                   <Image src={icon} alt="EvaluLabs" width={24} height={24} className="rounded-md" priority />
@@ -258,9 +282,10 @@ export default function Sidebar({ enterprise = false, mobileOpen, onClose }: Sid
                       key={href}
                       href={href}
                       onClick={onClose}
-                      className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-[15px] transition-all duration-200 ease-out hover:opacity-80"
+                      className="w-full flex items-center gap-[11px] px-3.5 py-[11px] rounded-[11px] text-[15px] transition-colors duration-200 ease-out"
                       style={{
-                        color: active ? "var(--ink)" : "var(--ink-dim)",
+                        background: active ? "var(--ink)" : "transparent",
+                        color: active ? "var(--page)" : "#3A3933",
                         fontWeight: active ? 600 : 500,
                       }}
                     >
@@ -273,26 +298,7 @@ export default function Sidebar({ enterprise = false, mobileOpen, onClose }: Sid
 
               <div className="mt-auto pt-4 border-t shrink-0" style={{ borderColor: 'var(--border)' }}>
                 <div className="space-y-3">
-                  <div className="rounded-xl px-3.5 py-2.5 flex items-center justify-between gap-2" style={{ background: "var(--hero-bg)" }}>
-                    <span className="flex items-baseline gap-1.5 min-w-0">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--ink-faint)" }}>
-                        Plan
-                      </span>
-                      <span className="font-display text-[14px] font-semibold tracking-tight truncate" style={{ color: "var(--hero-text)" }}>
-                        {planLabel}
-                      </span>
-                      {bonusInterviews > 0 && (
-                        <span className="text-[11px] shrink-0" style={{ color: "var(--ink-faint)" }}>
-                          +{bonusInterviews}
-                        </span>
-                      )}
-                    </span>
-                    {!enterprise && (
-                      <Link href="/pricing" className="text-[11.5px] shrink-0 pb-px transition-opacity hover:opacity-70" style={{ color: "var(--lime)", borderBottom: "1px solid var(--lime)" }}>
-                        Manage
-                      </Link>
-                    )}
-                  </div>
+                  <PlanCard planLabel={planLabel} enterprise={enterprise} used={used} limit={limit} bonus={bonusInterviews} />
 
                   <div className="flex items-center justify-between px-1 py-1">
                     <div className="flex items-center gap-2.5 min-w-0">

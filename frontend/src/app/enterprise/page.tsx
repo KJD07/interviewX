@@ -18,16 +18,16 @@ function formatDate(iso: string) {
 }
 
 const STATUS_STYLE: Record<OrgCandidateInvite["candidate_status"], { label: string; bg: string; color: string }> = {
-  pending: { label: "Pending", bg: "var(--surface-2)", color: "var(--ink-dim)" },
-  live: { label: "Live", bg: "var(--accent-glow)", color: "var(--accent)" },
-  finished: { label: "Finished", bg: "var(--success-bg)", color: "var(--success)" },
-  expired: { label: "Expired", bg: "#F7EAE7", color: "var(--danger)" },
+  pending: { label: "Pending", bg: "#EFEDE6", color: "var(--ink-dim)" },
+  live: { label: "Live", bg: "rgba(180,115,30,0.14)", color: "#7A5A12" },
+  finished: { label: "Finished", bg: "var(--success-bg)", color: "#2F6B48" },
+  expired: { label: "Expired", bg: "rgba(179,64,42,0.12)", color: "var(--danger)" },
 };
 
 function StatusBadge({ status }: { status: OrgCandidateInvite["candidate_status"] }) {
   const s = STATUS_STYLE[status];
   return (
-    <span className="inline-flex w-fit justify-self-start items-center justify-center whitespace-nowrap text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: s.bg, color: s.color }}>
+    <span className="inline-flex w-fit justify-self-start items-center justify-center whitespace-nowrap text-xs font-medium px-2.5 py-1.5 rounded-full" style={{ background: s.bg, color: s.color }}>
       {s.label}
     </span>
   );
@@ -46,34 +46,36 @@ function Card({ title, subtitle, action, children }: {
 }) {
   return (
     <div
-      className="card-hover rounded-3xl overflow-hidden shadow-[0_8px_32px_rgba(28,26,22,0.06)]"
-      style={{ border: "1px solid var(--border)", background: "var(--surface)" }}
+      className="rounded-[16px] overflow-hidden"
+      style={{ border: "1px solid var(--border-mid)", background: "var(--surface)" }}
     >
       <div
-        className="flex items-start justify-between gap-4 px-4 sm:px-6 py-5"
+        className="flex items-start justify-between gap-4 px-4 sm:px-[22px] py-[18px]"
         style={{ borderBottom: "1px solid var(--border)" }}
       >
         <div>
-          <h2 className="font-display text-base font-bold" style={{ color: "var(--ink)" }}>{title}</h2>
+          <h2 className="font-display text-xl font-bold tracking-[-0.025em]" style={{ color: "var(--ink)" }}>{title}</h2>
           {subtitle && <p className="text-xs mt-0.5" style={{ color: "var(--ink-dim)" }}>{subtitle}</p>}
         </div>
         {action}
       </div>
-      <div className="px-4 sm:px-6 py-5">{children}</div>
+      <div className="px-4 sm:px-[22px] py-[22px]">{children}</div>
     </div>
   );
 }
 
+// One cell of the hairline stat strip — the 1px gaps come from the strip's
+// background showing through, so cells stay borderless.
 function StatCard({ label, value, tone }: { label: string; value: string | number; tone?: string }) {
   return (
-    <div
-      className="card-hover rounded-2xl px-4 py-4 shadow-[0_4px_16px_rgba(28,26,22,0.05)]"
-      style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-    >
-      <p className="font-display text-2xl font-bold tabular-nums" style={{ color: tone ?? "var(--ink)" }}>
+    <div className="h-full px-[22px] py-5" style={{ background: "var(--surface)" }}>
+      <p
+        className="font-display text-[26px] sm:text-[32px] font-bold leading-none tracking-[-0.035em] tabular-nums"
+        style={{ color: tone ?? "var(--ink)" }}
+      >
         {value}
       </p>
-      <p className="text-xs mt-1" style={{ color: "var(--ink-dim)" }}>{label}</p>
+      <p className="text-xs mt-2" style={{ color: "var(--ink-dim)" }}>{label}</p>
     </div>
   );
 }
@@ -106,13 +108,29 @@ function UploadCard({ onUploaded }: { onUploaded: () => void }) {
   };
 
   return (
-    <Card title="Upload question bank" subtitle=".csv, .xlsx, or .json — Role, Round, Round Type, Question Text, Question Type, Ideal Answer">
-      <div className="flex flex-wrap items-center gap-3">
+    <div className="rounded-[16px] p-[22px]" style={{ background: "var(--hero-bg)", color: "var(--hero-text)" }}>
+      <div className="font-mono text-[10px] uppercase tracking-[0.16em] mb-3.5" style={{ color: "var(--lime)" }}>
+        Upload question bank
+      </div>
+      <p className="text-sm leading-[1.55] mb-2" style={{ color: "#A3A29A" }}>
+        .csv, .xlsx or .json with these columns:
+      </p>
+      <div
+        className="font-mono text-[11px] leading-[1.9] rounded-[11px] p-3.5 mb-[18px]"
+        style={{ background: "#17171A", border: "1px solid rgba(255,255,255,0.1)", color: "#D6D4CC" }}
+      >
+        Role · Round · Round Type
+        <br />
+        Question Text · Question Type
+        <br />
+        Ideal Answer
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
         <label
-          className="text-sm px-3.5 py-2 rounded-lg border cursor-pointer transition-colors"
-          style={{ borderColor: "var(--border-mid)", color: "var(--ink-dim)" }}
+          className="text-sm font-semibold px-[18px] py-[11px] rounded-full border cursor-pointer transition-colors hover:bg-white/[0.08]"
+          style={{ borderColor: "rgba(255,255,255,0.22)" }}
         >
-          {file ? file.name : "Choose file…"}
+          {file ? "Change file…" : "Choose file…"}
           <input
             type="file"
             accept=".csv,.xlsx,.json"
@@ -123,15 +141,25 @@ function UploadCard({ onUploaded }: { onUploaded: () => void }) {
         <button
           onClick={handleUpload}
           disabled={!file || busy}
-          className="px-4 py-2 rounded-full text-sm font-semibold disabled:opacity-40 transition-opacity"
-          style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
+          className="px-5 py-3 rounded-full text-sm font-bold transition-opacity disabled:cursor-not-allowed"
+          style={
+            file && !busy
+              ? { background: "var(--lime)", color: "var(--ink)" }
+              : { background: "rgba(255,255,255,0.12)", color: "#7E7D74" }
+          }
         >
           {busy ? "Uploading…" : "Upload"}
         </button>
       </div>
-      {error && <p className="text-sm mt-3" style={{ color: "var(--danger)" }}>{error}</p>}
-      {summary && <p className="text-sm mt-3" style={{ color: "var(--success)" }}>{summary}</p>}
-    </Card>
+      <div
+        className="font-mono text-[11px] mt-3 truncate"
+        style={{ color: "#7E7D74" }}
+      >
+        {file ? file.name : "No file chosen"}
+      </div>
+      {error && <p className="text-sm mt-3" style={{ color: "#E58A72" }}>{error}</p>}
+      {summary && <p className="text-sm mt-3" style={{ color: "var(--lime)" }}>{summary}</p>}
+    </div>
   );
 }
 
@@ -384,20 +412,20 @@ function InvitesTable({ invites, liveCameraEnabled }: { invites: OrgCandidateInv
             value={search.query}
             onChange={(e) => search.setQuery(e.target.value)}
             placeholder="Search by candidate, role, or round…"
-            className="w-full rounded-lg px-3.5 py-2.5 text-sm mb-4"
-            style={{ background: "var(--surface-2)", border: "1px solid var(--border-mid)", color: "var(--ink)" }}
+            className="w-full rounded-full px-4 py-2.5 text-sm mb-4 outline-none"
+            style={{ background: "var(--surface-alt)", border: "1px solid var(--border-mid)", color: "var(--ink)" }}
           />
 
           {search.results.length === 0 ? (
             <p className="text-sm" style={{ color: "var(--ink-dim)" }}>No candidates match "{search.query}".</p>
           ) : (
-            <div className="hidden md:block rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+            <div className="hidden md:block rounded-[14px] overflow-hidden" style={{ border: "1px solid var(--border-mid)" }}>
               <div
-                className="grid text-xs font-medium uppercase tracking-wider px-4 py-2.5"
+                className="grid font-mono text-[10px] uppercase tracking-[0.14em] px-[22px] py-3"
                 style={{
                   gridTemplateColumns: columns,
-                  background: "var(--surface-2)",
-                  color: "var(--ink-dim)",
+                  background: "var(--surface-alt)",
+                  color: "var(--ink-faint)",
                   borderBottom: "1px solid var(--border)",
                 }}
               >
@@ -413,9 +441,9 @@ function InvitesTable({ invites, liveCameraEnabled }: { invites: OrgCandidateInv
                 return (
                   <div
                     key={inv.id}
+                    className="dash-row"
                     style={{
                       borderBottom: i < search.results.length - 1 ? "1px solid var(--border)" : "none",
-                      background: i % 2 === 0 ? "transparent" : "var(--surface-2)",
                     }}
                   >
                     <div
@@ -428,7 +456,7 @@ function InvitesTable({ invites, liveCameraEnabled }: { invites: OrgCandidateInv
                           setExpandedId(isOpen ? null : inv.id);
                         }
                       }}
-                      className="w-full grid items-center px-4 py-3 text-left cursor-pointer"
+                      className="w-full grid items-center px-[22px] py-3.5 text-left cursor-pointer"
                       style={{ gridTemplateColumns: columns }}
                     >
                       <span className="text-sm truncate flex items-center gap-1.5" style={{ color: "var(--ink)" }}>
@@ -684,7 +712,7 @@ function EnterprisePageContent({ view = "overview" }: { view?: "overview" | "can
     <ProtectedRoute>
       <AppShell enterprise>
       <div className="min-h-screen" style={{ background: "var(--page)" }}>
-        <main className={`max-w-5xl mx-auto px-6 ${view === "overview" ? "pt-16 sm:pt-20" : "pt-10"} pb-10 fade-up`}>
+        <main className={`max-w-[1120px] mx-auto px-4 sm:px-10 ${view === "overview" ? "pt-8 sm:pt-[34px]" : "pt-8"} pb-16 fade-up`}>
 
           {loading && <EnterpriseSkeleton view={view} />}
 
@@ -708,27 +736,28 @@ function EnterprisePageContent({ view = "overview" }: { view?: "overview" | "can
           {dashboard && (
             <>
               {view === "overview" && (
-                <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
+                <div className="flex flex-wrap items-end justify-between gap-4 mb-7">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--ink-faint)" }}>
-                      Enterprise dashboard
-                    </p>
-                    <h1 className="font-display text-2xl font-bold" style={{ color: "var(--ink)" }}>
+                    <div className="font-label mb-2.5">Enterprise dashboard</div>
+                    <h1
+                      className="font-display text-[32px] sm:text-[44px] font-bold leading-none tracking-[-0.035em]"
+                      style={{ color: "var(--ink)" }}
+                    >
                       {dashboard.organization.name}
                     </h1>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span
-                      className="text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider"
-                      style={{ background: "var(--surface-2)", color: "var(--ink-dim)" }}
+                      className="font-mono text-[10px] uppercase tracking-[0.1em] px-3 py-1.5 rounded-full"
+                      style={{ border: "1px solid var(--border-mid)", color: "var(--ink)" }}
                     >
                       {dashboard.role}
                     </span>
                     <span
-                      className="text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider"
+                      className="font-mono text-[10px] uppercase tracking-[0.1em] px-3 py-1.5 rounded-full"
                       style={{
-                        background: dashboard.organization.is_active ? "var(--success-bg)" : "#F7EAE7",
-                        color: dashboard.organization.is_active ? "var(--success)" : "var(--danger)",
+                        background: dashboard.organization.is_active ? "var(--success-bg)" : "rgba(179,64,42,0.12)",
+                        color: dashboard.organization.is_active ? "#2F6B48" : "var(--danger)",
                       }}
                     >
                       {dashboard.organization.is_active ? "Active" : "Inactive"}
@@ -739,25 +768,28 @@ function EnterprisePageContent({ view = "overview" }: { view?: "overview" | "can
 
               {view !== "questions" && (
                 <div
-                  className="rounded-2xl px-5 py-4 mb-6 shadow-[0_4px_16px_rgba(28,26,22,0.05)]"
-                  style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+                  className="rounded-[16px] px-[22px] py-[22px] mb-3.5"
+                  style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>
+                  <div className="flex items-baseline justify-between mb-3.5">
+                    <span className="text-[15px] font-semibold" style={{ color: "var(--ink)" }}>
                       Candidate quota
                     </span>
-                    <span className="text-sm tabular-nums" style={{ color: "var(--ink-dim)" }}>
+                    <span className="font-mono text-[13px] tabular-nums" style={{ color: "var(--ink-dim)" }}>
                       {quotaUsed} / {quotaTotal} used
                     </span>
                   </div>
-                  <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--surface-2)" }}>
-                    <div className="h-full rounded-full" style={{ width: `${quotaPct}%`, background: quotaTone }} />
+                  <div className="h-[9px] rounded-[5px] overflow-hidden" style={{ background: "var(--surface-2)" }}>
+                    <div className="h-full rounded-[5px]" style={{ width: `${quotaPct}%`, background: quotaTone }} />
                   </div>
                 </div>
               )}
 
               {view === "overview" && (
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">
+                <div
+                  className="grid grid-cols-2 sm:grid-cols-5 gap-px overflow-hidden rounded-[16px] mb-3.5"
+                  style={{ background: "var(--border-mid)", border: "1px solid var(--border-mid)" }}
+                >
                     <StatCard label="Roles in bank" value={dashboard.question_bank.length} />
                     <StatCard label="Questions" value={totalQuestions} />
                     <StatCard label="Pending" value={counts.pending ?? 0} />
@@ -773,7 +805,7 @@ function EnterprisePageContent({ view = "overview" }: { view?: "overview" | "can
                 </div>
               )}
               {view === "questions" && (
-                <div className="space-y-6">
+                <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-[1.5fr_1fr] lg:items-start">
                   <QuestionBankCard dashboard={dashboard} />
                   <UploadCard onUploaded={load} />
                 </div>
