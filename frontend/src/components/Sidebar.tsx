@@ -162,7 +162,7 @@ export default function Sidebar({ enterprise = false, mobileOpen, onClose }: Sid
 
   const NAV_ITEMS = enterprise
     ? [
-        { href: "/enterprise", label: "Dashboard", icon: GridIcon },
+        { href: "/enterprise/dashboard", label: "Dashboard", icon: GridIcon },
         { href: "/enterprise/candidate", label: "Candidate", icon: UserIcon },
         { href: "/enterprise/questions", label: "Question bank", icon: QuestionsIcon },
       ]
