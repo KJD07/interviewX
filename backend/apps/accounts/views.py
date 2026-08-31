@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
+from django.utils import timezone
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token as google_id_token
 from rest_framework import status
@@ -30,7 +31,12 @@ logger = logging.getLogger(__name__)
 
 
 def _token_response(user) -> dict:
-    """Return access + refresh tokens for a given user."""
+    """Return access + refresh tokens for a given user and mark the user as
+    active for analytics.
+    """
+    user.last_login = timezone.now()
+    user.save(update_fields=["last_login"])
+
     refresh = RefreshToken.for_user(user)
     return {
         "access": str(refresh.access_token),

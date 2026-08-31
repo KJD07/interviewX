@@ -83,6 +83,22 @@ class SubscriptionCycleTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.data["subscription_plan"], "free")
 
+    def test_login_updates_last_login_for_active_user(self):
+        user = self._make_user(email="login@example.com", username="loginuser")
+        user.set_password("testpass123")
+        user.save()
+
+        client = APIClient()
+        response = client.post(
+            reverse("auth-login"),
+            {"email": "login@example.com", "password": "testpass123"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        user.refresh_from_db()
+        self.assertIsNotNone(user.last_login)
+
 
 class SponsorshipTests(TestCase):
     """Covers institutional sponsorship campaigns: lazy attach/expire/roll in
