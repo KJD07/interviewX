@@ -12,6 +12,10 @@ const ROUTES: { path: string; priority: number; changeFrequency: MetadataRoute.S
   { path: "/register", priority: 0.6, changeFrequency: "monthly" },
   { path: "/login", priority: 0.4, changeFrequency: "yearly" },
   { path: "/contact", priority: 0.4, changeFrequency: "yearly" },
+  { path: "/terms", priority: 0.3, changeFrequency: "yearly" },
+  { path: "/privacy", priority: 0.3, changeFrequency: "yearly" },
+  { path: "/refund", priority: 0.3, changeFrequency: "yearly" },
+  { path: "/cancellation", priority: 0.3, changeFrequency: "yearly" },
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

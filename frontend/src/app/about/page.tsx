@@ -3,7 +3,14 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import MarketingNav from "@/components/MarketingNav";
+import MarketingFooter from "@/components/MarketingFooter";
 import { ScrollReveal } from "@/components/ScrollReveal";
+import {
+  OPERATOR_LEGAL_NAME,
+  REGISTERED_ADDRESS,
+  SUPPORT_EMAIL,
+  TRADE_NAME,
+} from "@/lib/legal";
 
 const VALUES = [
   { title: "Sourced, not scraped", body: "Every question comes from someone who actually sat in that interview - a current employee or a recently interviewed candidate. Nothing is pulled off generic forums." },
@@ -145,6 +152,31 @@ export default function About() {
         </div>
       </section>
 
+      <section className="mx-auto max-w-[1180px] px-6 pt-[88px] sm:px-8">
+        <ScrollReveal>
+          <div className="rounded-[20px] border border-[var(--border)] bg-[var(--surface)] p-8 sm:p-10">
+            <div className="font-label mb-3.5">Legal information</div>
+            <h2 className="font-display text-[28px] font-bold leading-[1.04] tracking-[-0.032em] text-[var(--ink)] sm:text-[32px]">
+              Who operates {TRADE_NAME}
+            </h2>
+            <div className="mt-5 space-y-2 text-[15px] leading-[1.65] text-[var(--ink-dim)]">
+              <p>
+                {TRADE_NAME} is operated by <strong className="text-[var(--ink)]">{OPERATOR_LEGAL_NAME}</strong>.
+              </p>
+              <p>
+                <strong className="text-[var(--ink)]">Registered address:</strong> {REGISTERED_ADDRESS}
+              </p>
+              <p>
+                <strong className="text-[var(--ink)]">Contact:</strong>{" "}
+                <a href={`mailto:${SUPPORT_EMAIL}`} className="underline underline-offset-4 hover:opacity-70">
+                  {SUPPORT_EMAIL}
+                </a>
+              </p>
+            </div>
+          </div>
+        </ScrollReveal>
+      </section>
+
       <section className="mx-auto max-w-[1180px] px-6 pt-24 sm:px-8">
         <ScrollReveal>
           <div
@@ -175,15 +207,7 @@ export default function About() {
         </ScrollReveal>
       </section>
 
-      <footer className="mx-auto max-w-[1180px] px-6 pb-10 pt-16 sm:px-8">
-        <div className="flex items-center justify-between border-t border-[var(--border-mid)] pt-[26px] text-[13px] text-[var(--ink-faint)]">
-          <span>© {new Date().getFullYear()} EvaluLabs</span>
-          <div className="flex gap-6">
-            <Link href="/pricing" className="hover:opacity-70">Pricing</Link>
-            <Link href="/contact" className="hover:opacity-70">Contact</Link>
-          </div>
-        </div>
-      </footer>
+      <MarketingFooter />
     </div>
   );
 }

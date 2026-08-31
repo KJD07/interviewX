@@ -1,8 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import Link from "next/link";
 import MarketingNav from "@/components/MarketingNav";
+import MarketingFooter from "@/components/MarketingFooter";
 import { ScrollReveal } from "@/components/ScrollReveal";
 
 const SUPPORT_EMAIL = "support@evalulabs.com";
@@ -150,15 +150,7 @@ export default function Contact() {
         </ScrollReveal>
       </section>
 
-      <footer className="mx-auto max-w-[1180px] px-6 pb-10 pt-16 sm:px-8">
-        <div className="flex items-center justify-between border-t border-[var(--border-mid)] pt-[26px] text-[13px] text-[var(--ink-faint)]">
-          <span>© {new Date().getFullYear()} EvaluLabs</span>
-          <div className="flex gap-6">
-            <Link href="/pricing" className="hover:opacity-70">Pricing</Link>
-            <Link href="/about" className="hover:opacity-70">About</Link>
-          </div>
-        </div>
-      </footer>
+      <MarketingFooter />
     </div>
   );
 }
