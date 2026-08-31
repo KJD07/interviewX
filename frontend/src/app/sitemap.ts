@@ -12,7 +12,6 @@ const ROUTES: { path: string; priority: number; changeFrequency: MetadataRoute.S
   { path: "/register", priority: 0.6, changeFrequency: "monthly" },
   { path: "/login", priority: 0.4, changeFrequency: "yearly" },
   { path: "/contact", priority: 0.4, changeFrequency: "yearly" },
-  { path: "/career", priority: 0.4, changeFrequency: "monthly" },
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

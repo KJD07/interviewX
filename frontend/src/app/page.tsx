@@ -320,7 +320,7 @@ export default function Home() {
       </section>
 
       <footer className="mx-auto max-w-[1180px] px-6 pb-12 pt-16 sm:px-8">
-        <div className="grid grid-cols-2 gap-10 border-t border-[var(--border-mid)] pt-[26px] sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-10 border-t border-[var(--border-mid)] pt-[26px] sm:grid-cols-3">
           <div className="col-span-2 sm:col-span-1">
             <div className="font-display mb-4 flex items-center gap-2.5 text-lg font-bold tracking-[-0.025em] text-[var(--ink)]">
               <Image src={icon} alt="EvaluLabs" width={26} height={26} className="rounded-md" />
@@ -351,12 +351,6 @@ export default function Home() {
               >
                 <FaLinkedin size={15} aria-hidden="true" /> LinkedIn
               </a>
-            </div>
-          </div>
-          <div>
-            <p className="font-label mb-4">Career</p>
-            <div className="flex flex-col gap-2.5 text-sm">
-              <Link href="/career" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">We&apos;re hiring</Link>
             </div>
           </div>
         </div>
