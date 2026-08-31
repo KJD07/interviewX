@@ -15,6 +15,8 @@ const LINKS = [
   { href: "/contact", label: "Contact Us" },
 ];
 
+const ENTERPRISE_HREF = "/enterprise";
+
 export default function MarketingNav() {
   const pathname = usePathname();
   const router = useRouter();
@@ -67,6 +69,16 @@ export default function MarketingNav() {
               </Link>
             );
           })}
+          <Link
+            href={ENTERPRISE_HREF}
+            className={`rounded-full px-[17px] py-[9px] text-sm font-semibold transition-colors ${
+              pathname === ENTERPRISE_HREF || pathname?.startsWith(`${ENTERPRISE_HREF}/`)
+                ? "bg-[var(--lime)] text-[var(--ink)]"
+                : "text-[var(--olive)] hover:bg-[var(--lime)]/10"
+            }`}
+          >
+            Hire with Us
+          </Link>
         </div>
 
         <div className="flex items-center gap-2.5">

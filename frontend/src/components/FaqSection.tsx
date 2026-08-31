@@ -52,6 +52,11 @@ const FAQS = [
       "Yes. Institutional sponsorships grant a full plan to everyone on a given email domain, with a per-cycle interview limit the sponsor sets. Students sign up with their college address and the plan attaches automatically.",
   },
   {
+    question: "How can companies hire with EvaluLabs?",
+    answer:
+      "EvaluLabs Enterprise gives hiring teams a dashboard to invite candidates, run structured AI interviews from your own question bank, and review scored reports in one place. Colleges can sponsor prep for an entire batch the same way. Click Hire with Us in the header or visit evalulabs.com/enterprise to learn more.",
+  },
+  {
     question: "Is EvaluLabs related to Evalulab, the cosmetics testing lab?",
     answer:
       "No. EvaluLabs (evalulabs.com) is an AI mock interview platform for job candidates. Evalulab is a separate, unrelated clinical testing company in Montreal.",
