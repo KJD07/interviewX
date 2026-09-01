@@ -30,6 +30,8 @@ export default function MarketingNav() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  const afterAuth = pathname === ENTERPRISE_HREF ? "/enterprise/dashboard" : "/dashboard";
+
   return (
     <motion.header
       initial={{ y: -24, opacity: 0 }}
@@ -84,14 +86,14 @@ export default function MarketingNav() {
         <div className="flex items-center gap-2.5">
           {!loading && !user && (
             <button
-              onClick={() => router.push("/login")}
+              onClick={() => router.push(`/login?next=${encodeURIComponent(afterAuth)}`)}
               className="rounded-full px-3.5 py-2.5 text-[14.5px] font-medium text-[var(--ink)] transition-opacity hover:opacity-70"
             >
               Sign in
             </button>
           )}
           <button
-            onClick={() => router.push(user ? "/dashboard" : "/register")}
+            onClick={() => router.push(user ? afterAuth : "/register")}
             className="flex items-center gap-2 rounded-full bg-[var(--ink)] px-5 py-[11px] text-sm font-semibold text-[var(--page)] hover:bg-[var(--accent-dim)]"
           >
             {loading ? "Loading…" : user ? "Go to dashboard" : "Start free"}

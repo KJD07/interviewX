@@ -155,11 +155,19 @@ export function softwareApplicationSchema() {
   };
 }
 
-export function faqSchema(faqs: { question: string; answer: string }[]) {
+/**
+ * FAQPage JSON-LD for a public route. Pass the same `path` you give
+ * `pageMetadata()` so `@id` is the page canonical plus `#faq`, and two
+ * FAQ blocks on different URLs do not share an identifier.
+ */
+export function faqSchema(
+  faqs: { question: string; answer: string }[],
+  { path = "/" }: { path?: string } = {},
+) {
   return {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    "@id": `${SITE_URL}/#faq`,
+    "@id": `${canonicalUrl(path)}#faq`,
     mainEntity: faqs.map((f) => ({
       "@type": "Question",
       name: f.question,

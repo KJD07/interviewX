@@ -337,6 +337,7 @@ export default function Home() {
               <Link href="/#product" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">Features</Link>
               <Link href="/pricing" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">Pricing</Link>
               <Link href="/companies" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">Companies</Link>
+              <Link href="/enterprise" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">Enterprise</Link>
             </div>
           </div>
           <div>
