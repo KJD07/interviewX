@@ -52,6 +52,11 @@ const FAQS = [
       "Yes. Institutional sponsorships grant a full plan to everyone on a given email domain, with a per-cycle interview limit the sponsor sets. Students sign up with their college address and the plan attaches automatically.",
   },
   {
+    question: "How can companies hire with EvaluLabs?",
+    answer:
+      "EvaluLabs Enterprise gives hiring teams a dashboard to invite candidates, run structured AI interviews from your own question bank, and review scored reports in one place. Colleges can sponsor prep for an entire batch the same way. Click Hire with Us in the header or visit evalulabs.com/enterprise to learn more.",
+  },
+  {
     question: "Is EvaluLabs related to Evalulab, the cosmetics testing lab?",
     answer:
       "No. EvaluLabs (evalulabs.com) is an AI mock interview platform for job candidates. Evalulab is a separate, unrelated clinical testing company in Montreal.",
@@ -103,26 +108,41 @@ function FaqItem({ id, question, answer }: { id: string; question: string; answe
   );
 }
 
-export default function FaqSection() {
+export function FaqAccordion({
+  items,
+  heading,
+  idPrefix = "faq-a",
+}: {
+  items: { question: string; answer: string }[];
+  heading: string;
+  idPrefix?: string;
+}) {
   return (
     <section
       id="faq"
       className="mx-auto grid max-w-[1180px] grid-cols-1 gap-10 px-6 py-[88px] sm:px-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-[52px]"
     >
-      <StructuredData schema={faqSchema(FAQS)} />
-
       <div>
         <div className="font-label mb-3.5">FAQ</div>
         <h2 className="font-display text-[30px] font-bold leading-[1.04] tracking-[-0.032em] text-[var(--ink)] sm:text-[38px]">
-          Questions we get a lot.
+          {heading}
         </h2>
       </div>
 
       <div>
-        {FAQS.map((faq, i) => (
-          <FaqItem key={faq.question} id={`faq-a-${i}`} question={faq.question} answer={faq.answer} />
+        {items.map((faq, i) => (
+          <FaqItem key={faq.question} id={`${idPrefix}-${i}`} question={faq.question} answer={faq.answer} />
         ))}
       </div>
     </section>
+  );
+}
+
+export default function FaqSection() {
+  return (
+    <>
+      <StructuredData schema={faqSchema(FAQS)} />
+      <FaqAccordion items={FAQS} heading="Questions we get a lot." />
+    </>
   );
 }

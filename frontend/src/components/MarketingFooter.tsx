@@ -29,6 +29,9 @@ export default function MarketingFooter() {
             <Link href="/companies" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">
               Companies
             </Link>
+            <Link href="/enterprise" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">
+              Enterprise
+            </Link>
           </div>
         </div>
         <div>

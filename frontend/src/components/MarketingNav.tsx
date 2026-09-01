@@ -15,6 +15,8 @@ const LINKS = [
   { href: "/contact", label: "Contact Us" },
 ];
 
+const ENTERPRISE_HREF = "/enterprise";
+
 export default function MarketingNav() {
   const pathname = usePathname();
   const router = useRouter();
@@ -27,6 +29,8 @@ export default function MarketingNav() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  const afterAuth = pathname === ENTERPRISE_HREF ? "/enterprise/dashboard" : "/dashboard";
 
   return (
     <motion.header
@@ -67,19 +71,29 @@ export default function MarketingNav() {
               </Link>
             );
           })}
+          <Link
+            href={ENTERPRISE_HREF}
+            className={`rounded-full px-[17px] py-[9px] text-sm font-semibold transition-colors ${
+              pathname === ENTERPRISE_HREF || pathname?.startsWith(`${ENTERPRISE_HREF}/`)
+                ? "bg-[var(--lime)] text-[var(--ink)]"
+                : "text-[var(--olive)] hover:bg-[var(--lime)]/10"
+            }`}
+          >
+            Hire with Us
+          </Link>
         </div>
 
         <div className="flex items-center gap-2.5">
           {!loading && !user && (
             <button
-              onClick={() => router.push("/login")}
+              onClick={() => router.push(`/login?next=${encodeURIComponent(afterAuth)}`)}
               className="rounded-full px-3.5 py-2.5 text-[14.5px] font-medium text-[var(--ink)] transition-opacity hover:opacity-70"
             >
               Sign in
             </button>
           )}
           <button
-            onClick={() => router.push(user ? "/dashboard" : "/register")}
+            onClick={() => router.push(user ? afterAuth : "/register")}
             className="flex items-center gap-2 rounded-full bg-[var(--ink)] px-5 py-[11px] text-sm font-semibold text-[var(--page)] hover:bg-[var(--accent-dim)]"
           >
             {loading ? "Loading…" : user ? "Go to dashboard" : "Start free"}

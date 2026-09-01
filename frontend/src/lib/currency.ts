@@ -1,29 +1,34 @@
-// Client-side currency display: India sees INR, everyone else sees USD.
-// Display only — actual Razorpay checkout always charges INR (see pricing
-// page); this just converts the INR price for a friendlier read elsewhere.
+"use client";
+
+// Display currency: India sees INR, everyone else sees USD.
+// Display only — Razorpay checkout always charges INR (see pricing page);
+// this just converts the INR amount for a friendlier read elsewhere.
 //
 // Detection is the browser's IANA timezone, not IP geolocation — India has
 // exactly one timezone (Asia/Kolkata), so it's a reliable, synchronous,
-// zero-network signal for this binary split. No third-party API, no rate
-// limits, no per-request cost.
+// zero-network signal for this binary split.
+//
+// Timezone is a client-only signal. Node during SSR uses the server TZ
+// (UTC in Docker), so we must not detect during render — server HTML and
+// the first client pass stay on the INR default, then we update after mount.
 
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 
 export type DisplayCurrency = "INR" | "USD";
 
-// Fixed conversion rate for display purposes only — no live FX needed since
-// no money actually changes hands in USD.
 const INR_PER_USD = 83;
 
 const INDIA_TIMEZONES = new Set(["Asia/Kolkata", "Asia/Calcutta"]);
+
+/** Home-market default used for SSR and the first client render. */
+const SSR_CURRENCY: DisplayCurrency = "INR";
 
 export function detectCurrency(): DisplayCurrency {
   try {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
     return INDIA_TIMEZONES.has(tz) ? "INR" : "USD";
   } catch {
-    // Intl unavailable (very old browser) — fall back to INR, the app's home market.
-    return "INR";
+    return SSR_CURRENCY;
   }
 }
 
@@ -40,9 +45,13 @@ export function formatPrice(priceRupees: number, currency: DisplayCurrency): str
   }).format(usd);
 }
 
-/** Returns the viewer's display currency (India → INR, else → USD). Synchronous, no network. */
+/** Viewer's display currency. Stable across SSR/hydration; timezone applied after mount. */
 export function useCurrency(): DisplayCurrency {
-  // Timezone doesn't change mid-session, and detection is synchronous/free,
-  // so this only needs to run once per mount rather than live in state.
-  return useMemo(() => detectCurrency(), []);
+  const [currency, setCurrency] = useState<DisplayCurrency>(SSR_CURRENCY);
+
+  useEffect(() => {
+    setCurrency(detectCurrency());
+  }, []);
+
+  return currency;
 }
