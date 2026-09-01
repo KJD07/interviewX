@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { FaLinkedin } from "react-icons/fa6";
 import { useAuth } from "@/context/AuthContext";
 import MarketingNav from "@/components/MarketingNav";
+import { OPERATOR_LEGAL_NAME } from "@/lib/legal";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import LiveCodeFeature from "@/components/LiveCodeFeature";
 import FaqSection from "@/components/FaqSection";
@@ -320,8 +321,8 @@ export default function Home() {
       </section>
 
       <footer className="mx-auto max-w-[1180px] px-6 pb-12 pt-16 sm:px-8">
-        <div className="grid grid-cols-2 gap-10 border-t border-[var(--border-mid)] pt-[26px] sm:grid-cols-3">
-          <div className="col-span-2 sm:col-span-1">
+        <div className="grid grid-cols-2 gap-10 border-t border-[var(--border-mid)] pt-[26px] sm:grid-cols-2 lg:grid-cols-4">
+          <div className="col-span-2 lg:col-span-1">
             <div className="font-display mb-4 flex items-center gap-2.5 text-lg font-bold tracking-[-0.025em] text-[var(--ink)]">
               <Image src={icon} alt="EvaluLabs" width={26} height={26} className="rounded-md" />
               EvaluLabs
@@ -353,10 +354,19 @@ export default function Home() {
               </a>
             </div>
           </div>
+          <div>
+            <p className="font-label mb-4">Legal</p>
+            <div className="flex flex-col gap-2.5 text-sm">
+              <Link href="/terms" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">Terms</Link>
+              <Link href="/privacy" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">Privacy</Link>
+              <Link href="/refund" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">Refund</Link>
+              <Link href="/cancellation" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">Cancellation</Link>
+            </div>
+          </div>
         </div>
         <div className="flex flex-col items-center justify-between gap-2 pt-6 text-[13px] text-[var(--ink-faint)] sm:flex-row">
           <span>© {new Date().getFullYear()} EvaluLabs</span>
-          <span>Made for people preparing for the room.</span>
+          <span>Operated by {OPERATOR_LEGAL_NAME}</span>
         </div>
       </footer>
     </div>

@@ -7,6 +7,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { useAuth } from "@/context/AuthContext";
 import MarketingNav from "@/components/MarketingNav";
+import MarketingFooter from "@/components/MarketingFooter";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { PLANS, PAID_PLAN_IDS, type PlanId } from "@/lib/plans";
 import { subscriptions, ApiError } from "@/lib/api";
@@ -392,15 +393,7 @@ export default function Pricing() {
         </div>
       </section>
 
-      <footer className="mx-auto max-w-[1180px] px-6 pb-10 pt-4 sm:px-8">
-        <div className="flex items-center justify-between border-t border-[var(--border-mid)] pt-[26px] text-[13px] text-[var(--ink-faint)]">
-          <span>© {new Date().getFullYear()} EvaluLabs</span>
-          <div className="flex gap-6">
-            <Link href="/about" className="hover:opacity-70">About</Link>
-            <Link href="/contact" className="hover:opacity-70">Contact</Link>
-          </div>
-        </div>
-      </footer>
+      <MarketingFooter />
     </div>
   );
 }
