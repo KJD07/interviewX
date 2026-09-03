@@ -17,7 +17,7 @@ function getRedirectPath(next: string | null) {
 
 const LOGIN_POINTS = [
   { label: "Interview", value: "Panel-grade pressure" },
-  { label: "Scores", value: "Four dimensions, 0–10" },
+  { label: "Scores", value: "Four dimensions, 0-10" },
   { label: "Mode", value: "Voice or text" },
 ];
 
