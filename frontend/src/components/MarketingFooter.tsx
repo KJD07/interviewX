@@ -6,7 +6,7 @@ import { OPERATOR_LEGAL_NAME } from "@/lib/legal";
 
 export default function MarketingFooter() {
   return (
-    <footer className="mx-auto max-w-[1180px] px-6 pb-12 pt-8 sm:px-8">
+    <footer className="mx-auto max-w-[1180px] px-4 pb-12 pt-8 sm:px-8">
       <div className="grid grid-cols-2 gap-10 border-t border-[var(--border-mid)] pt-[26px] sm:grid-cols-2 lg:grid-cols-4">
         <div className="col-span-2 lg:col-span-1">
           <div className="font-display mb-4 flex items-center gap-2.5 text-lg font-bold tracking-[-0.025em] text-[var(--ink)]">
