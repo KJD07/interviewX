@@ -8,7 +8,7 @@ import { useSearchAndPaginate } from "@/hooks/useSearchAndPaginate";
 import { Skeleton } from "@/components/Skeleton";
 import Link from "next/link";
 import { organizations, ApiError } from "@/lib/api";
-import type { OrgDashboard, OrgCandidateInvite, OrgRound, OrgRole } from "@/lib/api";
+import type { OrgDashboard, OrgCandidateInvite, OrgRound, OrgRole, OrgActivityItem, OrgInviteWeek } from "@/lib/api";
 import { useCurrency, formatPrice } from "@/lib/currency";
 
 const ENTERPRISE_PRICE_PER_SEAT_RUPEES = 99;
@@ -60,6 +60,157 @@ function Card({ title, subtitle, action, children }: {
         {action}
       </div>
       <div className="px-4 sm:px-[22px] py-[22px]">{children}</div>
+    </div>
+  );
+}
+
+function formatRelative(iso: string) {
+  const dt = new Date(iso);
+  const seconds = Math.round((Date.now() - dt.getTime()) / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "yesterday";
+  if (days < 14) return `${days} days ago`;
+  return dt.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+}
+
+function mondayOf(d: Date) {
+  const date = new Date(d);
+  const offset = (date.getDay() + 6) % 7;
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() - offset);
+  return date;
+}
+
+function ymd(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function seriesFromInvites(invites: OrgCandidateInvite[]): OrgInviteWeek[] {
+  const counts = new Map<string, number>();
+  for (const inv of invites) {
+    const key = ymd(mondayOf(new Date(inv.created_at)));
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  const thisMonday = mondayOf(new Date());
+  return Array.from({ length: 12 }, (_, i) => {
+    const week = new Date(thisMonday);
+    week.setDate(thisMonday.getDate() - (11 - i) * 7);
+    const week_start = ymd(week);
+    return { week_start, count: counts.get(week_start) ?? 0 };
+  });
+}
+
+function activityFromInvites(invites: OrgCandidateInvite[]): OrgActivityItem[] {
+  return [...invites]
+    .sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at))
+    .slice(0, 8)
+    .map((inv) => {
+      if (inv.candidate_status === "live") {
+        return { text: `${inv.candidate_email} started ${inv.round_title}`, when: formatRelative(inv.created_at), live: true };
+      }
+      if (inv.candidate_status === "finished") {
+        const overall = inv.scores?.overall;
+        const scoreBit = overall !== undefined ? ` — ${overall}/10` : "";
+        return { text: `${inv.candidate_email} finished ${inv.round_title}${scoreBit}`, when: formatRelative(inv.created_at), live: false };
+      }
+      if (inv.candidate_status === "expired") {
+        return { text: `${inv.candidate_email} invite expired`, when: formatRelative(inv.expires_at), live: false };
+      }
+      return { text: `${inv.candidate_email} invited to ${inv.round_title}`, when: formatRelative(inv.created_at), live: false };
+    });
+}
+
+function sparkPoints(values: number[], w: number, h: number) {
+  if (values.length === 0) return [];
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const pad = 4;
+  const lastIndex = Math.max(values.length - 1, 1);
+  return values.map((v, i) => {
+    const x = pad + (i / lastIndex) * (w - pad * 2);
+    const y = pad + (1 - (v - min) / range) * (h - pad * 2);
+    return { x, y };
+  });
+}
+
+function InviteSparkline({ values }: { values: number[] }) {
+  const series = values.length > 0 ? values : Array(12).fill(0);
+  const pts = sparkPoints(series, 300, 64);
+  const last = pts[pts.length - 1];
+  const line = pts.map((p) => `${p.x},${p.y}`).join(" ");
+  const area = pts.length
+    ? `M${pts[0].x},${64} L${pts.map((p) => `${p.x},${p.y}`).join(" ")} L${last.x},64 Z`
+    : "";
+  const total = series.reduce((sum, n) => sum + n, 0);
+
+  return (
+    <div
+      className="relative overflow-hidden rounded-[24px] p-[22px]"
+      style={{ background: "var(--hero-bg)", color: "var(--hero-text)" }}
+    >
+      <div
+        className="pointer-events-none absolute -right-[70px] -top-[70px] h-[190px] w-[190px] rounded-full opacity-[0.13]"
+        style={{ background: "var(--lime)" }}
+      />
+      <div className="relative mb-2.5 flex items-center justify-between gap-4">
+        <span className="font-mono text-[10px] tracking-[0.16em] text-[var(--lime)]">INVITES SENT</span>
+        <span className="font-mono text-[11px] text-[#A3A29A]">
+          {total} in last 12 weeks
+        </span>
+      </div>
+      <svg viewBox="0 0 300 64" preserveAspectRatio="none" className="relative block h-16 w-full">
+        <path d={area} fill="rgba(216,250,75,.14)" />
+        <polyline
+          points={line}
+          fill="none"
+          stroke="#D8FA4B"
+          strokeWidth="2"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+        {last && <circle cx={last.x} cy={last.y} r="3.5" fill="#D8FA4B" />}
+      </svg>
+    </div>
+  );
+}
+
+function RecentActivity({ items }: { items: OrgActivityItem[] }) {
+  return (
+    <div
+      className="rounded-[16px] px-[22px] py-5"
+      style={{ border: "1px solid var(--border-mid)", background: "var(--surface)" }}
+    >
+      <h3 className="font-display mb-3 text-lg font-bold tracking-[-0.025em] text-[var(--ink)]">
+        Recent activity
+      </h3>
+      {items.length === 0 ? (
+        <p className="text-sm" style={{ color: "var(--ink-faint)" }}>No activity yet.</p>
+      ) : (
+        <div className="grid">
+          {items.map((a) => (
+            <div
+              key={`${a.text}-${a.when}`}
+              className="grid grid-cols-[14px_1fr_auto] items-center gap-3 border-b border-[var(--border)] py-3 last:border-b-0 last:pb-0"
+            >
+              <span
+                className={`h-2 w-2 rounded-full ${a.live ? "el-pulse" : ""}`}
+                style={{ background: a.live ? "var(--warn)" : "rgba(12,12,11,.18)" }}
+              />
+              <span className="truncate text-sm text-[var(--ink)]">{a.text}</span>
+              <span className="font-mono text-[11px] text-[var(--ink-faint)]">{a.when}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -625,18 +776,24 @@ function EnterpriseSkeleton({ view }: { view: "overview" | "candidate" | "questi
       )}
 
       {view === "overview" && (
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">
-          {[1, 2, 3, 4, 5].map((n) => (
-            <div
-              key={n}
-              className="rounded-2xl px-4 py-4"
-              style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-            >
-              <Skeleton className="h-7 w-12 rounded-lg mb-2" />
-              <Skeleton className="h-3 w-20 rounded" />
-            </div>
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <div
+                key={n}
+                className="rounded-2xl px-4 py-4"
+                style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+              >
+                <Skeleton className="h-7 w-12 rounded-lg mb-2" />
+                <Skeleton className="h-3 w-20 rounded" />
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2">
+            <Skeleton className="h-36 w-full rounded-[24px]" />
+            <Skeleton className="h-36 w-full rounded-[16px]" />
+          </div>
+        </>
       )}
 
       {view !== "overview" && (
@@ -699,6 +856,8 @@ function EnterprisePageContent({ view = "overview" }: { view?: "overview" | "can
   const quotaTone = quotaPct >= 90 ? "var(--danger)" : quotaPct >= 70 ? "#B8862F" : "var(--success)";
 
   const counts = dashboard?.invite_counts ?? {};
+  const inviteSeries = dashboard?.invite_series ?? seriesFromInvites(invites);
+  const activityItems = dashboard?.recent_activity ?? activityFromInvites(invites);
   const totalQuestions = useMemo(
     () =>
       dashboard?.question_bank.reduce(
@@ -795,6 +954,13 @@ function EnterprisePageContent({ view = "overview" }: { view?: "overview" | "can
                     <StatCard label="Pending" value={counts.pending ?? 0} />
                     <StatCard label="Live" value={counts.started ?? 0} tone="var(--accent)" />
                     <StatCard label="Finished" value={counts.completed ?? 0} tone="var(--success)" />
+                </div>
+              )}
+
+              {view === "overview" && (
+                <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2">
+                  <InviteSparkline values={inviteSeries.map((w) => w.count)} />
+                  <RecentActivity items={activityItems} />
                 </div>
               )}
 

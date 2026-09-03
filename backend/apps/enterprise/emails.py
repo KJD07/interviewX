@@ -33,5 +33,8 @@ def send_candidate_invite_email(invite) -> None:
         )
         logger.info("Sent org invite email to %s (invite=%s)", invite.candidate_email, invite.pk)
     except Exception:
+        # Invite is already persisted — a stalled SMTP host (common in local
+        # Docker, and on hosts that block outbound SMTP) must not 500 the
+        # create endpoint. The recruiter still sees the candidate in the
+        # dashboard; the link is /enterprise/invite/<token>.
         logger.exception("Failed to send org invite email to %s", invite.candidate_email)
-        raise
