@@ -30,7 +30,9 @@ export default function MarketingNav() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const afterAuth = pathname === ENTERPRISE_HREF ? "/enterprise/dashboard" : "/dashboard";
+  const isEnterpriseSection =
+    pathname === ENTERPRISE_HREF || Boolean(pathname?.startsWith(`${ENTERPRISE_HREF}/`));
+  const afterAuth = isEnterpriseSection ? "/enterprise/dashboard" : "/dashboard";
 
   return (
     <motion.header
@@ -41,10 +43,10 @@ export default function MarketingNav() {
         scrolled ? "border-[var(--border)] bg-[var(--page)]/[0.86]" : "border-transparent bg-[var(--page)]/60"
       }`}
     >
-      <nav className="mx-auto flex max-w-[1180px] items-center justify-between gap-8 px-6 py-[13px] sm:px-8">
-        <Link href="/" className="font-display flex items-center gap-2.5 text-[19px] font-bold tracking-[-0.025em] text-[var(--ink)]">
+      <nav className="mx-auto flex max-w-[1180px] items-center justify-between gap-3 px-4 py-[13px] sm:gap-8 sm:px-8">
+        <Link href="/" className="font-display flex min-w-0 items-center gap-2 text-[17px] font-bold tracking-[-0.025em] text-[var(--ink)] sm:gap-2.5 sm:text-[19px]">
           <Image src={icon} alt="EvaluLabs" width={26} height={26} className="rounded-md" priority />
-          EvaluLabs
+          <span className="truncate">EvaluLabs</span>
         </Link>
 
         <div className="mx-auto hidden items-center gap-1 text-sm sm:flex">
@@ -83,22 +85,47 @@ export default function MarketingNav() {
           </Link>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          {!loading && !user && (
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2.5">
+          {!loading && !user && pathname !== "/login" && (
             <button
               onClick={() => router.push(`/login?next=${encodeURIComponent(afterAuth)}`)}
-              className="rounded-full px-3.5 py-2.5 text-[14.5px] font-medium text-[var(--ink)] transition-opacity hover:opacity-70"
+              className="rounded-full px-2.5 py-2 text-sm font-medium text-[var(--ink)] transition-opacity hover:opacity-70 sm:px-3.5 sm:py-2.5 sm:text-[14.5px]"
             >
               Sign in
             </button>
           )}
-          <button
-            onClick={() => router.push(user ? afterAuth : "/register")}
-            className="flex items-center gap-2 rounded-full bg-[var(--ink)] px-5 py-[11px] text-sm font-semibold text-[var(--page)] hover:bg-[var(--accent-dim)]"
-          >
-            {loading ? "Loading…" : user ? "Go to dashboard" : "Start free"}
-            <span style={{ color: "var(--lime)" }}>→</span>
-          </button>
+          {loading ? (
+            <button
+              disabled
+              className="flex items-center gap-1.5 rounded-full bg-[var(--ink)] px-3.5 py-2 text-[13px] font-semibold text-[var(--page)] opacity-70 sm:gap-2 sm:px-5 sm:py-[11px] sm:text-sm"
+            >
+              Loading…
+            </button>
+          ) : user ? (
+            <button
+              onClick={() => router.push(afterAuth)}
+              className="flex items-center gap-1.5 rounded-full bg-[var(--ink)] px-3.5 py-2 text-[13px] font-semibold text-[var(--page)] hover:bg-[var(--accent-dim)] sm:gap-2 sm:px-5 sm:py-[11px] sm:text-sm"
+            >
+              Dashboard
+              <span className="hidden sm:inline" style={{ color: "var(--lime)" }}>→</span>
+            </button>
+          ) : isEnterpriseSection ? (
+            <button
+              onClick={() => router.push("/contact")}
+              className="flex items-center gap-1.5 rounded-full bg-[var(--ink)] px-3.5 py-2 text-[13px] font-semibold text-[var(--page)] hover:bg-[var(--accent-dim)] sm:gap-2 sm:px-5 sm:py-[11px] sm:text-sm"
+            >
+              Talk to sales
+              <span className="hidden sm:inline" style={{ color: "var(--lime)" }}>→</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => router.push("/register")}
+              className="flex items-center gap-1.5 rounded-full bg-[var(--ink)] px-3.5 py-2 text-[13px] font-semibold text-[var(--page)] hover:bg-[var(--accent-dim)] sm:gap-2 sm:px-5 sm:py-[11px] sm:text-sm"
+            >
+              Start free
+              <span className="hidden sm:inline" style={{ color: "var(--lime)" }}>→</span>
+            </button>
+          )}
         </div>
       </nav>
     </motion.header>

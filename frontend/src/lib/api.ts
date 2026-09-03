@@ -767,11 +767,24 @@ export interface Organization {
   live_camera_enabled: boolean;
 }
 
+export interface OrgInviteWeek {
+  week_start: string;
+  count: number;
+}
+
+export interface OrgActivityItem {
+  text: string;
+  when: string;
+  live: boolean;
+}
+
 export interface OrgDashboard {
   organization: Organization;
   role: "admin" | "recruiter";
   question_bank: OrgRole[];
   invite_counts: Record<string, number>;
+  invite_series: OrgInviteWeek[];
+  recent_activity: OrgActivityItem[];
 }
 
 export interface OrgQuestionUploadResult {

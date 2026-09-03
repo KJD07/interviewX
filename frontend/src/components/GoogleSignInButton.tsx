@@ -10,6 +10,12 @@ import { useAuth } from "@/context/AuthContext";
 import { ApiError } from "@/lib/api";
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
+// GIS `renderButton` width is clamped to 200–400px. We render inside that
+// range, then scale so the pill always matches the parent — including phones
+// narrower than 200px and cards wider than 400px.
+const GSI_MAX_WIDTH = 400;
+const GSI_MIN_WIDTH = 200;
+const GSI_LARGE_HEIGHT = 40;
 
 declare global {
   interface Window {
@@ -26,8 +32,10 @@ interface Props {
 
 export default function GoogleSignInButton({ redirectPath = "/dashboard", onError, onStart, adminOnly = false }: Props) {
   const { loginWithGoogle, loginWithGoogleAdmin } = useAuth();
+  const wrapRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLDivElement>(null);
   const [scriptLoaded, setScriptLoaded] = useState(false);
+  const [containerWidth, setContainerWidth] = useState(0);
 
   // next/script's onLoad only fires the FIRST time a given src is ever
   // loaded on the page. On client-side navigation (e.g. /login -> /register,
@@ -41,7 +49,30 @@ export default function GoogleSignInButton({ redirectPath = "/dashboard", onErro
   }, []);
 
   useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const update = () => {
+      const w = Math.round(el.getBoundingClientRect().width);
+      setContainerWidth((prev) => (Math.abs(prev - w) < 2 ? prev : w));
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    window.addEventListener("orientationchange", update);
+    window.addEventListener("resize", update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("orientationchange", update);
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+
+  const gsiWidth = Math.max(GSI_MIN_WIDTH, Math.min(GSI_MAX_WIDTH, containerWidth || GSI_MAX_WIDTH));
+  const scale = containerWidth > 0 ? containerWidth / gsiWidth : 1;
+
+  useEffect(() => {
     if (!scriptLoaded || !GOOGLE_CLIENT_ID || !window.google || !buttonRef.current) return;
+    if (containerWidth <= 0) return;
 
     window.google.accounts.id.initialize({
       client_id: GOOGLE_CLIENT_ID,
@@ -61,14 +92,25 @@ export default function GoogleSignInButton({ redirectPath = "/dashboard", onErro
       },
     });
 
+    buttonRef.current.innerHTML = "";
     window.google.accounts.id.renderButton(buttonRef.current, {
       theme: "filled_black",
       size: "large",
-      width: 320,
-      shape: "rectangular",
+      width: gsiWidth,
+      shape: "pill",
       text: "continue_with",
     });
-  }, [scriptLoaded, loginWithGoogle, loginWithGoogleAdmin, adminOnly, redirectPath, onError, onStart]);
+  }, [
+    scriptLoaded,
+    containerWidth,
+    gsiWidth,
+    loginWithGoogle,
+    loginWithGoogleAdmin,
+    adminOnly,
+    redirectPath,
+    onError,
+    onStart,
+  ]);
 
   if (!GOOGLE_CLIENT_ID) return null;
 
@@ -79,7 +121,20 @@ export default function GoogleSignInButton({ redirectPath = "/dashboard", onErro
         strategy="afterInteractive"
         onLoad={() => setScriptLoaded(true)}
       />
-      <div ref={buttonRef} className="flex justify-center" />
+      <div
+        ref={wrapRef}
+        className="relative w-full max-w-full overflow-hidden"
+        style={{ height: GSI_LARGE_HEIGHT * scale }}
+      >
+        <div
+          ref={buttonRef}
+          className="origin-top-left"
+          style={{
+            width: gsiWidth,
+            transform: `scale(${scale})`,
+          }}
+        />
+      </div>
     </>
   );
 }

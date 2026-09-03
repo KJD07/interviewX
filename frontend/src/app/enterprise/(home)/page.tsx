@@ -229,7 +229,7 @@ export default function EnterpriseHomePage() {
                 Talk to sales
               </Link>
               <Link
-                href="#product"
+                href="/enterprise/dashboard"
                 className="rounded-full border border-[var(--border-mid)] px-[26px] py-[15px] text-[15px] font-semibold text-[var(--ink)] hover:bg-[var(--surface)]"
               >
                 See the workspace →

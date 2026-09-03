@@ -1,9 +1,10 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { organizations } from "@/lib/api";
 import { planOf, hasSkills } from "@/lib/plans";
 import icon from "@/app/icon.png";
 
@@ -131,7 +132,13 @@ function PlanCard({
         />
       </div>
       <div className="font-mono text-[10px] mt-2 uppercase" style={{ color: "#7E7D74" }}>
-        {limit == null ? `${used} sessions used` : `${used} / ${limit} sessions used`}
+        {enterprise
+          ? limit == null
+            ? "candidate quota"
+            : `${used} / ${limit} candidate quota`
+          : limit == null
+            ? `${used} sessions used`
+            : `${used} / ${limit} sessions used`}
       </div>
     </div>
   );
@@ -149,6 +156,20 @@ export default function Sidebar({ enterprise = false, mobileOpen, onClose }: Sid
   const pathname = usePathname();
   const plan = planOf(user?.subscription_plan);
   const bonusInterviews = user?.bonus_interviews ?? 0;
+  const [orgQuota, setOrgQuota] = useState<{ used: number; total: number } | null>(null);
+
+  useEffect(() => {
+    if (!enterprise) return;
+    organizations
+      .dashboard()
+      .then((d) =>
+        setOrgQuota({
+          used: d.organization.candidates_used,
+          total: d.organization.candidate_quota,
+        })
+      )
+      .catch(() => setOrgQuota({ used: 0, total: 0 }));
+  }, [enterprise]);
 
   useEffect(() => {
     const previous = document.body.style.overflow;
@@ -182,8 +203,9 @@ export default function Sidebar({ enterprise = false, mobileOpen, onClose }: Sid
 
   const initial = (user?.username || "?").charAt(0).toUpperCase();
   const planLabel = enterprise ? "Enterprise" : plan.label;
-  const used = user?.interviews_this_month ?? 0;
-  const limit = user?.monthly_limit ?? plan.monthlyLimit;
+  const used = enterprise ? (orgQuota?.used ?? 0) : (user?.interviews_this_month ?? 0);
+  const limit = enterprise ? (orgQuota?.total ?? null) : (user?.monthly_limit ?? plan.monthlyLimit);
+  const bonus = enterprise ? 0 : bonusInterviews;
 
   return (
     <>
@@ -225,7 +247,7 @@ export default function Sidebar({ enterprise = false, mobileOpen, onClose }: Sid
       </div>
 
       <div className="space-y-3 shrink-0">
-        <PlanCard planLabel={planLabel} enterprise={enterprise} used={used} limit={limit} bonus={bonusInterviews} />
+        <PlanCard planLabel={planLabel} enterprise={enterprise} used={used} limit={limit} bonus={bonus} />
 
         <div className="flex items-center justify-between px-1 py-1">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -298,7 +320,7 @@ export default function Sidebar({ enterprise = false, mobileOpen, onClose }: Sid
 
               <div className="mt-auto pt-4 border-t shrink-0" style={{ borderColor: 'var(--border)' }}>
                 <div className="space-y-3">
-                  <PlanCard planLabel={planLabel} enterprise={enterprise} used={used} limit={limit} bonus={bonusInterviews} />
+                  <PlanCard planLabel={planLabel} enterprise={enterprise} used={used} limit={limit} bonus={bonus} />
 
                   <div className="flex items-center justify-between px-1 py-1">
                     <div className="flex items-center gap-2.5 min-w-0">

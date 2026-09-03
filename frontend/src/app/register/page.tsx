@@ -5,6 +5,17 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { ApiError } from "@/lib/api";
 import GoogleSignInButton from "@/components/GoogleSignInButton";
+import AuthPageShell, {
+  authInputClass,
+  authInputStyle,
+  authLabelClass,
+} from "@/components/AuthPageShell";
+
+const REGISTER_POINTS = [
+  { label: "Start", value: "No card required" },
+  { label: "First session", value: "Under a minute" },
+  { label: "Bank", value: "Real company questions" },
+];
 
 export default function RegisterPage() {
   const { register, user } = useAuth();
@@ -17,24 +28,6 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-  const inputStyle = useMemo(
-    () => ({
-      background: "var(--surface)",
-      border: "1px solid var(--border-mid)",
-      color: "var(--ink)",
-    }),
-    []
-  );
-
-  const labelStyle = useMemo(
-    () => ({ color: "var(--ink-dim)" }),
-    []
-  );
-
-  const buttonStyle = useMemo(
-    () => ({ background: "var(--accent)", color: "var(--accent-ink)" }),
-    []
-  );
 
   const emailPrefix = useMemo(
     () => email.trim().split("@")[0].toLowerCase(),
@@ -137,21 +130,21 @@ export default function RegisterPage() {
         if (err instanceof ApiError) {
           const body = err.body;
           if (body && typeof body === "object") {
-            const fieldErrors: Record<string, string> = {};
+            const nextFieldErrors: Record<string, string> = {};
             let genericError = err.detail;
             for (const key of Object.keys(body)) {
-              const value = (body as any)[key];
+              const value = (body as Record<string, unknown>)[key];
               if (Array.isArray(value)) {
-                fieldErrors[key] = value.join(" ");
+                nextFieldErrors[key] = value.join(" ");
               } else if (typeof value === "string") {
-                fieldErrors[key] = value;
+                nextFieldErrors[key] = value;
               }
             }
-            if (Object.keys(fieldErrors).length > 0) {
-              setFieldErrors(fieldErrors);
+            if (Object.keys(nextFieldErrors).length > 0) {
+              setFieldErrors(nextFieldErrors);
               genericError =
-                fieldErrors.detail ||
-                fieldErrors.non_field_errors ||
+                nextFieldErrors.detail ||
+                nextFieldErrors.non_field_errors ||
                 genericError;
             }
             setError(genericError);
@@ -180,214 +173,190 @@ export default function RegisterPage() {
     ]
   );
 
-
-
   return (
-    <main
-      className="min-h-screen flex items-center justify-center px-4 py-12"
-      style={{ background: "var(--page)" }}
-    >
-      <div className="w-full max-w-sm fade-up">
-        <div className="mb-10">
-          <span
-            className="text-2xl font-bold tracking-tight cursor-blink"
-            style={{ color: "var(--ink)" }}
-          >
-            EvaluLabs
+    <AuthPageShell
+      eyebrow="START FREE"
+      title={
+        <>
+          Your first mock in under a <em className="font-accent">minute</em>.
+        </>
+      }
+      subtitle="Create an account to practise against verified questions. No card required. Hiring teams — talk to sales instead of signing up here."
+      points={REGISTER_POINTS}
+      extra={
+        <Link
+          href="/contact"
+          className="card-hover mt-4 flex flex-col rounded-[20px] bg-[var(--lime)] p-5 text-[var(--ink)]"
+        >
+          <span className="font-mono text-[10px] tracking-[0.16em]">HIRING TEAMS · COLLEGES</span>
+          <span className="font-display mt-3 text-[18px] font-semibold tracking-[-0.02em]">
+            Don&apos;t register here to hire.
           </span>
-          <p className="mt-2 text-sm" style={{ color: "var(--ink-dim)" }}>
-            Create your account to start practising.
-          </p>
+          <span className="mt-1.5 text-[13px] leading-relaxed text-[#3C4118]">
+            Enterprise workspaces are set up with our team. Talk to sales and we&apos;ll stand up
+            your question bank, invites and scored reports.
+          </span>
+          <span className="mt-3 text-sm font-semibold">Talk to sales →</span>
+        </Link>
+      }
+    >
+      <p className="font-mono text-[10px] tracking-[0.16em] text-[var(--olive)]">CREATE ACCOUNT</p>
+      <h2 className="font-display mt-2 text-[22px] font-bold tracking-[-0.03em] text-[var(--ink)] sm:text-[26px]">
+        Start practising
+      </h2>
+
+      <div className="mt-6">
+        <GoogleSignInButton onError={handleGoogleError} onStart={handleGoogleStart} />
+      </div>
+
+      <div className="my-6 flex items-center gap-3">
+        <div className="h-px flex-1 bg-[var(--border-mid)]" />
+        <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--ink-faint)]">
+          or email
+        </span>
+        <div className="h-px flex-1 bg-[var(--border-mid)]" />
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div>
+          <label htmlFor="email" className={authLabelClass}>
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className={authInputClass}
+            style={authInputStyle}
+            placeholder="you@example.com"
+          />
+          {fieldErrors.email && (
+            <p className="mt-1.5 text-xs text-[var(--danger)]">{fieldErrors.email}</p>
+          )}
         </div>
 
-        <div className="mb-6">
-          <GoogleSignInButton onError={handleGoogleError} onStart={handleGoogleStart} />
+        <div>
+          <label htmlFor="username" className={authLabelClass}>
+            Username
+          </label>
+          <input
+            id="username"
+            type="text"
+            autoComplete="username"
+            required
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className={authInputClass}
+            style={authInputStyle}
+            placeholder="rahul_dev"
+          />
+          {fieldErrors.username && (
+            <p className="mt-1.5 text-xs text-[var(--danger)]">{fieldErrors.username}</p>
+          )}
         </div>
 
-        <div className="flex items-center gap-3 mb-6">
-          <div className="h-px flex-1" style={{ background: "var(--border-mid)" }} />
-          <span className="text-xs" style={{ color: "var(--ink-faint)" }}>or</span>
-          <div className="h-px flex-1" style={{ background: "var(--border-mid)" }} />
+        <div>
+          <label htmlFor="password" className={authLabelClass}>
+            Password
+          </label>
+          <input
+            id="password"
+            type="password"
+            autoComplete="new-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className={authInputClass}
+            style={authInputStyle}
+            placeholder="Min 8 characters"
+          />
+          {showPasswordRules && (
+            <div className="mt-3 space-y-1 text-xs">
+              <p style={{ color: passwordMinLength ? "var(--success)" : "var(--danger)" }}>
+                • At least 8 characters
+              </p>
+              <p style={{ color: passwordNotNumeric ? "var(--success)" : "var(--danger)" }}>
+                • Cannot be only numbers
+              </p>
+              <p
+                style={{
+                  color:
+                    passwordNotSimilarToUsername && passwordNotSimilarToEmail
+                      ? "var(--success)"
+                      : "var(--danger)",
+                }}
+              >
+                • Should not be too similar to username or email
+              </p>
+            </div>
+          )}
+          {fieldErrors.password && (
+            <p className="mt-1.5 text-xs text-[var(--danger)]">{fieldErrors.password}</p>
+          )}
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-xs font-medium mb-1.5 tracking-wider uppercase"
-              style={labelStyle}
-            >
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded px-3.5 py-2.5 text-sm"
-              style={inputStyle}
-              placeholder="you@example.com"
-            />
-            {fieldErrors.email && (
-              <p className="mt-1 text-xs" style={{ color: "var(--danger)" }}>
-                {fieldErrors.email}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label
-              htmlFor="username"
-              className="block text-xs font-medium mb-1.5 tracking-wider uppercase"
-              style={labelStyle}
-            >
-              Username
-            </label>
-            <input
-              id="username"
-              type="text"
-              autoComplete="username"
-              required
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full rounded px-3.5 py-2.5 text-sm"
-              style={inputStyle}
-              placeholder="rahul_dev"
-            />
-            {fieldErrors.username && (
-              <p className="mt-1 text-xs" style={{ color: "var(--danger)" }}>
-                {fieldErrors.username}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-xs font-medium mb-1.5 tracking-wider uppercase"
-              style={labelStyle}
-            >
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              autoComplete="new-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded px-3.5 py-2.5 text-sm"
-              style={inputStyle}
-              placeholder="Min 8 characters"
-            />
-            {showPasswordRules && (
-              <div className="mt-3 space-y-1 text-xs">
-                <p
-                  style={{
-                    color: passwordMinLength ? "var(--success)" : "var(--danger)",
-                  }}
-                >
-                  • At least 8 characters
-                </p>
-                <p
-                  style={{
-                    color: passwordNotNumeric ? "var(--success)" : "var(--danger)",
-                  }}
-                >
-                  • Cannot be only numbers
-                </p>
-                <p
-                  style={{
-                    color:
-                      passwordNotSimilarToUsername && passwordNotSimilarToEmail
-                        ? "var(--success)"
-                        : "var(--danger)",
-                  }}
-                >
-                  • Should not be too similar to username or email
-                </p>
-                
-              </div>
-            )}
-            {fieldErrors.password && (
-              <p className="mt-1 text-xs" style={{ color: "var(--danger)" }}>
-                {fieldErrors.password}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label
-              htmlFor="password2"
-              className="block text-xs font-medium mb-1.5 tracking-wider uppercase"
-              style={labelStyle}
-            >
-              Confirm password
-            </label>
-            <input
-              id="password2"
-              type="password"
-              autoComplete="new-password"
-              required
-              value={password2}
-              onChange={(e) => setPassword2(e.target.value)}
-              className="w-full rounded px-3.5 py-2.5 text-sm"
-              style={{
-                ...inputStyle,
-                borderColor: fieldErrors.password2
-                  ? "var(--danger)"
-                  : "var(--border-mid)",
-              }}
-              placeholder="Repeat password"
-            />
-            {password2.length > 0 && (
-              <p className="mt-2 text-xs" style={{ color: passwordsMatch ? "var(--success)" : "var(--danger)" }}>
-                • Passwords match
-              </p>
-            )}
-            {fieldErrors.password2 && (
-              <p className="mt-1 text-xs" style={{ color: "var(--danger)" }}>
-                {fieldErrors.password2}
-              </p>
-            )}
-          </div>
-
-          {error && (
+        <div>
+          <label htmlFor="password2" className={authLabelClass}>
+            Confirm password
+          </label>
+          <input
+            id="password2"
+            type="password"
+            autoComplete="new-password"
+            required
+            value={password2}
+            onChange={(e) => setPassword2(e.target.value)}
+            className={authInputClass}
+            style={{
+              ...authInputStyle,
+              borderColor: fieldErrors.password2 ? "var(--danger)" : "var(--border-mid)",
+            }}
+            placeholder="Repeat password"
+          />
+          {password2.length > 0 && (
             <p
-              className="text-sm rounded px-3 py-2"
-              style={{
-                background: "rgba(239,68,68,0.1)",
-                border: "1px solid rgba(239,68,68,0.3)",
-                color: "var(--danger)",
-              }}
+              className="mt-2 text-xs"
+              style={{ color: passwordsMatch ? "var(--success)" : "var(--danger)" }}
             >
-              {error}
+              • Passwords match
             </p>
           )}
+          {fieldErrors.password2 && (
+            <p className="mt-1.5 text-xs text-[var(--danger)]">{fieldErrors.password2}</p>
+          )}
+        </div>
 
-          <button
-            type="submit"
-            disabled={submitting || !canSubmit}
-            className="w-full rounded-full py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
-            style={buttonStyle}
+        {error && (
+          <p
+            className="rounded-[12px] px-3.5 py-2.5 text-sm"
+            style={{
+              background: "rgba(179,64,42,0.08)",
+              border: "1px solid rgba(179,64,42,0.28)",
+              color: "var(--danger)",
+            }}
           >
-            {submitting ? "Creating account…" : "Create account"}
-          </button>
-        </form>
+            {error}
+          </p>
+        )}
 
-        <p className="mt-6 text-sm text-center" style={{ color: "var(--ink-faint)" }}>
-          Already have an account?{" "}
-          <Link
-            href="/login"
-            className="font-medium hover:underline"
-            style={{ color: "var(--accent)" }}
-          >
-            Sign in
-          </Link>
-        </p>
-      </div>
-    </main>
+        <button
+          type="submit"
+          disabled={submitting || !canSubmit}
+          className="w-full rounded-full bg-[var(--ink)] py-3.5 text-[15px] font-semibold text-[var(--page)] hover:bg-[var(--accent-dim)] disabled:opacity-50"
+        >
+          {submitting ? "Creating account…" : "Create account"}
+        </button>
+      </form>
+
+      <p className="mt-6 text-center text-sm text-[var(--ink-faint)]">
+        Already have an account?{" "}
+        <Link href="/login" className="font-semibold text-[var(--olive)] hover:underline">
+          Sign in
+        </Link>
+      </p>
+    </AuthPageShell>
   );
 }

@@ -22,6 +22,7 @@ from apps.interviews.views import (
 )
 from core.openrouter_client import build_interview_system_prompt, chat_completion, extract_workspace_action
 
+from .dashboard import invite_series, recent_activity
 from .emails import send_candidate_invite_email
 from .imports import OrgImportError, get_or_create_org_company, import_org_questions
 from .models import Organization, OrgCandidateInvite, OrganizationMember, ProctoringEvent
@@ -55,8 +56,9 @@ def _get_membership(user):
 
 class OrgDashboardView(APIView):
     """GET /api/enterprise/dashboard/ — the requesting user's org, quota
-    usage, and question-bank summary. 404s (not 403) for non-members so an
-    org's existence isn't leaked to accounts outside it."""
+    usage, question-bank summary, weekly invite counts, and a recent-activity
+    feed. 404s (not 403) for non-members so an org's existence isn't leaked
+    to accounts outside it."""
 
     permission_classes = [IsAuthenticated]
 
@@ -80,6 +82,8 @@ class OrgDashboardView(APIView):
                 "role": membership.role,
                 "question_bank": OrgRoleSerializer(roles, many=True).data,
                 "invite_counts": invite_counts,
+                "invite_series": invite_series(organization),
+                "recent_activity": recent_activity(organization),
             }
         )
 
