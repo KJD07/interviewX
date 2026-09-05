@@ -5,7 +5,7 @@ from .plans import PAID_PLANS
 
 
 class PaymentOrder(models.Model):
-    """Tracks a Razorpay payment order lifecycle."""
+    """Tracks a PayU payment transaction lifecycle."""
 
     class Status(models.TextChoices):
         CREATED = "created", "Created"
@@ -17,9 +17,9 @@ class PaymentOrder(models.Model):
         on_delete=models.CASCADE,
         related_name="payment_orders",
     )
-    razorpay_order_id = models.CharField(max_length=100, unique=True)
-    razorpay_payment_id = models.CharField(max_length=100, blank=True)
-    razorpay_signature = models.CharField(max_length=255, blank=True)
+    payu_txnid = models.CharField(max_length=100, unique=True)
+    payu_payment_id = models.CharField(max_length=100, blank=True)
+    payu_hash = models.CharField(max_length=255, blank=True)
     plan = models.CharField(
         max_length=20,
         default="max",
@@ -47,7 +47,7 @@ class PaymentOrder(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"{self.user.email} — {self.razorpay_order_id} ({self.status})"
+        return f"{self.user.email} — {self.payu_txnid} ({self.status})"
 
 
 class SponsorshipCampaign(models.Model):

@@ -663,37 +663,28 @@ export const interviews = {
 
 // ── Subscription endpoints ────────────────────────────────────────────────────
 
-export interface CreateOrderResponse {
-  order_id: string;
-  amount: number;
+export interface PayUCheckoutResponse {
+  action: string;
+  key: string;
+  txnid: string;
+  amount: string;
+  productinfo: string;
+  firstname: string;
+  email: string;
+  phone: string;
+  surl: string;
+  furl: string;
+  hash: string;
   currency: string;
+}
+
+export interface CreateOrderResponse extends PayUCheckoutResponse {
   plan: string;
-  key_id: string;
-  user_email: string;
-  user_name: string;
 }
 
-export interface VerifyPaymentResponse {
-  detail: string;
-  subscription_plan: string;
-  subscription_end_date: string;
-}
-
-export interface CreateTopupOrderResponse {
-  order_id: string;
-  amount: number;
-  currency: string;
+export interface CreateTopupOrderResponse extends PayUCheckoutResponse {
   pack: string;
   credits: number;
-  key_id: string;
-  user_email: string;
-  user_name: string;
-}
-
-export interface VerifyTopupPaymentResponse {
-  detail: string;
-  credits_added: number;
-  bonus_interviews: number;
 }
 
 export const subscriptions = {
@@ -703,30 +694,10 @@ export const subscriptions = {
       body: JSON.stringify({ plan }),
     }),
 
-  verifyPayment: (
-    razorpay_order_id: string,
-    razorpay_payment_id: string,
-    razorpay_signature: string
-  ) =>
-    request<VerifyPaymentResponse>("/api/subscriptions/verify-payment/", {
-      method: "POST",
-      body: JSON.stringify({ razorpay_order_id, razorpay_payment_id, razorpay_signature }),
-    }),
-
   createTopupOrder: (pack: "spark" | "boost" | "power") =>
     request<CreateTopupOrderResponse>("/api/subscriptions/topup/create-order/", {
       method: "POST",
       body: JSON.stringify({ pack }),
-    }),
-
-  verifyTopupPayment: (
-    razorpay_order_id: string,
-    razorpay_payment_id: string,
-    razorpay_signature: string
-  ) =>
-    request<VerifyTopupPaymentResponse>("/api/subscriptions/topup/verify-payment/", {
-      method: "POST",
-      body: JSON.stringify({ razorpay_order_id, razorpay_payment_id, razorpay_signature }),
     }),
 };
 

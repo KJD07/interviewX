@@ -19,6 +19,43 @@ def _csv(body: str, name: str = "emails.csv") -> SimpleUploadedFile:
     return SimpleUploadedFile(name, body.encode("utf-8"), content_type="text/csv")
 
 
+from core.payu import paise_to_amount_str, payment_request_hash, payment_response_hash
+
+
+class PayUHashTests(TestCase):
+    def test_paise_to_amount_str(self):
+        self.assertEqual(paise_to_amount_str(19900), "199.00")
+        self.assertEqual(paise_to_amount_str(9900), "99.00")
+
+    def test_payment_request_hash_matches_payu_docs_example_shape(self):
+        digest = payment_request_hash(
+            key="gtKFFx",
+            txnid="123456789",
+            amount="10.00",
+            productinfo="Test Product",
+            firstname="John",
+            email="john@example.com",
+            salt="eCwWELxi",
+        )
+        self.assertEqual(len(digest), 128)
+
+    def test_payment_response_hash_is_deterministic(self):
+        kwargs = {
+            "salt": "eCwWELxi",
+            "status": "success",
+            "key": "gtKFFx",
+            "txnid": "123456789",
+            "amount": "10.00",
+            "productinfo": "Test Product",
+            "firstname": "John",
+            "email": "john@example.com",
+        }
+        self.assertEqual(
+            payment_response_hash(**kwargs),
+            payment_response_hash(**kwargs),
+        )
+
+
 class SponsorshipEmailImportTests(TestCase):
     """Covers the admin 'Upload emails' spreadsheet import that populates a
     campaign's explicitly covered email list."""

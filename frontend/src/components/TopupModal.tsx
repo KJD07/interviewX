@@ -1,19 +1,12 @@
 "use client";
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { useAuth } from "@/context/AuthContext";
 import { subscriptions, ApiError } from "@/lib/api";
+import { submitPayUCheckout } from "@/lib/payuCheckout";
 import { TOPUP_PACKS, TOPUP_PACK_IDS, type TopupPackId } from "@/lib/plans";
 import { useCurrency, formatPrice } from "@/lib/currency";
 
-declare global {
-  interface Window {
-    Razorpay: any;
-  }
-}
-
 export default function TopupModal({ onClose }: { onClose: () => void }) {
-  const { refreshUser } = useAuth();
   const [loadingPack, setLoadingPack] = useState<TopupPackId | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState<string | null>(null);
@@ -25,54 +18,7 @@ export default function TopupModal({ onClose }: { onClose: () => void }) {
 
     try {
       const order = await subscriptions.createTopupOrder(pack);
-
-      if (!window.Razorpay) {
-        await new Promise<void>((resolve, reject) => {
-          const script = document.createElement("script");
-          script.src = "https://checkout.razorpay.com/v1/checkout.js";
-          script.onload = () => resolve();
-          script.onerror = () => reject(new Error("Failed to load Razorpay"));
-          document.body.appendChild(script);
-        });
-      }
-
-      const rzp = new window.Razorpay({
-        key: order.key_id,
-        amount: order.amount,
-        currency: order.currency,
-        name: "EvaluLabs",
-        description: `${TOPUP_PACKS[pack].label} — ${order.credits} interviews`,
-        order_id: order.order_id,
-        prefill: {
-          email: order.user_email,
-          name: order.user_name,
-        },
-        theme: { color: "#6366f1" },
-        handler: async (response: {
-          razorpay_order_id: string;
-          razorpay_payment_id: string;
-          razorpay_signature: string;
-        }) => {
-          try {
-            const result = await subscriptions.verifyTopupPayment(
-              response.razorpay_order_id,
-              response.razorpay_payment_id,
-              response.razorpay_signature
-            );
-            await refreshUser();
-            setSuccess(`${result.credits_added} interviews added. You now have ${result.bonus_interviews} bonus credits.`);
-          } catch (err) {
-            setError("Payment succeeded but verification failed. Contact support.");
-          } finally {
-            setLoadingPack(null);
-          }
-        },
-        modal: {
-          ondismiss: () => setLoadingPack(null),
-        },
-      });
-
-      rzp.open();
+      submitPayUCheckout(order);
     } catch (err) {
       if (err instanceof ApiError) setError(err.detail);
       else setError("Something went wrong. Please try again.");
@@ -142,7 +88,7 @@ export default function TopupModal({ onClose }: { onClose: () => void }) {
                       </p>
                     </div>
                     <span className="text-sm font-bold shrink-0 ml-3" style={{ color: "var(--accent)" }}>
-                      {loadingPack === packId ? "Opening…" : formatPrice(pack.priceRupees, currency)}
+                      {loadingPack === packId ? "Redirecting…" : formatPrice(pack.priceRupees, currency)}
                     </span>
                   </button>
                 );

@@ -11,6 +11,7 @@ import MarketingFooter from "@/components/MarketingFooter";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { PLANS, PAID_PLAN_IDS, type PlanId } from "@/lib/plans";
 import { subscriptions, ApiError } from "@/lib/api";
+import { submitPayUCheckout } from "@/lib/payuCheckout";
 import { useCurrency, formatPrice } from "@/lib/currency";
 
 // One-line positioning note per tier — display copy only, so it lives here
@@ -93,12 +94,6 @@ function FaqItem({ q, a, defaultOpen = false }: { q: string; a: ReactNode; defau
   );
 }
 
-declare global {
-  interface Window {
-    Razorpay: any;
-  }
-}
-
 export default function Pricing() {
   const { user } = useAuth();
   const router = useRouter();
@@ -118,58 +113,8 @@ export default function Pricing() {
     setError("");
 
     try {
-      // 1. Create order on backend for the chosen plan
       const order = await subscriptions.createOrder(plan as "pro" | "premium" | "max");
-
-      // 2. Load Razorpay script if not already loaded
-      if (!window.Razorpay) {
-        await new Promise<void>((resolve, reject) => {
-          const script = document.createElement("script");
-          script.src = "https://checkout.razorpay.com/v1/checkout.js";
-          script.onload = () => resolve();
-          script.onerror = () => reject(new Error("Failed to load Razorpay"));
-          document.body.appendChild(script);
-        });
-      }
-
-      // 3. Open Razorpay checkout
-      const rzp = new window.Razorpay({
-        key: order.key_id,
-        amount: order.amount,
-        currency: order.currency,
-        name: "EvaluLabs",
-        description: `${PLANS[plan].label} Plan — 1 Month`,
-        order_id: order.order_id,
-        prefill: {
-          email: order.user_email,
-          name: order.user_name,
-        },
-        theme: { color: "#0C0C0B" },
-        handler: async (response: {
-          razorpay_order_id: string;
-          razorpay_payment_id: string;
-          razorpay_signature: string;
-        }) => {
-          try {
-            await subscriptions.verifyPayment(
-              response.razorpay_order_id,
-              response.razorpay_payment_id,
-              response.razorpay_signature
-            );
-            // Redirect to dashboard — user will see their new plan badge
-            router.replace("/dashboard?upgraded=1");
-          } catch (err) {
-            setError("Payment succeeded but verification failed. Contact support.");
-          } finally {
-            setLoadingPlan(null);
-          }
-        },
-        modal: {
-          ondismiss: () => setLoadingPlan(null),
-        },
-      });
-
-      rzp.open();
+      submitPayUCheckout(order);
     } catch (err) {
       if (err instanceof ApiError) setError(err.detail);
       else setError("Something went wrong. Please try again.");
@@ -303,7 +248,7 @@ export default function Pricing() {
                     {isCurrent
                       ? "Current plan"
                       : loadingPlan === planId
-                      ? "Opening checkout…"
+                      ? "Redirecting to PayU…"
                       : `Choose ${plan.label}`}
                   </button>
                 </div>

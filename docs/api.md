@@ -48,11 +48,12 @@ Skills use the same endpoints with `?kind=skill` — they're stored as
 
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/api/subscriptions/create-order/` | Creates a Razorpay order for a plan (pro/premium/max) |
-| POST | `/api/subscriptions/verify-payment/` | Verifies payment, upgrades the plan for 30 days |
-| POST | `/api/subscriptions/topup/create-order/` | Creates a Razorpay order for an interview top-up pack |
-| POST | `/api/subscriptions/topup/verify-payment/` | Verifies payment, adds bonus interview credits |
+| POST | `/api/subscriptions/create-order/` | Creates a PayU transaction for a plan (pro/premium/max); returns hosted-checkout form fields |
+| POST | `/api/subscriptions/topup/create-order/` | Creates a PayU transaction for an interview top-up pack |
+| POST | `/api/subscriptions/payu/success/` | PayU success callback (surl) — verifies hash and upgrades plan / credits |
+| POST | `/api/subscriptions/payu/failure/` | PayU failure callback (furl) |
 
-Payment endpoints need real `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` values
-in `.env` to actually complete a purchase — without them they fail with a
-clean "Authentication failed" error, which is expected in local dev.
+Payment endpoints need real `PAYU_MERCHANT_KEY` / `PAYU_MERCHANT_SALT` values
+in `.env`, plus a reachable `BACKEND_URL` for PayU callbacks, to complete a
+purchase end-to-end. Without them create-order returns 503 or callbacks fail,
+which is expected in local dev without a tunnel.
