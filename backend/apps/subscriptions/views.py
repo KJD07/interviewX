@@ -1,45 +1,47 @@
 import hashlib
 import hmac
 from datetime import datetime, timezone, timedelta
+from urllib.parse import urlencode
 
-import razorpay
 from django.conf import settings
 from django.db import transaction
 from django.db.models import F
+from django.http import HttpResponseRedirect
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.payu import (
+    generate_txnid,
+    paise_to_amount_str,
+    payment_request_hash,
+    payment_response_hash,
+    verify_payment_status,
+)
+
 from .models import PaymentOrder
 from .plans import PAID_PLANS, TOPUP_PACKS, amount_for, topup_amount_for, topup_credits_for
 
 
-def _razorpay_client():
-    return razorpay.Client(
-        auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
-    )
-
-
-# How long a "created" order gets before we consider it eligible for
-# reconciliation. Short-lived in-flight checkouts (still on the Razorpay
-# widget) shouldn't be touched.
 _STUCK_ORDER_AGE = timedelta(minutes=5)
 
 
-def _settle_order(order_id, payment_id):
-    """
-    Apply the same upgrade/credit effects as the client-driven verify-payment
-    endpoints, from server-confirmed Razorpay data rather than a client-supplied
-    signature. Used only by the reconciliation path below — the normal
-    verify-payment views still verify their own HMAC signature.
+def _callback_url(name: str) -> str:
+    base = settings.BACKEND_URL.rstrip("/")
+    return f"{base}/api/subscriptions/payu/{name}/"
 
-    Locks the order row and re-checks its status first, so two concurrent
-    reconciliation passes (e.g. a double-clicked upgrade button) can't both
-    settle the same captured payment and grant its credits/plan extension
-    twice — the same hazard the verify-payment views guard against with their
-    already-processed check.
-    """
+
+def _frontend_redirect(path: str, **query) -> HttpResponseRedirect:
+    url = settings.FRONTEND_URL.rstrip("/") + path
+    if query:
+        url += "?" + urlencode(query)
+    return HttpResponseRedirect(url)
+
+
+def _settle_order(order_id, payment_id, payment_hash=""):
     with transaction.atomic():
         order = (
             PaymentOrder.objects.select_for_update()
@@ -47,18 +49,17 @@ def _settle_order(order_id, payment_id):
             .get(pk=order_id)
         )
         if order.status != PaymentOrder.Status.CREATED:
-            return  # another request already settled it
+            return
 
         now = datetime.now(timezone.utc)
-        order.razorpay_payment_id = payment_id
+        order.payu_payment_id = payment_id
+        order.payu_hash = payment_hash
         order.status = PaymentOrder.Status.PAID
         order.paid_at = now
-        order.save(update_fields=["razorpay_payment_id", "status", "paid_at"])
+        order.save(update_fields=["payu_payment_id", "payu_hash", "status", "paid_at"])
 
         user = order.user
         if order.topup_pack:
-            # F() rather than a read-modify-write, so a concurrent credit
-            # change elsewhere can't be clobbered by a stale in-memory value.
             type(user).objects.filter(pk=user.pk).update(
                 bonus_interviews=F("bonus_interviews") + order.topup_credits
             )
@@ -72,14 +73,6 @@ def _settle_order(order_id, payment_id):
 
 
 def _reconcile_stuck_orders(user):
-    """
-    Settle any of this user's orders that Razorpay confirms were actually
-    captured but that never got a verify-payment call (browser closed/crashed
-    right after a successful charge). Called lazily whenever the user opens a
-    new order, the same on-request pattern used elsewhere in this stack
-    (see User.sync_subscription_state()) since there's no Celery/cron worker
-    to run this as a scheduled job.
-    """
     cutoff = datetime.now(timezone.utc) - _STUCK_ORDER_AGE
     stuck = PaymentOrder.objects.filter(
         user=user, status=PaymentOrder.Status.CREATED, created_at__lte=cutoff
@@ -87,22 +80,54 @@ def _reconcile_stuck_orders(user):
     if not stuck.exists():
         return
 
-    client = _razorpay_client()
     for order in stuck:
-        try:
-            payments = client.order.payments(order.razorpay_order_id).get("items", [])
-        except Exception:
+        details = verify_payment_status(order.payu_txnid)
+        if not details:
             continue
-        captured = next((p for p in payments if p.get("status") == "captured"), None)
-        if captured:
-            _settle_order(order.pk, captured["id"])
+        if details.get("status") == "success":
+            _settle_order(order.pk, details.get("mihpayid", ""))
+
+
+def _build_payu_payload(user, amount_paise: int, productinfo: str) -> dict:
+    txnid = generate_txnid()
+    amount = paise_to_amount_str(amount_paise)
+    firstname = (user.first_name or user.username or "User")[:60]
+    email = user.email
+    phone = ""
+
+    key = settings.PAYU_MERCHANT_KEY
+    salt = settings.PAYU_MERCHANT_SALT
+    hash_value = payment_request_hash(
+        key=key,
+        txnid=txnid,
+        amount=amount,
+        productinfo=productinfo,
+        firstname=firstname,
+        email=email,
+        salt=salt,
+    )
+
+    return {
+        "txnid": txnid,
+        "amount": amount,
+        "productinfo": productinfo,
+        "firstname": firstname,
+        "email": email,
+        "phone": phone,
+        "surl": _callback_url("success"),
+        "furl": _callback_url("failure"),
+        "key": key,
+        "hash": hash_value,
+        "action": settings.PAYU_PAYMENT_URL,
+        "currency": "INR",
+    }
 
 
 class CreateOrderView(APIView):
     """
     POST /api/subscriptions/create-order/
     Body: {"plan": "pro" | "premium" | "max"}
-    Creates a Razorpay order for the chosen plan and returns order_id + key_id.
+    Creates a PayU transaction and returns hosted-checkout form fields.
     """
 
     permission_classes = [IsAuthenticated]
@@ -115,136 +140,35 @@ class CreateOrderView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        if not settings.PAYU_MERCHANT_KEY or not settings.PAYU_MERCHANT_SALT:
+            return Response(
+                {"detail": "Payment gateway is not configured."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
         _reconcile_stuck_orders(request.user)
 
-        amount = amount_for(plan)
-        client = _razorpay_client()
-
-        order_data = {
-            "amount": amount,
-            "currency": "INR",
-            "receipt": f"ix_user_{request.user.pk}",
-            "payment_capture": 1,
-        }
-
-        try:
-            rz_order = client.order.create(data=order_data)
-        except Exception as exc:
-            return Response(
-                {"detail": f"Razorpay error: {exc}"},
-                status=status.HTTP_502_BAD_GATEWAY,
-            )
+        amount_paise = amount_for(plan)
+        plan_label = PAID_PLANS[plan]["label"]
+        payload = _build_payu_payload(
+            request.user,
+            amount_paise,
+            f"EvaluLabs {plan_label} Plan — 1 Month",
+        )
 
         PaymentOrder.objects.create(
             user=request.user,
-            razorpay_order_id=rz_order["id"],
-            amount=amount,
+            payu_txnid=payload["txnid"],
+            amount=amount_paise,
             plan=plan,
         )
 
         return Response(
             {
-                "order_id": rz_order["id"],
-                "amount": amount,
-                "currency": "INR",
+                **payload,
                 "plan": plan,
-                "key_id": settings.RAZORPAY_KEY_ID,
-                "user_email": request.user.email,
-                "user_name": request.user.username,
             },
             status=status.HTTP_201_CREATED,
-        )
-
-
-class VerifyPaymentView(APIView):
-    """
-    POST /api/subscriptions/verify-payment/
-    Body: { razorpay_order_id, razorpay_payment_id, razorpay_signature }
-    Verifies HMAC signature, upgrades user to premium for 30 days.
-    """
-
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        order_id = request.data.get("razorpay_order_id", "")
-        payment_id = request.data.get("razorpay_payment_id", "")
-        signature = request.data.get("razorpay_signature", "")
-
-        if not all([order_id, payment_id, signature]):
-            return Response(
-                {"detail": "order_id, payment_id, and signature are required."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        # Fetch our order record
-        try:
-            order = PaymentOrder.objects.get(
-                razorpay_order_id=order_id, user=request.user
-            )
-        except PaymentOrder.DoesNotExist:
-            return Response(
-                {"detail": "Order not found."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        # Idempotency guard: the signature is deterministic from
-        # order_id|payment_id, so without this check a client could replay
-        # an already-verified order's payload indefinitely to repeatedly
-        # reset interviews_this_month and push subscription_end_date
-        # forward — all off a single successful payment.
-        if order.status == PaymentOrder.Status.PAID:
-            return Response(
-                {"detail": "This order has already been processed."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        # Verify HMAC-SHA256 signature
-        expected = hmac.new(
-            settings.RAZORPAY_KEY_SECRET.encode(),
-            f"{order_id}|{payment_id}".encode(),
-            hashlib.sha256,
-        ).hexdigest()
-
-        if not hmac.compare_digest(expected, signature):
-            order.status = PaymentOrder.Status.FAILED
-            order.save(update_fields=["status"])
-            return Response(
-                {"detail": "Payment verification failed. Invalid signature."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        # Upgrade user
-        now = datetime.now(timezone.utc)
-        order.razorpay_payment_id = payment_id
-        order.razorpay_signature = signature
-        order.status = PaymentOrder.Status.PAID
-        order.paid_at = now
-        order.save(update_fields=["razorpay_payment_id", "razorpay_signature", "status", "paid_at"])
-
-        user = request.user
-        user.subscription_plan = order.plan
-        user.subscription_end_date = now + timedelta(days=30)
-        # Fresh billing cycle: reset usage and restart the 30-day cycle clock
-        # so the new plan's limit applies cleanly.
-        user.interviews_this_month = 0
-        user.current_cycle_start = now
-        user.save(
-            update_fields=[
-                "subscription_plan",
-                "subscription_end_date",
-                "interviews_this_month",
-                "current_cycle_start",
-            ]
-        )
-
-        plan_label = PAID_PLANS.get(order.plan, {}).get("label", order.plan.title())
-
-        return Response(
-            {
-                "detail": f"Payment verified. You are now on the {plan_label} plan.",
-                "subscription_plan": order.plan,
-                "subscription_end_date": user.subscription_end_date.isoformat(),
-            }
         )
 
 
@@ -252,9 +176,6 @@ class CreateTopupOrderView(APIView):
     """
     POST /api/subscriptions/topup/create-order/
     Body: {"pack": "spark" | "boost" | "power"}
-    Creates a Razorpay order for a one-off interview credit top-up.
-    Available to any authenticated user, on any plan, to go past their
-    monthly limit without waiting for the next billing cycle.
     """
 
     permission_classes = [IsAuthenticated]
@@ -267,31 +188,27 @@ class CreateTopupOrderView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        if not settings.PAYU_MERCHANT_KEY or not settings.PAYU_MERCHANT_SALT:
+            return Response(
+                {"detail": "Payment gateway is not configured."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
         _reconcile_stuck_orders(request.user)
 
-        amount = topup_amount_for(pack)
+        amount_paise = topup_amount_for(pack)
         credits = topup_credits_for(pack)
-        client = _razorpay_client()
-
-        order_data = {
-            "amount": amount,
-            "currency": "INR",
-            "receipt": f"ix_topup_{request.user.pk}",
-            "payment_capture": 1,
-        }
-
-        try:
-            rz_order = client.order.create(data=order_data)
-        except Exception as exc:
-            return Response(
-                {"detail": f"Razorpay error: {exc}"},
-                status=status.HTTP_502_BAD_GATEWAY,
-            )
+        pack_label = TOPUP_PACKS[pack]["label"]
+        payload = _build_payu_payload(
+            request.user,
+            amount_paise,
+            f"EvaluLabs {pack_label} — {credits} interviews",
+        )
 
         PaymentOrder.objects.create(
             user=request.user,
-            razorpay_order_id=rz_order["id"],
-            amount=amount,
+            payu_txnid=payload["txnid"],
+            amount=amount_paise,
             plan="",
             topup_pack=pack,
             topup_credits=credits,
@@ -299,90 +216,100 @@ class CreateTopupOrderView(APIView):
 
         return Response(
             {
-                "order_id": rz_order["id"],
-                "amount": amount,
-                "currency": "INR",
+                **payload,
                 "pack": pack,
                 "credits": credits,
-                "key_id": settings.RAZORPAY_KEY_ID,
-                "user_email": request.user.email,
-                "user_name": request.user.username,
             },
             status=status.HTTP_201_CREATED,
         )
 
 
-class VerifyTopupPaymentView(APIView):
-    """
-    POST /api/subscriptions/topup/verify-payment/
-    Body: { razorpay_order_id, razorpay_payment_id, razorpay_signature }
-    Verifies HMAC signature and credits the purchased interviews to the
-    user's bonus_interviews balance. These credits roll over and don't
-    reset on the monthly billing cycle.
-    """
+def _verify_and_settle_callback(post_data: dict) -> PaymentOrder | None:
+    txnid = post_data.get("txnid", "")
+    received_hash = post_data.get("hash", "")
+    payu_status = post_data.get("status", "")
 
-    permission_classes = [IsAuthenticated]
+    if not txnid or not received_hash:
+        return None
+
+    try:
+        order = PaymentOrder.objects.get(payu_txnid=txnid)
+    except PaymentOrder.DoesNotExist:
+        return None
+
+    if order.status == PaymentOrder.Status.PAID:
+        return order
+
+    expected_hash = payment_response_hash(
+        salt=settings.PAYU_MERCHANT_SALT,
+        status=payu_status,
+        key=post_data.get("key", settings.PAYU_MERCHANT_KEY),
+        txnid=txnid,
+        amount=post_data.get("amount", paise_to_amount_str(order.amount)),
+        productinfo=post_data.get("productinfo", ""),
+        firstname=post_data.get("firstname", ""),
+        email=post_data.get("email", ""),
+        udf1=post_data.get("udf1", ""),
+        udf2=post_data.get("udf2", ""),
+        udf3=post_data.get("udf3", ""),
+        udf4=post_data.get("udf4", ""),
+        udf5=post_data.get("udf5", ""),
+        additional_charges=post_data.get("additionalCharges", ""),
+    )
+
+    if not hmac.compare_digest(expected_hash, received_hash):
+        order.status = PaymentOrder.Status.FAILED
+        order.save(update_fields=["status"])
+        return None
+
+    if payu_status != "success":
+        order.status = PaymentOrder.Status.FAILED
+        order.save(update_fields=["status"])
+        return None
+
+    _settle_order(order.pk, post_data.get("mihpayid", ""), received_hash)
+    return order
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class PayUSuccessCallbackView(APIView):
+    """PayU surl — browser POST after a successful payment."""
+
+    permission_classes = []
+    authentication_classes = []
 
     def post(self, request):
-        order_id = request.data.get("razorpay_order_id", "")
-        payment_id = request.data.get("razorpay_payment_id", "")
-        signature = request.data.get("razorpay_signature", "")
+        order = _verify_and_settle_callback(request.POST.dict())
+        if not order:
+            return _frontend_redirect("/pricing", payment="failed")
 
-        if not all([order_id, payment_id, signature]):
-            return Response(
-                {"detail": "order_id, payment_id, and signature are required."},
-                status=status.HTTP_400_BAD_REQUEST,
+        if order.topup_pack:
+            return _frontend_redirect(
+                "/dashboard",
+                topup="success",
+                credits=str(order.topup_credits),
             )
+        return _frontend_redirect("/dashboard", upgraded="1")
 
-        try:
-            order = PaymentOrder.objects.get(
-                razorpay_order_id=order_id, user=request.user, topup_pack__in=TOPUP_PACKS
-            )
-        except PaymentOrder.DoesNotExist:
-            return Response(
-                {"detail": "Top-up order not found."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+    def get(self, request):
+        # PayU normally POSTs; accept GET for easier local debugging.
+        return self.post(request)
 
-        if order.status == PaymentOrder.Status.PAID:
-            return Response(
-                {"detail": "This order has already been processed."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
 
-        expected = hmac.new(
-            settings.RAZORPAY_KEY_SECRET.encode(),
-            f"{order_id}|{payment_id}".encode(),
-            hashlib.sha256,
-        ).hexdigest()
+@method_decorator(csrf_exempt, name="dispatch")
+class PayUFailureCallbackView(APIView):
+    """PayU furl — browser POST after a failed/cancelled payment."""
 
-        if not hmac.compare_digest(expected, signature):
-            order.status = PaymentOrder.Status.FAILED
-            order.save(update_fields=["status"])
-            return Response(
-                {"detail": "Payment verification failed. Invalid signature."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+    permission_classes = []
+    authentication_classes = []
 
-        now = datetime.now(timezone.utc)
-        order.razorpay_payment_id = payment_id
-        order.razorpay_signature = signature
-        order.status = PaymentOrder.Status.PAID
-        order.paid_at = now
-        order.save(
-            update_fields=["razorpay_payment_id", "razorpay_signature", "status", "paid_at"]
-        )
+    def post(self, request):
+        txnid = request.POST.get("txnid", "")
+        if txnid:
+            PaymentOrder.objects.filter(
+                payu_txnid=txnid, status=PaymentOrder.Status.CREATED
+            ).update(status=PaymentOrder.Status.FAILED)
+        return _frontend_redirect("/pricing", payment="failed")
 
-        user = request.user
-        user.bonus_interviews += order.topup_credits
-        user.save(update_fields=["bonus_interviews"])
-
-        pack_label = TOPUP_PACKS.get(order.topup_pack, {}).get("label", order.topup_pack.title())
-
-        return Response(
-            {
-                "detail": f"Payment verified. {order.topup_credits} interviews added from the {pack_label}.",
-                "credits_added": order.topup_credits,
-                "bonus_interviews": user.bonus_interviews,
-            }
-        )
+    def get(self, request):
+        return self.post(request)

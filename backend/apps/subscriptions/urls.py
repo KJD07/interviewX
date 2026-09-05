@@ -1,14 +1,14 @@
 from django.urls import path
 from .views import (
     CreateOrderView,
-    VerifyPaymentView,
     CreateTopupOrderView,
-    VerifyTopupPaymentView,
+    PayUSuccessCallbackView,
+    PayUFailureCallbackView,
 )
 
 urlpatterns = [
     path("create-order/", CreateOrderView.as_view(), name="create-order"),
-    path("verify-payment/", VerifyPaymentView.as_view(), name="verify-payment"),
     path("topup/create-order/", CreateTopupOrderView.as_view(), name="topup-create-order"),
-    path("topup/verify-payment/", VerifyTopupPaymentView.as_view(), name="topup-verify-payment"),
+    path("payu/success/", PayUSuccessCallbackView.as_view(), name="payu-success"),
+    path("payu/failure/", PayUFailureCallbackView.as_view(), name="payu-failure"),
 ]

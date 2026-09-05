@@ -237,9 +237,19 @@ if not DEBUG:
 # --- OpenRouter (used starting Phase 4) ---
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 
-# --- Razorpay (Phase 8) ---
-RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "")
-RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
+# --- PayU (subscriptions) ---
+PAYU_MERCHANT_KEY = os.environ.get("PAYU_MERCHANT_KEY", "")
+PAYU_MERCHANT_SALT = os.environ.get("PAYU_MERCHANT_SALT", "")
+PAYU_ENV = os.environ.get("PAYU_ENV", "test").lower()
+if PAYU_ENV == "production":
+    PAYU_PAYMENT_URL = "https://secure.payu.in/_payment"
+    PAYU_POSTSERVICE_URL = "https://info.payu.in"
+else:
+    PAYU_PAYMENT_URL = "https://test.payu.in/_payment"
+    PAYU_POSTSERVICE_URL = "https://test.payu.in"
+
+# Public backend URL for PayU surl/furl callbacks (must be reachable by PayU).
+BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:8000")
 
 # --- Email (OTP verification) ---
 # Defaults to printing emails to the console so OTPs are visible in

@@ -1,7 +1,7 @@
 "use client";
 
 // Display currency: India sees INR, everyone else sees USD.
-// Display only — Razorpay checkout always charges INR (see pricing page);
+// Display only — PayU checkout always charges INR (see pricing page);
 // this just converts the INR amount for a friendlier read elsewhere.
 //
 // Detection is the browser's IANA timezone, not IP geolocation — India has

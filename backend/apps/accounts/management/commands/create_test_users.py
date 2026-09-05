@@ -2,7 +2,7 @@
 Create one ready-to-login test user per subscription plan, so you can
 manually check that free/pro/premium/max behave differently in the app
 (dashboard visibility, AI insights, interview limits, etc.) without going
-through Razorpay checkout.
+through PayU checkout.
 
 USAGE
 -----

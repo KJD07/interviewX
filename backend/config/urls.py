@@ -1,6 +1,6 @@
 """
 Root URL conf.
-Phase 8: Subscriptions + Razorpay wired (/api/subscriptions/).
+Phase 8: Subscriptions + PayU wired (/api/subscriptions/).
 """
 
 from django.conf import settings
