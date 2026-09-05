@@ -1,0 +1,14 @@
+{
+  "name": "EvaluLabs",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
+  "user": "ubuntu",
+  "install": "./scripts/cloud-agent-install.sh",
+  "start": "./scripts/cloud-agent-start.sh",
+  "ports": [
+    { "port": 3000, "name": "Frontend (Next.js)" },
+    { "port": 8000, "name": "Backend (Django)" }
+  ]
+}
