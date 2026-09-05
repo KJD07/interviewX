@@ -3,23 +3,22 @@ from io import BytesIO
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
+from rest_framework.test import APIClient
 
+from core.payu import paise_to_amount_str, payment_request_hash, payment_response_hash
 from core.spreadsheet import SpreadsheetError
 
 from .imports import import_sponsorship_emails
-from .models import SponsorshipCampaign, SponsorshipMember
+from .models import PaymentOrder, SponsorshipCampaign, SponsorshipMember
 
 User = get_user_model()
 
 
 def _csv(body: str, name: str = "emails.csv") -> SimpleUploadedFile:
     return SimpleUploadedFile(name, body.encode("utf-8"), content_type="text/csv")
-
-
-from core.payu import paise_to_amount_str, payment_request_hash, payment_response_hash
 
 
 class PayUHashTests(TestCase):
@@ -54,6 +53,50 @@ class PayUHashTests(TestCase):
             payment_response_hash(**kwargs),
             payment_response_hash(**kwargs),
         )
+
+
+@override_settings(
+    PAYU_MERCHANT_KEY="gtKFFx",
+    PAYU_MERCHANT_SALT="eCwWELxi",
+    BACKEND_URL="http://localhost:8000",
+)
+class CreateOrderViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="buyer",
+            email="buyer@example.com",
+            password="pass12345",
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+
+    def test_create_order_returns_payu_checkout_fields(self):
+        resp = self.client.post(
+            reverse("create-order"),
+            {"plan": "pro"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, 201)
+        data = resp.json()
+        self.assertEqual(data["plan"], "pro")
+        self.assertEqual(data["amount"], "199.00")
+        self.assertIn("hash", data)
+        self.assertIn("action", data)
+        self.assertTrue(
+            PaymentOrder.objects.filter(
+                user=self.user, payu_txnid=data["txnid"], plan="pro"
+            ).exists()
+        )
+
+    def test_create_order_without_keys_returns_503(self):
+        with self.settings(PAYU_MERCHANT_KEY="", PAYU_MERCHANT_SALT=""):
+            resp = self.client.post(
+                reverse("create-order"),
+                {"plan": "pro"},
+                format="json",
+            )
+        self.assertEqual(resp.status_code, 503)
+        self.assertIn("not configured", resp.json()["detail"])
 
 
 class SponsorshipEmailImportTests(TestCase):

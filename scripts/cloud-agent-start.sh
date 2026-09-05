@@ -26,6 +26,7 @@ fi
 source backend/.venv/bin/activate
 
 cd backend
+python manage.py migrate --noinput
 daphne -b 0.0.0.0 -p 8000 config.asgi:application &
 BACKEND_PID=$!
 

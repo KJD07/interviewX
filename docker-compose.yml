@@ -29,6 +29,7 @@ services:
     # within one process, and this is a low-throughput signaling channel,
     # not a bottleneck for the pilot scale this targets — revisit with
     # channels_redis + multiple daphne processes if that changes.
+    # entrypoint.sh runs migrate before daphne (see backend/entrypoint.sh).
     command: daphne -b 0.0.0.0 -p 8000 config.asgi:application
     volumes:
       - ./backend:/app
