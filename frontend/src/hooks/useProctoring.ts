@@ -22,6 +22,8 @@ const MAX_VIOLATIONS = 5; // interview auto-ends once this many violations are f
 const WARNING_DISPLAY_MS = 5000;
 const DISCONNECT_GRACE_SECONDS = 10; // time to reconnect the camera before auto-end
 const RECONNECT_POLL_MS = 1500;
+const TAB_SWITCH_COOLDOWN_MS = 15_000; // don't spam tab-switch violations on rapid toggles
+const QUEUED_CLIP_MS = 5_000; // shorter clips when several violations fire back-to-back
 
 const VIOLATION_WARNING_TEXT: Partial<Record<ProctoringEventType, string>> = {
   no_face: "No face detected — please stay visible on camera.",
@@ -61,6 +63,12 @@ export function useProctoring(session: InterviewSession | null) {
   const streamRef = useRef<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const isRecordingRef = useRef(false);
+  type QueuedClipReport = {
+    event_type: ProctoringEventType;
+    opts?: { confidence?: number; note?: string };
+  };
+  const clipQueueRef = useRef<QueuedClipReport[]>([]);
+  const lastTabSwitchFlagRef = useRef(0);
   const faceStreakRef = useRef({ count: -1, streak: 0 });
   const modelsLoadedRef = useRef(false);
   const phoneModelRef = useRef<import("@tensorflow-models/coco-ssd").ObjectDetection | null>(null);
@@ -82,13 +90,65 @@ export function useProctoring(session: InterviewSession | null) {
     if (enabled && !consentGiven) setConsentNeeded(true);
   }, [enabled, consentGiven]);
 
-  // Reports one flagged moment. If a live camera stream is available and
-  // nothing is already recording, captures a short clip around the moment;
-  // otherwise (camera denied/unsupported, or a recording already in
-  // flight) just logs the event with no clip — never overlaps recordings.
+  // Drain the clip queue one recording at a time so simultaneous violations
+  // (e.g. tab switch + no-face + phone) each get their own uploaded clip
+  // instead of only the first one being captured.
+  const processClipQueue = useCallback(() => {
+    if (!session || isRecordingRef.current) return;
+
+    const next = clipQueueRef.current.shift();
+    if (!next) return;
+
+    const stream = streamRef.current;
+    if (!stream || typeof MediaRecorder === "undefined") {
+      interviews.reportProctoringEvent(session.id, next.event_type, next.opts).catch(() => {});
+      processClipQueue();
+      return;
+    }
+
+    const clipMs =
+      clipQueueRef.current.length > 0 ? QUEUED_CLIP_MS : RECORD_MS;
+
+    try {
+      const chunks: BlobPart[] = [];
+      const recorder = new MediaRecorder(stream, { mimeType: "video/webm" });
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+      recorder.onstop = () => {
+        isRecordingRef.current = false;
+        const blob = new Blob(chunks, { type: "video/webm" });
+        interviews
+          .reportProctoringEvent(session.id, next.event_type, { ...next.opts, clip: blob })
+          .catch(() => {})
+          .finally(() => processClipQueue());
+      };
+      isRecordingRef.current = true;
+      recorder.start();
+      window.setTimeout(() => {
+        if (recorder.state !== "inactive") recorder.stop();
+      }, clipMs);
+    } catch {
+      isRecordingRef.current = false;
+      interviews.reportProctoringEvent(session.id, next.event_type, next.opts).catch(() => {});
+      processClipQueue();
+    }
+  }, [session]);
+
+  // Reports one flagged moment. If a live camera stream is available,
+  // enqueues a short clip capture (processed sequentially so bursts of
+  // violations each get their own recording). Otherwise logs without a clip.
   const report = useCallback(
     (event_type: ProctoringEventType, opts?: { confidence?: number; note?: string; silent?: boolean }) => {
       if (!session) return;
+
+      // Tab switches can fire in quick bursts (alt-tab twice, devtools dock
+      // resize, etc.) — treat them as one violation per cooldown window.
+      if (event_type === "tab_switch" && !opts?.silent) {
+        const now = Date.now();
+        if (now - lastTabSwitchFlagRef.current < TAB_SWITCH_COOLDOWN_MS) return;
+        lastTabSwitchFlagRef.current = now;
+      }
 
       // Silent events (e.g. camera permission denied) are logged but don't
       // count as a cheating violation and don't surface a warning.
@@ -105,33 +165,15 @@ export function useProctoring(session: InterviewSession | null) {
         }
       }
 
-      const stream = streamRef.current;
-      if (!stream || isRecordingRef.current || typeof MediaRecorder === "undefined") {
-        interviews.reportProctoringEvent(session.id, event_type, opts).catch(() => {});
-        return;
-      }
-      try {
-        const chunks: BlobPart[] = [];
-        const recorder = new MediaRecorder(stream, { mimeType: "video/webm" });
-        recorder.ondataavailable = (e) => {
-          if (e.data.size > 0) chunks.push(e.data);
-        };
-        recorder.onstop = () => {
-          isRecordingRef.current = false;
-          const blob = new Blob(chunks, { type: "video/webm" });
-          interviews.reportProctoringEvent(session.id, event_type, { ...opts, clip: blob }).catch(() => {});
-        };
-        isRecordingRef.current = true;
-        recorder.start();
-        window.setTimeout(() => {
-          if (recorder.state !== "inactive") recorder.stop();
-        }, RECORD_MS);
-      } catch {
-        isRecordingRef.current = false;
+      const clipOpts = opts?.silent ? undefined : { confidence: opts?.confidence, note: opts?.note };
+      if (clipOpts) {
+        clipQueueRef.current.push({ event_type, opts: clipOpts });
+        processClipQueue();
+      } else {
         interviews.reportProctoringEvent(session.id, event_type, opts).catch(() => {});
       }
     },
-    [session]
+    [session, processClipQueue]
   );
 
   // Camera access — only after explicit consent. Required for a proctored
@@ -178,8 +220,9 @@ export function useProctoring(session: InterviewSession | null) {
       streamRef.current = null;
       setLiveStream(null);
 
-      // No live stream left to pull a clip from — logged without one.
-      report("other", { note: "camera_disconnected" });
+      // Technical disconnect — logged for audit but doesn't count toward the
+      // cheating-violation limit (a unplugged cable isn't the same as cheating).
+      report("other", { note: "camera_disconnected", silent: true });
 
       let secondsLeft = DISCONNECT_GRACE_SECONDS;
       setDisconnectSecondsLeft(secondsLeft);
@@ -270,6 +313,8 @@ export function useProctoring(session: InterviewSession | null) {
           if (streak.streak === FACE_CONFIRM_STREAK) {
             if (count === 0) report("no_face", { confidence: 0.8 });
             else if (count > 1) report("multiple_faces", { confidence: 0.8 });
+            // Reset so a sustained condition doesn't re-fire every poll tick.
+            streak.streak = 0;
           }
         } catch {
           // transient detection failure — next tick retries
