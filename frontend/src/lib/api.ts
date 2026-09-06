@@ -608,11 +608,7 @@ export const interviews = {
     }),
 
   chat: (session_id: number, message: string, workspace?: WorkspacePayload) =>
-    request<{
-      ai_message: string;
-      open_workspace: { type: "coding" | "system_design"; language?: string } | null;
-      interview_complete?: boolean;
-    }>(
+    request<{ ai_message: string; open_workspace: { type: "coding" | "system_design"; language?: string } | null }>(
       `/api/interviews/${session_id}/chat/`,
       {
         method: "POST",

@@ -20,15 +20,6 @@ TIMEOUT = 30  # seconds
 # e.g. "[[OPEN_WORKSPACE:coding:python]]" or "[[OPEN_WORKSPACE:system_design]]".
 WORKSPACE_MARKER_RE = re.compile(r"\[\[OPEN_WORKSPACE:(coding|system_design)(?::([\w+#-]+))?\]\]\s*$")
 
-# Matches the closing line the interviewer AI is instructed to say once all
-# questions are done (see build_interview_system_prompt).
-INTERVIEW_CLOSING_RE = re.compile(r"wraps up the interview", re.IGNORECASE)
-
-
-def is_interview_closing_message(text: str) -> bool:
-    """True when the AI has signalled that the interview Q&A is finished."""
-    return bool(INTERVIEW_CLOSING_RE.search(text or ""))
-
 
 def extract_workspace_action(ai_message: str) -> tuple[str, dict[str, str] | None]:
     """
