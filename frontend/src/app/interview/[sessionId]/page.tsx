@@ -326,19 +326,9 @@ function EndModal({
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 const SILENCE_MS = 2000; // pause length that triggers auto-send in voice mode
-const INITIAL_WAIT_MS = 20_000; // first answer: generous window after a long AI intro
-const SUBSEQUENT_WAIT_MS = 12_000; // later turns: still automatic, less rushed
+const INITIAL_WAIT_MS = 5000; // max wait for the user to start speaking on the very first turn
+const SUBSEQUENT_WAIT_MS = 5000; // max wait for the user to start speaking on every turn after that
 const NO_RESPONSE_MESSAGE = "(No response)";
-const TTS_COOLDOWN_MS = 500; // grace after TTS before re-arming the mic (echo bleed)
-const MIC_ERROR_RETRY_MS = 1200; // backoff before retrying a dropped recognition session
-
-function isInterviewClosingMessage(text: string): boolean {
-  return /wraps up the interview/i.test(text);
-}
-
-function isSpeechActive(): boolean {
-  return typeof window !== "undefined" && !!window.speechSynthesis?.speaking;
-}
 
 export default function InterviewPage() {
   const { user } = useAuth();
@@ -396,14 +386,13 @@ export default function InterviewPage() {
   //   • voiceMode — the candidate answers by microphone instead of the
   //     keyboard. This one is opt-in and only controls the mic.
   const [speechEnabled, setSpeechEnabled] = useState(true);
-  const [voiceMode, setVoiceMode] = useState(true); // automatic answer-by-voice by default
+  const [voiceMode, setVoiceMode] = useState(false);
   const [micSupported, setMicSupported] = useState(true);
   const [ttsSupported, setTtsSupported] = useState(true);
   const [isListening, setIsListening] = useState(false);
   const [interimText, setInterimText] = useState("");
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
   const [voiceError, setVoiceError] = useState("");
-  const [interviewComplete, setInterviewComplete] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -419,18 +408,10 @@ export default function InterviewPage() {
   const initialWaitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null); // caps how long we wait for the user to START speaking each turn
   const hasSpokenOnceRef = useRef(false); // true once the user has produced any speech in this interview
   const finalTranscriptRef = useRef("");
-  const voiceModeRef = useRef(true); // mirrors voiceMode for use inside async callbacks
+  const voiceModeRef = useRef(false); // mirrors voiceMode for use inside async callbacks
   const speechEnabledRef = useRef(true); // mirrors speechEnabled for use inside async callbacks
   const hasSpokenOpeningRef = useRef(false); // has the interviewer's opening line been spoken yet
   const shouldListenRef = useRef(false); // whether we *want* to be listening right now
-  const isAiSpeakingRef = useRef(false); // mirrors isAiSpeaking for async speech callbacks
-  const interviewCompleteRef = useRef(false); // AI signalled the Q&A is finished
-  const interviewEndingRef = useRef(false); // finalize/end already in flight
-  const voiceDefaultAppliedRef = useRef(false); // voice defaults applied once per session
-  const listenAfterAiTimerRef = useRef<number | null>(null);
-  const scheduleListenAfterAiRef = useRef<() => void>(() => {});
-  const sendingRef = useRef(false);
-  const aiTypingRef = useRef(false);
   const voiceModeBeforeWorkspaceRef = useRef(false); // was voice mode on right before a workspace auto-disabled it, so we can resume it once the workspace closes
 
   const hasEnteredFullscreenRef = useRef(false); // true once the candidate has confirmed full-screen
@@ -456,35 +437,6 @@ export default function InterviewPage() {
   useEffect(() => {
     speechEnabledRef.current = speechEnabled;
   }, [speechEnabled]);
-
-  useEffect(() => {
-    isAiSpeakingRef.current = isAiSpeaking;
-  }, [isAiSpeaking]);
-
-  useEffect(() => {
-    interviewCompleteRef.current = interviewComplete;
-  }, [interviewComplete]);
-
-  useEffect(() => {
-    sendingRef.current = sending;
-  }, [sending]);
-
-  useEffect(() => {
-    aiTypingRef.current = aiTyping;
-  }, [aiTyping]);
-
-  // Default to automatic answer-by-voice for every session (mic required on
-  // enterprise invites anyway). Only flip voiceMode on — do NOT start the
-  // mic here; listening begins after the AI finishes speaking each turn.
-  useEffect(() => {
-    if (!session || !micSupported || voiceDefaultAppliedRef.current) return;
-    if (showFullscreenPrompt) return;
-    if (session.is_proctored && proctoringConsentNeeded) return;
-    voiceDefaultAppliedRef.current = true;
-    setVoiceMode(true);
-    shouldListenRef.current = true;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, micSupported, showFullscreenPrompt, proctoringConsentNeeded]);
 
   // Feature detection
   useEffect(() => {
@@ -613,14 +565,7 @@ export default function InterviewPage() {
     async (overrideText?: string, workspace?: WorkspacePayload, isCheckIn?: boolean) => {
       const text = (overrideText ?? input).trim();
       if (!text && !workspace) return;
-      if (sending || aiTyping || timeUp || interviewCompleteRef.current) return;
-
-      // Mic must stay off for the whole AI turn (network + TTS).
-      if (voiceModeRef.current) {
-        shouldListenRef.current = false;
-        micMutedRef.current = true;
-        stopListening();
-      }
+      if (sending || aiTyping || timeUp) return;
 
       const userMsg: Message = { role: "user", text, ts: new Date().toISOString(), workspace };
       setMessages((prev) => [...prev, userMsg]);
@@ -654,23 +599,11 @@ export default function InterviewPage() {
           setOpenWorkspace(null);
         }
 
-        const closing =
-          !!res.interview_complete || isInterviewClosingMessage(res.ai_message);
-        if (closing) {
-          interviewCompleteRef.current = true;
-          setInterviewComplete(true);
-          shouldListenRef.current = false;
-          micMutedRef.current = true;
-          stopListening();
-        }
-
         // The interviewer always speaks its reply out loud — whether the
         // candidate answered by typing or by microphone. Speaking is tied to
         // the mute switch alone, never to voiceMode.
         if (speechEnabledRef.current && ttsSupported) {
           speak(res.ai_message);
-        } else if (closing) {
-          window.setTimeout(() => finalizeInterviewRef.current(), 1500);
         }
       } catch (err) {
         if (err instanceof ApiError && err.code === "time_expired") {
@@ -690,21 +623,11 @@ export default function InterviewPage() {
         setAiTyping(false);
         setWorkspaceSubmitting(false);
         textareaRef.current?.focus();
-        // AI replied with text only (speaker muted) — open the mic once idle.
-        if (
-          voiceModeRef.current &&
-          !interviewCompleteRef.current &&
-          !speechEnabledRef.current
-        ) {
-          scheduleListenAfterAiRef.current();
-        }
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [input, sending, aiTyping, timeUp, sessionId, ttsSupported]
   );
-
-  const finalizeInterviewRef = useRef<() => Promise<void>>(async () => {});
 
   const handleWorkspaceSubmit = useCallback(
     (content: string) => {
@@ -740,15 +663,10 @@ export default function InterviewPage() {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
     if (!speechEnabledRef.current) return; // candidate muted the interviewer
 
-    // Cancel any pending mic start — the interviewer is talking now.
-    if (listenAfterAiTimerRef.current) {
-      clearTimeout(listenAfterAiTimerRef.current);
-      listenAfterAiTimerRef.current = null;
-    }
-    shouldListenRef.current = false;
-
     // Belt-and-suspenders: make sure the mic is actually dead before we
     // start talking, in case a recognition instance is still winding down.
+    // Only relevant in voice mode — in text mode there's no mic running for
+    // the AI's own voice to leak into.
     if (voiceModeRef.current) {
       micMutedRef.current = true;
       stopListening();
@@ -764,23 +682,33 @@ export default function InterviewPage() {
 
     utter.onstart = () => {
       micMutedRef.current = true;
-      isAiSpeakingRef.current = true;
       setIsAiSpeaking(true);
     };
     utter.onend = () => {
-      isAiSpeakingRef.current = false;
       setIsAiSpeaking(false);
-      scheduleListenAfterAiRef.current();
+      // Small grace period after TTS ends before we unmute — some
+      // browsers keep a trailing bit of speaker audio queued that would
+      // otherwise leak into the very start of the next listening session.
+      setTimeout(() => {
+        micMutedRef.current = false;
+        if (voiceModeRef.current && shouldListenRef.current && !timeUp) {
+          startListening();
+        }
+      }, 250);
     };
     utter.onerror = () => {
-      isAiSpeakingRef.current = false;
       setIsAiSpeaking(false);
-      scheduleListenAfterAiRef.current();
+      setTimeout(() => {
+        micMutedRef.current = false;
+        if (voiceModeRef.current && shouldListenRef.current && !timeUp) {
+          startListening();
+        }
+      }, 250);
     };
 
     window.speechSynthesis.speak(utter);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [timeUp]);
 
   // ── Speech-to-text (user mic) ─────────────────────────────────────────────────
 
@@ -834,18 +762,7 @@ export default function InterviewPage() {
       setMicSupported(false);
       return;
     }
-    if (
-      sending ||
-      aiTyping ||
-      timeUp ||
-      isAiSpeaking ||
-      isAiSpeakingRef.current ||
-      interviewCompleteRef.current ||
-      interviewEndingRef.current ||
-      isSpeechActive()
-    ) {
-      return;
-    }
+    if (sending || aiTyping || timeUp || isAiSpeaking) return;
 
     // Stop any previous instance first
     if (recognitionRef.current) {
@@ -869,23 +786,23 @@ export default function InterviewPage() {
       micMutedRef.current = false; // this instance is legitimate, allow its results through
       setIsListening(true);
 
-      // Don't start the no-response countdown while the interviewer is still
-      // talking — the candidate can't answer until the question is spoken.
-      if (isAiSpeakingRef.current || isSpeechActive() || sending || aiTyping) return;
-
       // Cap how long we wait for the user to START speaking this turn. First
       // turn of the interview gets a longer grace period; every turn after
       // the user has spoken at least once uses the shorter dynamic wait.
       clearInitialWaitTimer();
       const waitMs = hasSpokenOnceRef.current ? SUBSEQUENT_WAIT_MS : INITIAL_WAIT_MS;
       initialWaitTimerRef.current = setTimeout(() => {
-        if (isAiSpeakingRef.current || isSpeechActive() || sending || aiTyping) return;
         const captured = finalTranscriptRef.current.trim();
         shouldListenRef.current = true; // resume listening after the AI responds & speaks
         stopListening();
         if (captured) {
+          // The user had already said something before the window closed —
+          // send it instead of waiting further.
           handleSend(captured);
         } else {
+          // No speech at all within the wait window — don't keep waiting.
+          // Tell the AI the candidate didn't answer so it moves the
+          // interview forward on its own (e.g. re-prompts or asks the next question).
           handleSend(NO_RESPONSE_MESSAGE);
         }
       }, waitMs);
@@ -895,7 +812,7 @@ export default function InterviewPage() {
       // Drop anything that arrives while we're supposed to be muted — this
       // is what actually stops the AI's own TTS voice (leaking in through
       // the mic) from being transcribed and auto-sent as the user's answer.
-      if (micMutedRef.current || interviewCompleteRef.current || interviewEndingRef.current) return;
+      if (micMutedRef.current) return;
 
       // The user has started speaking — the initial wait window is satisfied.
       clearInitialWaitTimer();
@@ -935,28 +852,27 @@ export default function InterviewPage() {
       } else if (err === "no-speech") {
         // Harmless — just restart if we still want to be listening; our own
         // initial-wait timer (not this browser event) governs the cutoff.
-      } else if (
-        err === "network" ||
-        err === "aborted" ||
-        err === "audio-capture" ||
-        err === "network-error" ||
-        err
-      ) {
-        if (err && err !== "no-speech") {
-          setVoiceError("Voice input hiccuped — retrying automatically…");
-        }
-        if (shouldListenRef.current && voiceModeRef.current) {
-          window.setTimeout(() => scheduleListenAfterAiRef.current(), MIC_ERROR_RETRY_MS);
-        }
       }
       setIsListening(false);
     };
 
     recognition.onend = () => {
       setIsListening(false);
-      // Browser stopped recognition mid-turn — only resume once the AI is silent.
-      if (shouldListenRef.current && voiceModeRef.current) {
-        scheduleListenAfterAiRef.current();
+      // Some browsers stop recognition automatically after a pause; restart
+      // it if we still want to be listening (and haven't already sent/spoken).
+      if (
+        shouldListenRef.current &&
+        voiceModeRef.current &&
+        !timeUp &&
+        !sending &&
+        !aiTyping &&
+        !isAiSpeaking
+      ) {
+        try {
+          recognition.start();
+        } catch {
+          /* already started elsewhere — ignore */
+        }
       }
     };
 
@@ -969,49 +885,6 @@ export default function InterviewPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sending, aiTyping, timeUp, isAiSpeaking, handleSend]);
 
-  // The ONLY path that turns the mic on in voice mode: wait until the
-  // interviewer has fully finished speaking (TTS + API in-flight), then
-  // start listening automatically.
-  const scheduleListenAfterAi = useCallback(() => {
-    if (interviewCompleteRef.current) {
-      window.setTimeout(() => finalizeInterviewRef.current(), 1500);
-      return;
-    }
-    if (!voiceModeRef.current || timeUp || interviewEndingRef.current) return;
-
-    if (listenAfterAiTimerRef.current) {
-      clearTimeout(listenAfterAiTimerRef.current);
-      listenAfterAiTimerRef.current = null;
-    }
-
-    const attempt = () => {
-      listenAfterAiTimerRef.current = null;
-      if (interviewCompleteRef.current) {
-        window.setTimeout(() => finalizeInterviewRef.current(), 1500);
-        return;
-      }
-      if (!voiceModeRef.current || timeUp || interviewEndingRef.current) return;
-      if (
-        sendingRef.current ||
-        aiTypingRef.current ||
-        isAiSpeakingRef.current ||
-        isSpeechActive()
-      ) {
-        listenAfterAiTimerRef.current = window.setTimeout(attempt, 150);
-        return;
-      }
-      shouldListenRef.current = true;
-      micMutedRef.current = false;
-      startListening();
-    };
-
-    listenAfterAiTimerRef.current = window.setTimeout(attempt, TTS_COOLDOWN_MS);
-  }, [timeUp, startListening]);
-
-  useEffect(() => {
-    scheduleListenAfterAiRef.current = scheduleListenAfterAi;
-  }, [scheduleListenAfterAi]);
-
   // Mute/unmute the interviewer's voice. Independent of voiceMode: muting
   // here never turns the mic off, and unmuting never turns it on.
   const toggleSpeech = () => {
@@ -1020,10 +893,11 @@ export default function InterviewPage() {
       window.speechSynthesis?.cancel();
       setIsAiSpeaking(false);
       setSpeechEnabled(false);
-      // Cancelling mid-sentence skips the utterance's onend — re-arm via the
-      // same post-AI scheduler so we never open the mic while it's talking.
-      if (voiceModeRef.current && !timeUp) {
-        scheduleListenAfterAiRef.current();
+      // Cancelling mid-sentence skips the utterance's onend, which is what
+      // normally re-arms the mic after the AI finishes — so re-arm it here.
+      if (voiceModeRef.current && shouldListenRef.current && !timeUp) {
+        micMutedRef.current = false;
+        startListening();
       }
     } else {
       speechEnabledRef.current = true;
@@ -1045,30 +919,13 @@ export default function InterviewPage() {
       setVoiceError("");
       setVoiceMode(true);
       shouldListenRef.current = true;
-      scheduleListenAfterAiRef.current();
+      if (!sending && !aiTyping && !isAiSpeaking && !timeUp) {
+        startListening();
+      }
     }
   };
 
-  // When the interviewer doesn't speak (muted / unsupported), still auto-open
-  // the mic only once nothing AI-related is in flight.
-  useEffect(() => {
-    if (showFullscreenPrompt || !voiceMode || !micSupported) return;
-    if (session?.is_proctored && proctoringConsentNeeded) return;
-    if (interviewComplete || speechEnabled && ttsSupported) return;
-    scheduleListenAfterAiRef.current();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    showFullscreenPrompt,
-    voiceMode,
-    micSupported,
-    proctoringConsentNeeded,
-    session?.is_proctored,
-    interviewComplete,
-    speechEnabled,
-    ttsSupported,
-  ]);
-
-  // Speak the interviewer's opening question
+  // Speak the interviewer's opening question — and, on a mid-interview
   // reload, whatever it last said — as soon as the candidate is past the
   // full-screen prompt. That click is also the user gesture browsers require
   // before speechSynthesis is allowed to make any sound, so this is the
@@ -1086,10 +943,6 @@ export default function InterviewPage() {
   useEffect(() => {
     return () => {
       shouldListenRef.current = false;
-      if (listenAfterAiTimerRef.current) {
-        clearTimeout(listenAfterAiTimerRef.current);
-        listenAfterAiTimerRef.current = null;
-      }
       stopListening();
       window.speechSynthesis?.cancel();
     };
@@ -1125,7 +978,9 @@ export default function InterviewPage() {
       setVoiceError("");
       setVoiceMode(true);
       shouldListenRef.current = true;
-      scheduleListenAfterAiRef.current();
+      if (!sending && !aiTyping && !isAiSpeaking && !timeUp) {
+        startListening();
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openWorkspace]);
@@ -1133,11 +988,8 @@ export default function InterviewPage() {
   // ── End interview ───────────────────────────────────────────────────────────
 
   const handleEnd = async () => {
-    if (interviewEndingRef.current) return;
-    interviewEndingRef.current = true;
     setEnding(true);
     shouldListenRef.current = false;
-    micMutedRef.current = true;
     stopListening();
     window.speechSynthesis?.cancel();
     try {
@@ -1146,31 +998,8 @@ export default function InterviewPage() {
     } catch (err) {
       setShowEndModal(false);
       setEnding(false);
-      interviewEndingRef.current = false;
     }
   };
-
-  const finalizeInterview = useCallback(async () => {
-    if (interviewEndingRef.current) return;
-    interviewEndingRef.current = true;
-    setShowEndModal(false);
-    setEnding(true);
-    shouldListenRef.current = false;
-    micMutedRef.current = true;
-    stopListening();
-    window.speechSynthesis?.cancel();
-    try {
-      await interviews.end(sessionId);
-      router.replace(`/interview/${sessionId}/results`);
-    } catch {
-      setEnding(false);
-      interviewEndingRef.current = false;
-    }
-  }, [sessionId, router]);
-
-  useEffect(() => {
-    finalizeInterviewRef.current = finalizeInterview;
-  }, [finalizeInterview]);
 
   // ── Auto-end (full-screen exit / window minimized) ─────────────────────────
   // Wrapped in a ref so the event listeners below (registered once) always call
@@ -1672,11 +1501,9 @@ export default function InterviewPage() {
             {/* Answer-by-voice toggle — mic only. The AI speaks either way. */}
             <button
               onClick={toggleVoiceMode}
-              disabled={!micSupported || !!openWorkspace || interviewComplete}
+              disabled={!micSupported || !!openWorkspace}
               title={
-                interviewComplete
-                  ? "The interview has ended — voice input is off"
-                  : !micSupported
+                !micSupported
                   ? "Microphone input isn't supported in this browser — try Chrome or Edge"
                   : openWorkspace
                   ? "Answering by voice is unavailable while the coding/system-design workspace is open"
@@ -1729,15 +1556,6 @@ export default function InterviewPage() {
             style={{ background: "rgba(239,68,68,0.1)", color: "var(--danger)" }}
           >
             {voiceError}
-          </div>
-        )}
-
-        {interviewComplete && (
-          <div
-            className="px-4 py-2 text-xs text-center shrink-0"
-            style={{ background: "var(--success-bg)", color: "#2F6B48" }}
-          >
-            The interviewer has wrapped up — scoring your interview and redirecting you shortly…
           </div>
         )}
 
@@ -1815,58 +1633,54 @@ export default function InterviewPage() {
               />
             ))}
 
-          {voiceMode && !openWorkspace && !interviewComplete ? (
+          {voiceMode && !openWorkspace ? (
             <div className="flex flex-col items-center gap-2 py-2">
-              <div
-                className="w-16 h-16 rounded-full flex items-center justify-center"
-                style={{
-                  background: isListening ? "var(--danger)" : "var(--surface)",
-                  boxShadow: isListening
-                    ? "0 0 0 8px rgba(239,68,68,0.15)"
-                    : "0 0 0 8px rgba(99,102,241,0.08)",
-                  border: isListening ? "none" : "1px solid var(--border-mid)",
-                }}
-                aria-hidden
-              >
-                <svg width="24" height="24" viewBox="0 0 16 16" fill="none">
-                  <path
-                    d="M8 1.5a2 2 0 0 0-2 2v5a2 2 0 0 0 4 0v-5a2 2 0 0 0-2-2Z"
-                    stroke={isListening ? "#fff" : "var(--ink-dim)"}
-                    strokeWidth="1.4"
-                  />
-                  <path
-                    d="M4 7.5v1a4 4 0 0 0 8 0v-1M8 12.5v2M6 14.5h4"
-                    stroke={isListening ? "#fff" : "var(--ink-dim)"}
-                    strokeWidth="1.4"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </div>
-              <p className="text-xs text-center" style={{ color: "var(--ink-faint)" }}>
-                {isAiSpeaking
-                  ? "AI is speaking — the mic turns on automatically when they're done"
-                  : isListening
-                  ? "Listening — just speak your answer; we'll send it when you pause"
-                  : sending || aiTyping
-                  ? "Waiting for AI…"
-                  : "Mic starting…"}
-              </p>
-              {isListening && interimText.trim() && (
-                <button
-                  onClick={() => {
+              <button
+                onClick={() => {
+                  if (isListening) {
+                    // Manual stop — send whatever was captured so far
                     clearSilenceTimer();
                     const finalText = interimText.trim();
                     shouldListenRef.current = true;
                     stopListening();
                     if (finalText) handleSend(finalText);
-                  }}
-                  disabled={sending || aiTyping || isAiSpeaking || timeUp}
-                  className="text-xs font-semibold px-3 py-1.5 rounded-full transition-opacity disabled:opacity-40"
-                  style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
-                >
-                  Send answer now
-                </button>
-              )}
+                  } else if (!sending && !aiTyping && !isAiSpeaking && !timeUp) {
+                    shouldListenRef.current = true;
+                    startListening();
+                  }
+                }}
+                disabled={sending || aiTyping || isAiSpeaking || timeUp}
+                className="w-16 h-16 rounded-full flex items-center justify-center transition-transform disabled:opacity-40"
+                style={{
+                  background: isListening ? "var(--danger)" : "var(--accent)",
+                  boxShadow: isListening
+                    ? "0 0 0 8px rgba(239,68,68,0.15)"
+                    : "0 0 0 8px rgba(99,102,241,0.15)",
+                }}
+              >
+                <svg width="24" height="24" viewBox="0 0 16 16" fill="none">
+                  <path
+                    d="M8 1.5a2 2 0 0 0-2 2v5a2 2 0 0 0 4 0v-5a2 2 0 0 0-2-2Z"
+                    stroke={isListening ? "#fff" : "var(--accent-ink)"}
+                    strokeWidth="1.4"
+                  />
+                  <path
+                    d="M4 7.5v1a4 4 0 0 0 8 0v-1M8 12.5v2M6 14.5h4"
+                    stroke={isListening ? "#fff" : "var(--accent-ink)"}
+                    strokeWidth="1.4"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+              <p className="text-xs text-center" style={{ color: "var(--ink-faint)" }}>
+                {isAiSpeaking
+                  ? "AI is speaking…"
+                  : isListening
+                  ? "Listening — pause when you're done answering"
+                  : sending || aiTyping
+                  ? "Waiting for AI…"
+                  : "Tap the mic to answer by speaking"}
+              </p>
             </div>
           ) : (
             <>
