@@ -384,9 +384,10 @@ export default function InterviewPage() {
   //     like an interview rather than a chatbot). Only an explicit mute or a
   //     browser without speechSynthesis silences it.
   //   • voiceMode — the candidate answers by microphone instead of the
-  //     keyboard. This one is opt-in and only controls the mic.
+  //     keyboard. ON by default so interviews start in voice-answer mode;
+  //     the toggle still lets them switch back to typing any time.
   const [speechEnabled, setSpeechEnabled] = useState(true);
-  const [voiceMode, setVoiceMode] = useState(false);
+  const [voiceMode, setVoiceMode] = useState(true);
   const [micSupported, setMicSupported] = useState(true);
   const [ttsSupported, setTtsSupported] = useState(true);
   const [isListening, setIsListening] = useState(false);
@@ -408,10 +409,10 @@ export default function InterviewPage() {
   const initialWaitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null); // caps how long we wait for the user to START speaking each turn
   const hasSpokenOnceRef = useRef(false); // true once the user has produced any speech in this interview
   const finalTranscriptRef = useRef("");
-  const voiceModeRef = useRef(false); // mirrors voiceMode for use inside async callbacks
+  const voiceModeRef = useRef(true); // mirrors voiceMode for use inside async callbacks
   const speechEnabledRef = useRef(true); // mirrors speechEnabled for use inside async callbacks
   const hasSpokenOpeningRef = useRef(false); // has the interviewer's opening line been spoken yet
-  const shouldListenRef = useRef(false); // whether we *want* to be listening right now
+  const shouldListenRef = useRef(true); // whether we *want* to be listening right now
   const voiceModeBeforeWorkspaceRef = useRef(false); // was voice mode on right before a workspace auto-disabled it, so we can resume it once the workspace closes
 
   const hasEnteredFullscreenRef = useRef(false); // true once the candidate has confirmed full-screen
@@ -444,7 +445,13 @@ export default function InterviewPage() {
       (window as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown })
         .SpeechRecognition ||
       (window as unknown as { webkitSpeechRecognition?: unknown }).webkitSpeechRecognition;
-    setMicSupported(!!SR);
+    const micOk = !!SR;
+    setMicSupported(micOk);
+    if (!micOk) {
+      voiceModeRef.current = false;
+      shouldListenRef.current = false;
+      setVoiceMode(false);
+    }
     setTtsSupported(typeof window !== "undefined" && "speechSynthesis" in window);
     // Warm up voice list (some browsers load voices async)
     if (typeof window !== "undefined" && window.speechSynthesis) {
@@ -924,6 +931,34 @@ export default function InterviewPage() {
       }
     }
   };
+
+  // When voice mode is on but the interviewer won't speak aloud (TTS
+  // unavailable or AI voice muted), arm the mic as soon as we're past the
+  // full-screen gate. When TTS *is* active, speak()'s onend handles this.
+  useEffect(() => {
+    if (showFullscreenPrompt || !voiceMode || !micSupported || openWorkspace) return;
+    if (timeUp || sending || aiTyping || isAiSpeaking) return;
+    if (speechEnabled && ttsSupported) return;
+    const last = messages[messages.length - 1];
+    if (!last || last.role !== "ai") return;
+
+    shouldListenRef.current = true;
+    if (!isListening) startListening();
+  }, [
+    showFullscreenPrompt,
+    voiceMode,
+    micSupported,
+    openWorkspace,
+    timeUp,
+    sending,
+    aiTyping,
+    isAiSpeaking,
+    speechEnabled,
+    ttsSupported,
+    messages,
+    isListening,
+    startListening,
+  ]);
 
   // Speak the interviewer's opening question — and, on a mid-interview
   // reload, whatever it last said — as soon as the candidate is past the
