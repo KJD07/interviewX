@@ -16,6 +16,7 @@ from core.openrouter_client import (
     build_interview_system_prompt,
     chat_completion,
     extract_workspace_action,
+    is_interview_closing_message,
 )
 
 from .models import InterviewSession, RealInterviewReport
@@ -617,7 +618,13 @@ class ChatView(APIView):
                 session.transcript = transcript
                 session.save(update_fields=["transcript"])
 
-        return Response({"ai_message": ai_reply, "open_workspace": open_workspace})
+        return Response(
+            {
+                "ai_message": ai_reply,
+                "open_workspace": open_workspace,
+                "interview_complete": is_interview_closing_message(ai_reply),
+            }
+        )
 
 
 # Non-attempts that should never earn meaningful credit, regardless of what

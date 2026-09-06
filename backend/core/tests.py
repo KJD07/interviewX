@@ -1,6 +1,6 @@
 from django.test import SimpleTestCase
 
-from .openrouter_client import build_interview_system_prompt
+from .openrouter_client import build_interview_system_prompt, is_interview_closing_message
 
 
 class TonePromptTests(SimpleTestCase):
@@ -43,3 +43,15 @@ class TonePromptTests(SimpleTestCase):
             questions=self._questions(),
         )
         self.assertIn("Your tone is quirky", prompt)
+
+
+class InterviewClosingDetectionTests(SimpleTestCase):
+    def test_detects_standard_closing_line(self):
+        self.assertTrue(
+            is_interview_closing_message(
+                "That wraps up the interview. Thanks for your time today."
+            )
+        )
+
+    def test_ignores_regular_replies(self):
+        self.assertFalse(is_interview_closing_message("Can you walk me through that again?"))
