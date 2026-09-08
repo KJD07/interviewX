@@ -37,7 +37,9 @@ export default function EnterpriseInterestForm() {
         message: message.trim(),
       });
       const partnerNote = result.referral_partner
-        ? ` We have recorded your referral from ${result.referral_partner}.`
+        ? result.converted
+          ? ` Your partner ${result.referral_partner} has been credited automatically.`
+          : ` We have recorded your referral from ${result.referral_partner}.`
         : "";
       setSuccess(`${result.detail}${partnerNote}`);
       setCompanyName("");

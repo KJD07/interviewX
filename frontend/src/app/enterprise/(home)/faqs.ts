@@ -22,11 +22,11 @@ export const ENTERPRISE_FAQS = [
   {
     question: "How do we get started?",
     answer:
-      "Fill out the enterprise interest form on this page with your company details. If a partner referred you, include their code — we use it to credit them when you become a customer. Our team will set up your organization, seat quota and admin access.",
+      "Fill out the enterprise interest form on this page with your company details. If a partner referred you, include their code — we credit them automatically when you sign up and set up your organization.",
   },
   {
     question: "Do you have a partner referral program?",
     answer:
-      "Yes. Agencies, colleges, and consultants can refer enterprise customers with a unique code and earn 20% commission on attributed revenue for 12 months. Partners with dashboard access can track referrals at /partner.",
+      "Yes. Agencies, colleges, and consultants can self-register at /partner, get a unique code and referral link, and earn 20% commission on attributed enterprise revenue. Referred organizations appear on the partner dashboard automatically, and commissions pay out within 7 days.",
   },
 ];

@@ -117,3 +117,10 @@ class EnterpriseLeadCreateSerializer(serializers.Serializer):
         from .referrals import create_enterprise_lead
 
         return create_enterprise_lead(**validated_data)
+
+
+class PartnerRegisterSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=200)
+    contact_email = serializers.EmailField(required=False, allow_blank=True, default="")
+    preferred_code = serializers.CharField(required=False, allow_blank=True, max_length=40, default="")
+    payout_notes = serializers.CharField(required=False, allow_blank=True, max_length=2000, default="")

@@ -30,6 +30,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def _is_partner(user) -> bool:
+    from apps.enterprise.models import ReferralPartner
+
+    return ReferralPartner.objects.filter(
+        user=user, status=ReferralPartner.Status.ACTIVE
+    ).exists()
+
+
 def _token_response(user) -> dict:
     """Return access + refresh tokens for a given user and mark the user as
     active for analytics.
@@ -50,6 +58,7 @@ def _token_response(user) -> dict:
             "is_email_verified": user.is_email_verified,
             "auth_provider": user.auth_provider,
             "is_staff": user.is_staff,
+            "is_partner": _is_partner(user),
         },
     }
 
@@ -440,5 +449,6 @@ class MeView(APIView):
                 "is_email_verified": user.is_email_verified,
                 "auth_provider": user.auth_provider,
                 "is_staff": user.is_staff,
+                "is_partner": _is_partner(user),
             }
         )
