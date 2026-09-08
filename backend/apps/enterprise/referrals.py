@@ -117,3 +117,61 @@ def create_commission_for_payment(payment):
         commission_amount_paise=commission_paise,
         status=CommissionLedger.Status.PENDING,
     )
+
+
+@transaction.atomic
+def convert_lead_to_organization(lead, contract_days: int = 365):
+    """Create an Organization from a lead and attach partner attribution when present."""
+    from .models import EnterpriseLead, ReferralAttribution
+
+    if lead.organization_id:
+        org = lead.organization
+    else:
+        now = timezone.now()
+        from .models import Organization
+
+        org = Organization.objects.create(
+            name=lead.company_name,
+            contact_email=lead.contact_email,
+            candidate_quota=lead.seats_needed,
+            contract_ends=now + timedelta(days=contract_days),
+        )
+        lead.organization = org
+
+    if lead.referral_partner_id and not ReferralAttribution.objects.filter(
+        organization=org
+    ).exists():
+        attribute_organization(
+            lead.referral_partner,
+            org,
+            ReferralAttribution.Source.CODE_AT_SIGNUP,
+        )
+
+    lead.status = EnterpriseLead.Status.CONVERTED
+    lead.save(update_fields=["organization", "status"])
+    return org
+
+
+def create_enterprise_lead(
+    company_name: str,
+    contact_email: str,
+    *,
+    contact_name: str = "",
+    seats_needed: int = 50,
+    referral_code: str = "",
+    message: str = "",
+):
+    from .models import EnterpriseLead
+
+    partner = get_active_partner(referral_code) if referral_code else None
+    normalized_code = normalize_partner_code(referral_code) if referral_code else ""
+
+    return EnterpriseLead.objects.create(
+        company_name=company_name.strip(),
+        contact_name=contact_name.strip(),
+        contact_email=contact_email.strip().lower(),
+        seats_needed=max(seats_needed, 1),
+        referral_code=normalized_code,
+        referral_partner=partner,
+        message=message.strip(),
+    )

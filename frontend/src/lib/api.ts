@@ -835,6 +835,7 @@ export interface PartnerDashboard {
   };
   summary: {
     referred_organizations: number;
+    open_leads: number;
     earned_paise: number;
     pending_paise: number;
     paid_paise: number;
@@ -845,6 +846,14 @@ export interface PartnerDashboard {
     attributed_at: string;
     expires_at: string;
     source: string;
+  }[];
+  recent_leads: {
+    id: number;
+    company_name: string;
+    contact_email: string;
+    seats_needed: number;
+    status: string;
+    created_at: string;
   }[];
   recent_commissions: {
     id: number;
@@ -864,6 +873,22 @@ export const partnerReferrals = {
       method: "POST",
       body: JSON.stringify({ code }),
     }),
+
+  submitLead: (payload: {
+    company_name: string;
+    contact_email: string;
+    contact_name?: string;
+    seats_needed?: number;
+    referral_code?: string;
+    message?: string;
+  }) =>
+    request<{ id: number; detail: string; referral_partner: string | null }>(
+      "/api/enterprise/leads/",
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      },
+    ),
 
   dashboard: () => request<PartnerDashboard>("/api/enterprise/partner/dashboard/"),
 };

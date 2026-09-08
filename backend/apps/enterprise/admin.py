@@ -3,6 +3,7 @@ from django.utils import timezone
 
 from .models import (
     CommissionLedger,
+    EnterpriseLead,
     EnterprisePayment,
     Organization,
     OrganizationMember,
@@ -11,7 +12,7 @@ from .models import (
     ReferralAttribution,
     ReferralPartner,
 )
-from .referrals import commission_expires_at
+from .referrals import commission_expires_at, convert_lead_to_organization
 
 
 class OrganizationMemberInline(admin.TabularInline):
@@ -99,6 +100,33 @@ class ProctoringEventAdmin(admin.ModelAdmin):
     list_display = ("session", "event_type", "note", "confidence", "occurred_at", "clip")
     list_filter = ("event_type",)
     search_fields = ("session__id", "note")
+
+
+@admin.action(description="Convert selected leads to organizations")
+def convert_leads_to_organizations(modeladmin, request, queryset):
+    converted = 0
+    for lead in queryset.exclude(status=EnterpriseLead.Status.CONVERTED):
+        convert_lead_to_organization(lead)
+        converted += 1
+    messages.success(request, f"Converted {converted} lead(s) to organizations.")
+
+
+@admin.register(EnterpriseLead)
+class EnterpriseLeadAdmin(admin.ModelAdmin):
+    list_display = (
+        "company_name",
+        "contact_email",
+        "referral_partner",
+        "referral_code",
+        "seats_needed",
+        "status",
+        "organization",
+        "created_at",
+    )
+    list_filter = ("status", "referral_partner")
+    search_fields = ("company_name", "contact_email", "referral_code", "contact_name")
+    readonly_fields = ("created_at", "organization")
+    actions = [convert_leads_to_organizations]
 
 
 @admin.register(ReferralPartner)

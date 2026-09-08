@@ -342,3 +342,54 @@ class CommissionLedger(models.Model):
             f"{self.partner.code} — ₹{self.commission_amount_paise / 100:.2f} "
             f"({self.status})"
         )
+
+
+class EnterpriseLead(models.Model):
+    """Inbound enterprise interest from the public signup form.
+
+    Captures partner referral codes so sales can convert a lead into an
+    Organization with attribution in one admin action.
+    """
+
+    class Status(models.TextChoices):
+        NEW = "new", "New"
+        CONTACTED = "contacted", "Contacted"
+        CONVERTED = "converted", "Converted"
+        CLOSED_LOST = "closed_lost", "Closed lost"
+
+    company_name = models.CharField(max_length=200)
+    contact_name = models.CharField(max_length=120, blank=True, default="")
+    contact_email = models.EmailField()
+    seats_needed = models.PositiveIntegerField(
+        default=50,
+        help_text="Estimated number of candidate interviews the org needs.",
+    )
+    referral_code = models.CharField(max_length=40, blank=True, default="")
+    referral_partner = models.ForeignKey(
+        ReferralPartner,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="leads",
+    )
+    message = models.TextField(blank=True, default="")
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.NEW,
+    )
+    organization = models.OneToOneField(
+        Organization,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="source_lead",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        partner = f" via {self.referral_partner.code}" if self.referral_partner_id else ""
+        return f"{self.company_name} ({self.contact_email}){partner}"

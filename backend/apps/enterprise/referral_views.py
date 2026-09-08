@@ -1,10 +1,11 @@
-from django.db.models import Sum
+from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import CommissionLedger, ReferralAttribution, ReferralPartner
+from .models import CommissionLedger, EnterpriseLead, ReferralAttribution, ReferralPartner
 from .referrals import get_active_partner, normalize_partner_code
+from .serializers import EnterpriseLeadCreateSerializer
 
 
 class PartnerReferralCaptureView(APIView):
@@ -19,12 +20,33 @@ class PartnerReferralCaptureView(APIView):
         return Response({"code": code}, status=200)
 
 
+class EnterpriseLeadCreateView(APIView):
+    """POST /api/enterprise/leads/ — public enterprise interest form."""
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = EnterpriseLeadCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        lead = serializer.save()
+        return Response(
+            {
+                "id": lead.id,
+                "detail": "Thanks — we'll reach out shortly to set up your workspace.",
+                "referral_partner": lead.referral_partner.name if lead.referral_partner_id else None,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
 class PartnerDashboardView(APIView):
     """GET /api/enterprise/partner/dashboard/ — partner commission summary."""
 
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        from django.db.models import Sum
+
         partner = (
             ReferralPartner.objects.filter(user=request.user, status=ReferralPartner.Status.ACTIVE)
             .first()
@@ -81,6 +103,22 @@ class PartnerDashboardView(APIView):
             ).order_by("-created_at")[:20]
         ]
 
+        open_leads_qs = EnterpriseLead.objects.filter(referral_partner=partner).exclude(
+            status=EnterpriseLead.Status.CONVERTED
+        )
+        open_leads = open_leads_qs.order_by("-created_at")[:20]
+        recent_leads = [
+            {
+                "id": row.id,
+                "company_name": row.company_name,
+                "contact_email": row.contact_email,
+                "seats_needed": row.seats_needed,
+                "status": row.status,
+                "created_at": row.created_at.isoformat(),
+            }
+            for row in open_leads
+        ]
+
         return Response(
             {
                 "partner": {
@@ -90,11 +128,13 @@ class PartnerDashboardView(APIView):
                 },
                 "summary": {
                     "referred_organizations": attributions.count(),
+                    "open_leads": open_leads_qs.count(),
                     "earned_paise": earned_paise,
                     "pending_paise": pending_paise,
                     "paid_paise": paid_paise,
                 },
                 "referred_organizations": referred_orgs,
+                "recent_leads": recent_leads,
                 "recent_commissions": recent_commissions,
             }
         )

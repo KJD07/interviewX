@@ -103,3 +103,45 @@ class ReferralSystemTests(TestCase):
         self.assertEqual(body["summary"]["referred_organizations"], 1)
         self.assertEqual(body["summary"]["earned_paise"], 100000)
         self.assertEqual(body["summary"]["pending_paise"], 100000)
+
+    def test_enterprise_lead_api_links_partner(self):
+        res = self.client.post(
+            "/api/enterprise/leads/",
+            {
+                "company_name": "Startup Inc",
+                "contact_email": "founder@startup.test",
+                "contact_name": "Alex",
+                "seats_needed": 25,
+                "referral_code": "agency20",
+                "message": "Referred by our hiring partner",
+            },
+            format="json",
+        )
+        self.assertEqual(res.status_code, 201)
+        from .models import EnterpriseLead
+
+        lead = EnterpriseLead.objects.get(pk=res.json()["id"])
+        self.assertEqual(lead.referral_partner_id, self.partner.pk)
+        self.assertEqual(lead.referral_code, "AGENCY20")
+
+    def test_convert_lead_creates_org_and_attribution(self):
+        from .models import EnterpriseLead
+        from .referrals import convert_lead_to_organization, create_enterprise_lead
+
+        lead = create_enterprise_lead(
+            "Wellfound Startup",
+            "ceo@wellfound-startup.test",
+            seats_needed=40,
+            referral_code="AGENCY20",
+        )
+        org = convert_lead_to_organization(lead)
+        self.assertEqual(org.name, "Wellfound Startup")
+        self.assertEqual(org.candidate_quota, 40)
+        self.assertTrue(
+            ReferralAttribution.objects.filter(
+                organization=org, partner=self.partner
+            ).exists()
+        )
+        lead.refresh_from_db()
+        self.assertEqual(lead.status, EnterpriseLead.Status.CONVERTED)
+        self.assertEqual(lead.organization_id, org.pk)

@@ -74,8 +74,9 @@ function PartnerDashboardContent() {
 
         {!loading && data && (
           <>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
               <MetricCard title="Referred orgs" value={String(data.summary.referred_organizations)} />
+              <MetricCard title="Open leads" value={String(data.summary.open_leads ?? 0)} />
               <MetricCard title="Total earned" value={moneyFromPaise(data.summary.earned_paise, currency)} />
               <MetricCard title="Pending payout" value={moneyFromPaise(data.summary.pending_paise, currency)} />
               <MetricCard title="Paid out" value={moneyFromPaise(data.summary.paid_paise, currency)} />
@@ -101,7 +102,31 @@ function PartnerDashboardContent() {
               </p>
             </div>
 
-            <div className="grid lg:grid-cols-2 gap-6">
+            <div className="grid lg:grid-cols-3 gap-6">
+              <section className="rounded-2xl border p-5" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+                <h2 className="font-display text-lg font-semibold mb-4" style={{ color: "var(--ink)" }}>
+                  Open leads
+                </h2>
+                {(data.recent_leads ?? []).length === 0 ? (
+                  <p className="text-sm" style={{ color: "var(--ink-dim)" }}>No open leads yet.</p>
+                ) : (
+                  <ul className="space-y-3">
+                    {data.recent_leads.map((lead) => (
+                      <li
+                        key={lead.id}
+                        className="rounded-xl px-4 py-3"
+                        style={{ background: "var(--page)" }}
+                      >
+                        <div className="font-medium" style={{ color: "var(--ink)" }}>{lead.company_name}</div>
+                        <div className="text-xs mt-1" style={{ color: "var(--ink-dim)" }}>
+                          {lead.contact_email} · {lead.seats_needed} interviews · {lead.status}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+
               <section className="rounded-2xl border p-5" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
                 <h2 className="font-display text-lg font-semibold mb-4" style={{ color: "var(--ink)" }}>
                   Referred organizations
