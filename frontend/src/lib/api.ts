@@ -825,6 +825,74 @@ export const organizations = {
   },
 };
 
+// ── B2B partner referral endpoints ──────────────────────────────────────────
+
+export interface PartnerDashboard {
+  partner: {
+    name: string;
+    code: string;
+    commission_rate: string;
+  };
+  summary: {
+    referred_organizations: number;
+    open_leads: number;
+    earned_paise: number;
+    pending_paise: number;
+    paid_paise: number;
+  };
+  referred_organizations: {
+    organization_id: number;
+    organization_name: string;
+    attributed_at: string;
+    expires_at: string;
+    source: string;
+  }[];
+  recent_leads: {
+    id: number;
+    company_name: string;
+    contact_email: string;
+    seats_needed: number;
+    status: string;
+    created_at: string;
+  }[];
+  recent_commissions: {
+    id: number;
+    organization_name: string | null;
+    gross_amount_paise: number;
+    commission_amount_paise: number;
+    commission_rate: string;
+    status: "pending" | "approved" | "paid" | "void";
+    created_at: string;
+    paid_at: string | null;
+  }[];
+}
+
+export const partnerReferrals = {
+  capture: (code: string) =>
+    request<{ code: string }>("/api/enterprise/referrals/capture/", {
+      method: "POST",
+      body: JSON.stringify({ code }),
+    }),
+
+  submitLead: (payload: {
+    company_name: string;
+    contact_email: string;
+    contact_name?: string;
+    seats_needed?: number;
+    referral_code?: string;
+    message?: string;
+  }) =>
+    request<{ id: number; detail: string; referral_partner: string | null }>(
+      "/api/enterprise/leads/",
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      },
+    ),
+
+  dashboard: () => request<PartnerDashboard>("/api/enterprise/partner/dashboard/"),
+};
+
 // ── Review endpoints ────────────────────────────────────────────────────────
 
 export interface ReviewPayload {

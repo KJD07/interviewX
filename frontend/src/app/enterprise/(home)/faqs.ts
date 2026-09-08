@@ -22,6 +22,11 @@ export const ENTERPRISE_FAQS = [
   {
     question: "How do we get started?",
     answer:
-      "Email us from the contact page. We set up the organization, seat quota and admin access. After that, invites and the question bank are self-serve from the enterprise dashboard.",
+      "Fill out the enterprise interest form on this page with your company details. If a partner referred you, include their code — we use it to credit them when you become a customer. Our team will set up your organization, seat quota and admin access.",
+  },
+  {
+    question: "Do you have a partner referral program?",
+    answer:
+      "Yes. Agencies, colleges, and consultants can refer enterprise customers with a unique code and earn 20% commission on attributed revenue for 12 months. Partners with dashboard access can track referrals at /partner.",
   },
 ];

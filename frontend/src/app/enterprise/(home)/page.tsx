@@ -4,6 +4,8 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import MarketingNav from "@/components/MarketingNav";
 import MarketingFooter from "@/components/MarketingFooter";
+import PartnerReferralBanner from "@/components/PartnerReferralBanner";
+import EnterpriseInterestForm from "@/components/EnterpriseInterestForm";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { FaqAccordion } from "@/components/FaqSection";
 import { useCurrency, formatPrice } from "@/lib/currency";
@@ -182,6 +184,10 @@ export default function EnterpriseHomePage() {
     <div className="relative min-h-screen bg-[var(--page)]">
       <MarketingNav />
 
+      <section className="mx-auto max-w-[1180px] px-6 pt-6 sm:px-8">
+        <PartnerReferralBanner />
+      </section>
+
       <section className="mx-auto max-w-[1180px] px-6 pt-32 sm:px-8 sm:pt-36">
         <div className="grid items-end gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-[52px]">
           <div>
@@ -223,10 +229,10 @@ export default function EnterpriseHomePage() {
               className="mt-8 flex flex-wrap gap-2.5"
             >
               <Link
-                href="/contact"
+                href="#enterprise-interest"
                 className="rounded-full bg-[var(--ink)] px-[26px] py-[15px] text-[15px] font-semibold text-[var(--page)] hover:bg-[var(--accent-dim)]"
               >
-                Talk to sales
+                Request access
               </Link>
               <Link
                 href="/enterprise/dashboard"
@@ -384,38 +390,9 @@ export default function EnterpriseHomePage() {
 
       <FaqAccordion items={ENTERPRISE_FAQS} heading="Hiring questions, answered." />
 
-      <section className="mx-auto max-w-[1180px] px-6 pb-4 sm:px-8">
-        <ScrollReveal>
-          <div
-            className="relative overflow-hidden rounded-[28px] px-8 py-14 sm:px-[54px] sm:py-[62px]"
-            style={{ background: "var(--hero-bg)", color: "var(--hero-text)" }}
-          >
-            <div
-              className="el-float pointer-events-none absolute -bottom-[100px] -right-[70px] h-[300px] w-[300px] rounded-full"
-              style={{ background: "var(--lime)" }}
-            />
-            <div className="relative max-w-[620px]">
-              <div className="mb-[18px] font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--lime)]">
-                Hire with us
-              </div>
-              <h2 className="font-display text-[36px] font-bold leading-none tracking-[-0.035em] sm:text-[52px]">
-                Ready when your next batch is.
-              </h2>
-              <p className="mt-[18px] max-w-[440px] text-base leading-relaxed text-[#A3A29A]">
-                Tell us the roles, the volume, and whether you&apos;re a company or a campus.
-                We&apos;ll stand up the workspace.
-              </p>
-              <Link
-                href="/contact"
-                className="mt-[30px] inline-block rounded-full px-[30px] py-4 text-[15px] font-bold text-[var(--ink)] hover:brightness-95"
-                style={{ background: "var(--lime)" }}
-              >
-                Talk to sales →
-              </Link>
-            </div>
-          </div>
-        </ScrollReveal>
-      </section>
+      <div className="pt-[88px]">
+        <EnterpriseInterestForm />
+      </div>
 
       <MarketingFooter />
     </div>

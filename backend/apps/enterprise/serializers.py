@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from apps.companies.models import InterviewQuestion, Role, Round
 
-from .models import Organization, OrgCandidateInvite, ProctoringEvent
+from .models import Organization, OrgCandidateInvite, ProctoringEvent, EnterpriseLead
 
 
 class OrganizationSerializer(serializers.ModelSerializer):
@@ -103,3 +103,17 @@ class ProctoringEventSerializer(serializers.ModelSerializer):
         model = ProctoringEvent
         fields = ["id", "event_type", "confidence", "note", "clip", "occurred_at"]
         read_only_fields = ["id", "occurred_at"]
+
+
+class EnterpriseLeadCreateSerializer(serializers.Serializer):
+    company_name = serializers.CharField(max_length=200)
+    contact_name = serializers.CharField(max_length=120, required=False, allow_blank=True, default="")
+    contact_email = serializers.EmailField()
+    seats_needed = serializers.IntegerField(required=False, min_value=1, max_value=10000, default=50)
+    referral_code = serializers.CharField(required=False, allow_blank=True, max_length=40, default="")
+    message = serializers.CharField(required=False, allow_blank=True, max_length=2000, default="")
+
+    def create(self, validated_data):
+        from .referrals import create_enterprise_lead
+
+        return create_enterprise_lead(**validated_data)
