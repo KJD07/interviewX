@@ -57,3 +57,16 @@ Payment endpoints need real `PAYU_MERCHANT_KEY` / `PAYU_MERCHANT_SALT` values
 in `.env`, plus a reachable `BACKEND_URL` for PayU callbacks, to complete a
 purchase end-to-end. Without them create-order returns 503 or callbacks fail,
 which is expected in local dev without a tunnel.
+
+## Enterprise & partner referrals (`/api/enterprise/`)
+
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/api/enterprise/leads/` | Public enterprise interest form. Valid partner `referral_code` auto-converts the lead into an Organization, attributes the partner, and creates a pending commission |
+| POST | `/api/enterprise/referrals/capture/` | Validates a partner referral code from `?ref=` |
+| POST | `/api/enterprise/partner/register/` | Authenticated self-serve partner enrollment (unique code + 20% rate) |
+| GET | `/api/enterprise/partner/dashboard/` | Partner summary; lazily marks pending commissions older than 7 days as paid |
+| GET | `/api/enterprise/dashboard/` | Org admin dashboard (requires OrganizationMember) |
+| GET/POST | `/api/enterprise/invites/` | List/create candidate invites for the org |
+| POST | `/api/enterprise/invites/<token>/start/` | Candidate starts a proctored interview from invite link |
+
