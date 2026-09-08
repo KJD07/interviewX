@@ -13,7 +13,15 @@ import Sidebar from "./Sidebar";
  * [data-plan="pro|premium|max"]) cascades through every component that
  * reads var(--accent) / var(--hero-bg) — one neutral shell, four accents.
  */
-export default function AppShell({ children, enterprise = false }: { children: React.ReactNode; enterprise?: boolean }) {
+export default function AppShell({
+  children,
+  enterprise = false,
+  partner = false,
+}: {
+  children: React.ReactNode;
+  enterprise?: boolean;
+  partner?: boolean;
+}) {
   const { user } = useAuth();
   const plan = planOf(user?.subscription_plan);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -23,13 +31,20 @@ export default function AppShell({ children, enterprise = false }: { children: R
     return () => { document.body.removeAttribute("data-plan"); };
   }, [plan.id]);
 
-  if (!enterprise && !isPaidPlan(user?.subscription_plan)) {
+  // Partner + enterprise pages always use the shared shell so they match the
+  // rest of the product theme (same sidebar language, same tokens).
+  if (!enterprise && !partner && !isPaidPlan(user?.subscription_plan)) {
     return <>{children}</>;
   }
 
   return (
     <div className="flex min-h-screen" style={{ background: "var(--page)" }}>
-      <Sidebar enterprise={enterprise} mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
+      <Sidebar
+        enterprise={enterprise}
+        partner={partner}
+        mobileOpen={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+      />
 
       <div className="flex-1 min-w-0">
         {/* Mobile top bar: visible only on small screens */}

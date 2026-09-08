@@ -265,7 +265,7 @@ class ReferralAttribution(models.Model):
 
 
 class EnterprisePayment(models.Model):
-    """Manual enterprise invoice payment recorded by admin."""
+    """Enterprise invoice payment (admin-recorded or automatic on referred signup)."""
 
     organization = models.ForeignKey(
         Organization,
@@ -347,8 +347,9 @@ class CommissionLedger(models.Model):
 class EnterpriseLead(models.Model):
     """Inbound enterprise interest from the public signup form.
 
-    Captures partner referral codes so sales can convert a lead into an
-    Organization with attribution in one admin action.
+    Valid partner referral codes auto-convert the lead into an Organization
+    with attribution and a pending commission. Unreferred leads stay open for
+    sales follow-up / admin conversion.
     """
 
     class Status(models.TextChoices):

@@ -4,6 +4,7 @@ from .referral_views import (
     EnterpriseLeadCreateView,
     PartnerDashboardView,
     PartnerReferralCaptureView,
+    PartnerRegisterView,
 )
 from .views import (
     OrgCandidateInviteListCreateView,
@@ -25,5 +26,6 @@ urlpatterns = [
     ),
     path("referrals/capture/", PartnerReferralCaptureView.as_view(), name="enterprise-referral-capture"),
     path("leads/", EnterpriseLeadCreateView.as_view(), name="enterprise-lead-create"),
+    path("partner/register/", PartnerRegisterView.as_view(), name="enterprise-partner-register"),
     path("partner/dashboard/", PartnerDashboardView.as_view(), name="enterprise-partner-dashboard"),
 ]

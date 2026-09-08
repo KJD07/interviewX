@@ -45,6 +45,7 @@ export interface User {
   bonus_interviews?: number;
   is_email_verified?: boolean;
   is_staff?: boolean;
+  is_partner?: boolean;
   auth_provider?: "email" | "google";
 }
 
@@ -832,6 +833,7 @@ export interface PartnerDashboard {
     name: string;
     code: string;
     commission_rate: string;
+    payout_days: number;
   };
   summary: {
     referred_organizations: number;
@@ -882,13 +884,36 @@ export const partnerReferrals = {
     referral_code?: string;
     message?: string;
   }) =>
-    request<{ id: number; detail: string; referral_partner: string | null }>(
-      "/api/enterprise/leads/",
-      {
-        method: "POST",
-        body: JSON.stringify(payload),
-      },
-    ),
+    request<{
+      id: number;
+      detail: string;
+      referral_partner: string | null;
+      converted: boolean;
+      organization_id: number | null;
+    }>("/api/enterprise/leads/", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
+  register: (payload: {
+    name: string;
+    contact_email?: string;
+    preferred_code?: string;
+    payout_notes?: string;
+  }) =>
+    request<{
+      created: boolean;
+      detail: string;
+      partner: {
+        name: string;
+        code: string;
+        commission_rate: string;
+        payout_days: number;
+      };
+    }>("/api/enterprise/partner/register/", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
 
   dashboard: () => request<PartnerDashboard>("/api/enterprise/partner/dashboard/"),
 };

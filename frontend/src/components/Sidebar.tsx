@@ -74,6 +74,15 @@ function LogoutIcon() {
   );
 }
 
+function HandshakeIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 20 20" fill="currentColor">
+      <path d="M2.5 9.25 6.2 5.55a2 2 0 0 1 2.83 0l.72.72-1.2 1.2-.72-.72a.5.5 0 0 0-.7 0L3.9 10.7l1.2 1.2Zm15 0-3.7-3.7a2 2 0 0 0-2.83 0l-.72.72 1.2 1.2.72-.72a.5.5 0 0 1 .7 0l3.23 3.25-1.2 1.2Z" />
+      <path d="M7.4 11.85 9.1 10.15a1.25 1.25 0 0 1 1.77 0l.53.53-1.2 1.2-.18-.18a.35.35 0 0 0-.5 0L7.4 13.85l1.2 1.2 2.12-2.12a1.25 1.25 0 0 0 0-1.77l-.53-.53 1.2-1.2.53.53a2.75 2.75 0 0 1 0 3.89l-2.12 2.12a.75.75 0 0 1-1.06 0L7.4 13.85a.75.75 0 0 1 0-1.06Z" />
+    </svg>
+  );
+}
+
 // The active row itself is the ink slab, so the glyph only recolors: lime on
 // the dark row, faint ink on idle rows.
 function NavGlyph({ Icon, active }: { Icon: () => JSX.Element; active: boolean }) {
@@ -91,12 +100,14 @@ function NavGlyph({ Icon, active }: { Icon: () => JSX.Element; active: boolean }
 function PlanCard({
   planLabel,
   enterprise,
+  partner,
   used,
   limit,
   bonus,
 }: {
   planLabel: string;
   enterprise: boolean;
+  partner?: boolean;
   used: number;
   limit: number | null;
   bonus: number;
@@ -108,7 +119,7 @@ function PlanCard({
         <span className="font-mono text-[9px] uppercase tracking-[0.16em]" style={{ color: "#7E7D74" }}>
           Plan
         </span>
-        {!enterprise && (
+        {!enterprise && !partner && (
           <Link
             href="/pricing"
             className="font-mono text-[10px] underline transition-opacity hover:opacity-70"
@@ -125,32 +136,41 @@ function PlanCard({
         {planLabel}
         {bonus > 0 && <span className="text-[13px] font-medium" style={{ color: "#7E7D74" }}> +{bonus}</span>}
       </div>
-      <div className="relative h-1 rounded-sm" style={{ background: "rgba(255,255,255,0.14)" }}>
-        <span
-          className="absolute inset-y-0 left-0 rounded-sm"
-          style={{ width: `${pct}%`, background: "var(--lime)" }}
-        />
-      </div>
-      <div className="font-mono text-[10px] mt-2 uppercase" style={{ color: "#7E7D74" }}>
-        {enterprise
-          ? limit == null
-            ? "candidate quota"
-            : `${used} / ${limit} candidate quota`
-          : limit == null
-            ? `${used} sessions used`
-            : `${used} / ${limit} sessions used`}
-      </div>
+      {partner ? (
+        <div className="font-mono text-[10px] uppercase" style={{ color: "#7E7D74" }}>
+          20% referral commission
+        </div>
+      ) : (
+        <>
+          <div className="relative h-1 rounded-sm" style={{ background: "rgba(255,255,255,0.14)" }}>
+            <span
+              className="absolute inset-y-0 left-0 rounded-sm"
+              style={{ width: `${pct}%`, background: "var(--lime)" }}
+            />
+          </div>
+          <div className="font-mono text-[10px] mt-2 uppercase" style={{ color: "#7E7D74" }}>
+            {enterprise
+              ? limit == null
+                ? "candidate quota"
+                : `${used} / ${limit} candidate quota`
+              : limit == null
+                ? `${used} sessions used`
+                : `${used} / ${limit} sessions used`}
+          </div>
+        </>
+      )}
     </div>
   );
 }
 
 type SidebarProps = {
   enterprise?: boolean;
+  partner?: boolean;
   mobileOpen?: boolean;
   onClose?: () => void;
 };
 
-export default function Sidebar({ enterprise = false, mobileOpen, onClose }: SidebarProps) {
+export default function Sidebar({ enterprise = false, partner = false, mobileOpen, onClose }: SidebarProps) {
   const { user, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -181,7 +201,13 @@ export default function Sidebar({ enterprise = false, mobileOpen, onClose }: Sid
     };
   }, [mobileOpen]);
 
-  const NAV_ITEMS = enterprise
+  const NAV_ITEMS = partner
+    ? [
+        { href: "/partner", label: "Partner", icon: HandshakeIcon },
+        { href: "/enterprise", label: "Enterprise", icon: BuildingIcon },
+        { href: "/dashboard", label: "Practice", icon: GridIcon },
+      ]
+    : enterprise
     ? [
         { href: "/enterprise/dashboard", label: "Dashboard", icon: GridIcon },
         { href: "/enterprise/candidate", label: "Candidate", icon: UserIcon },
@@ -194,6 +220,7 @@ export default function Sidebar({ enterprise = false, mobileOpen, onClose }: Sid
           ? [{ href: "/skills", label: "Skills", icon: SparkleIcon }]
           : []),
         { href: "/progress", label: "Progress", icon: TrendIcon },
+        ...(user?.is_partner ? [{ href: "/partner", label: "Partner", icon: HandshakeIcon }] : []),
       ];
 
   const handleLogout = () => {
@@ -202,10 +229,15 @@ export default function Sidebar({ enterprise = false, mobileOpen, onClose }: Sid
   };
 
   const initial = (user?.username || "?").charAt(0).toUpperCase();
-  const planLabel = enterprise ? "Enterprise" : plan.label;
+  const planLabel = partner ? "Partner" : enterprise ? "Enterprise" : plan.label;
   const used = enterprise ? (orgQuota?.used ?? 0) : (user?.interviews_this_month ?? 0);
   const limit = enterprise ? (orgQuota?.total ?? null) : (user?.monthly_limit ?? plan.monthlyLimit);
-  const bonus = enterprise ? 0 : bonusInterviews;
+  const bonus = enterprise || partner ? 0 : bonusInterviews;
+
+  const isActive = (href: string) => {
+    if (partner || enterprise) return pathname === href || pathname?.startsWith(href + "/");
+    return pathname === href || pathname?.startsWith(href + "/");
+  };
 
   return (
     <>
@@ -226,7 +258,7 @@ export default function Sidebar({ enterprise = false, mobileOpen, onClose }: Sid
 
         <nav className="space-y-1 overflow-y-auto min-h-0 flex-1 pr-1">
           {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-            const active = enterprise ? pathname === href : pathname === href || pathname?.startsWith(href + "/");
+            const active = isActive(href);
             return (
               <Link
                 key={href}
@@ -247,7 +279,7 @@ export default function Sidebar({ enterprise = false, mobileOpen, onClose }: Sid
       </div>
 
       <div className="space-y-3 shrink-0">
-        <PlanCard planLabel={planLabel} enterprise={enterprise} used={used} limit={limit} bonus={bonus} />
+        <PlanCard planLabel={planLabel} enterprise={enterprise} partner={partner} used={used} limit={limit} bonus={bonus} />
 
         <div className="flex items-center justify-between px-1 py-1">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -298,7 +330,7 @@ export default function Sidebar({ enterprise = false, mobileOpen, onClose }: Sid
 
               <nav className="space-y-1 overflow-y-auto flex-1 min-h-0 pr-1 pb-2">
                 {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-                  const active = enterprise ? pathname === href : pathname === href || pathname?.startsWith(href + "/");
+                  const active = isActive(href);
                   return (
                     <Link
                       key={href}
@@ -320,7 +352,7 @@ export default function Sidebar({ enterprise = false, mobileOpen, onClose }: Sid
 
               <div className="mt-auto pt-4 border-t shrink-0" style={{ borderColor: 'var(--border)' }}>
                 <div className="space-y-3">
-                  <PlanCard planLabel={planLabel} enterprise={enterprise} used={used} limit={limit} bonus={bonus} />
+                  <PlanCard planLabel={planLabel} enterprise={enterprise} partner={partner} used={used} limit={limit} bonus={bonus} />
 
                   <div className="flex items-center justify-between px-1 py-1">
                     <div className="flex items-center gap-2.5 min-w-0">
