@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import MarketingNav from "@/components/MarketingNav";
 import MarketingFooter from "@/components/MarketingFooter";
+import PartnerReferralBanner from "@/components/PartnerReferralBanner";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { FaqAccordion } from "@/components/FaqSection";
 import { useCurrency, formatPrice } from "@/lib/currency";
@@ -181,6 +182,10 @@ export default function EnterpriseHomePage() {
   return (
     <div className="relative min-h-screen bg-[var(--page)]">
       <MarketingNav />
+
+      <section className="mx-auto max-w-[1180px] px-6 pt-6 sm:px-8">
+        <PartnerReferralBanner />
+      </section>
 
       <section className="mx-auto max-w-[1180px] px-6 pt-32 sm:px-8 sm:pt-36">
         <div className="grid items-end gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-[52px]">

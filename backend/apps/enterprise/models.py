@@ -178,3 +178,167 @@ class ProctoringEvent(models.Model):
 
     def __str__(self) -> str:
         return f"{self.session_id} — {self.event_type} @ {self.occurred_at:%Y-%m-%d %H:%M}"
+
+
+class ReferralPartner(models.Model):
+    """External B2B partner who refers enterprise customers for commission."""
+
+    class Status(models.TextChoices):
+        ACTIVE = "active", "Active"
+        PAUSED = "paused", "Paused"
+
+    name = models.CharField(max_length=200)
+    contact_email = models.EmailField()
+    code = models.CharField(
+        max_length=40,
+        unique=True,
+        help_text="Unique referral code used in links, e.g. THAPAR20.",
+    )
+    commission_rate = models.DecimalField(
+        max_digits=5,
+        decimal_places=4,
+        default=0.20,
+        help_text="Commission rate as a decimal fraction, e.g. 0.20 = 20%.",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.ACTIVE,
+    )
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="referral_partner",
+        help_text="Optional login used for the partner dashboard.",
+    )
+    payout_notes = models.TextField(
+        blank=True,
+        default="",
+        help_text="Bank/UPI details and payout notes for admin use.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def save(self, *args, **kwargs):
+        from .referrals import normalize_partner_code
+
+        self.code = normalize_partner_code(self.code)
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.code})"
+
+
+class ReferralAttribution(models.Model):
+    """Links a referred enterprise organization to a partner."""
+
+    class Source(models.TextChoices):
+        LINK = "link", "Referral link"
+        MANUAL_ADMIN = "manual_admin", "Manual admin"
+        CODE_AT_SIGNUP = "code_at_signup", "Code at signup"
+
+    partner = models.ForeignKey(
+        ReferralPartner,
+        on_delete=models.CASCADE,
+        related_name="attributions",
+    )
+    organization = models.OneToOneField(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="referral_attribution",
+    )
+    source = models.CharField(max_length=30, choices=Source.choices)
+    attributed_at = models.DateTimeField()
+    expires_at = models.DateTimeField(
+        help_text="Commission window ends at this moment (default: 12 months).",
+    )
+
+    class Meta:
+        ordering = ["-attributed_at"]
+
+    def __str__(self) -> str:
+        return f"{self.organization.name} → {self.partner.code}"
+
+
+class EnterprisePayment(models.Model):
+    """Manual enterprise invoice payment recorded by admin."""
+
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="payments",
+    )
+    amount_paise = models.PositiveIntegerField(
+        help_text="Gross payment amount in paise, e.g. 1999900 = ₹19,999.",
+    )
+    description = models.CharField(max_length=255, blank=True, default="")
+    paid_at = models.DateTimeField()
+    recorded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="recorded_enterprise_payments",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-paid_at"]
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+        if is_new:
+            from .referrals import create_commission_for_payment
+
+            create_commission_for_payment(self)
+
+    def __str__(self) -> str:
+        return f"{self.organization.name} — ₹{self.amount_paise / 100:.2f}"
+
+
+class CommissionLedger(models.Model):
+    """Partner commission owed or paid for attributed revenue."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        APPROVED = "approved", "Approved"
+        PAID = "paid", "Paid"
+        VOID = "void", "Void"
+
+    partner = models.ForeignKey(
+        ReferralPartner,
+        on_delete=models.CASCADE,
+        related_name="commissions",
+    )
+    enterprise_payment = models.OneToOneField(
+        EnterprisePayment,
+        on_delete=models.CASCADE,
+        related_name="commission",
+        null=True,
+        blank=True,
+    )
+    gross_amount_paise = models.PositiveIntegerField()
+    commission_rate = models.DecimalField(max_digits=5, decimal_places=4)
+    commission_amount_paise = models.PositiveIntegerField()
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+    )
+    paid_at = models.DateTimeField(null=True, blank=True)
+    notes = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return (
+            f"{self.partner.code} — ₹{self.commission_amount_paise / 100:.2f} "
+            f"({self.status})"
+        )

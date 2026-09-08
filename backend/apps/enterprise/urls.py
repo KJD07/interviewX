@@ -1,5 +1,6 @@
 from django.urls import path
 
+from .referral_views import PartnerDashboardView, PartnerReferralCaptureView
 from .views import (
     OrgCandidateInviteListCreateView,
     OrgDashboardView,
@@ -18,4 +19,6 @@ urlpatterns = [
         ProctoringEventCreateView.as_view(),
         name="enterprise-proctoring-event-create",
     ),
+    path("referrals/capture/", PartnerReferralCaptureView.as_view(), name="enterprise-referral-capture"),
+    path("partner/dashboard/", PartnerDashboardView.as_view(), name="enterprise-partner-dashboard"),
 ]

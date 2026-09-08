@@ -24,4 +24,9 @@ export const ENTERPRISE_FAQS = [
     answer:
       "Email us from the contact page. We set up the organization, seat quota and admin access. After that, invites and the question bank are self-serve from the enterprise dashboard.",
   },
+  {
+    question: "Do you have a partner referral program?",
+    answer:
+      "Yes. Agencies, colleges, and consultants can refer enterprise customers with a unique code and earn 20% commission on attributed revenue for 12 months. Partners with dashboard access can track referrals at /partner.",
+  },
 ];
