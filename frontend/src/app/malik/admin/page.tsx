@@ -26,9 +26,25 @@ function MetricCard({ title, value, detail }: { title: string; value: string | n
 // Wrapped in its own horizontal scroller with a per-bar minimum width so
 // labels stay fully readable (never truncated/hidden) even when the data
 // set is wide (e.g. 30 daily points) on a narrow mobile viewport.
+function mergeBars(data: { label: string; value: number }[]) {
+  const merged: { label: string; value: number }[] = [];
+  const indexByLabel = new Map<string, number>();
+  for (const item of data) {
+    const existing = indexByLabel.get(item.label);
+    if (existing === undefined) {
+      indexByLabel.set(item.label, merged.length);
+      merged.push({ ...item });
+    } else {
+      merged[existing].value += item.value;
+    }
+  }
+  return merged;
+}
+
 function Bars({ data, color = "#e8ff3d" }: { data: { label: string; value: number }[]; color?: string }) {
-  const max = Math.max(...data.map((item) => item.value), 1);
-  return <div className="overflow-x-auto"><div className="flex items-end gap-2 h-40" style={{ minWidth: data.length * 34 }}>{data.map((item) => <div key={item.label} className="flex-1 h-full flex flex-col justify-end items-center gap-2" style={{ minWidth: 28 }}><span className="text-[10px] tabular-nums whitespace-nowrap" style={{ color: "var(--ink-dim)" }}>{item.value}</span><div className="w-full max-w-8 rounded-t" style={{ height: `${Math.max(4, (item.value / max) * 100)}%`, background: color }} /><span className="text-[9px] whitespace-nowrap" style={{ color: "var(--ink-faint)" }}>{item.label}</span></div>)}</div></div>;
+  const bars = mergeBars(data);
+  const max = Math.max(...bars.map((item) => item.value), 1);
+  return <div className="overflow-x-auto"><div className="flex items-end gap-2 h-40" style={{ minWidth: bars.length * 34 }}>{bars.map((item) => <div key={item.label} className="flex-1 h-full flex flex-col justify-end items-center gap-2" style={{ minWidth: 28 }}><span className="text-[10px] tabular-nums whitespace-nowrap" style={{ color: "var(--ink-dim)" }}>{item.value}</span><div className="w-full max-w-8 rounded-t" style={{ height: `${Math.max(4, (item.value / max) * 100)}%`, background: color }} /><span className="text-[9px] whitespace-nowrap" style={{ color: "var(--ink-faint)" }}>{item.label}</span></div>)}</div></div>;
 }
 
 function Donut({ data }: { data: Record<string, number> }) {

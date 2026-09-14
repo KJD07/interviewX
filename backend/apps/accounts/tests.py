@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
@@ -483,3 +483,69 @@ class AuthThrottleTests(TestCase):
                 format="json",
             ).status_code
         self.assertEqual(last_status, 429)
+
+
+class AdminInsightsTests(TestCase):
+    """malik/admin Insights charts were undercounting because GROUP BY
+    inherited Meta.ordering (one row per record, last write wins at 1)
+    and month labels used UTC truncation instead of IST calendar months."""
+
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            username="malik", email="malik@example.com", password="testpass123"
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(self.admin)
+
+    def _insights(self):
+        return self.client.get("/api/analytics/referral/dashboard/")
+
+    def test_new_users_by_month_counts_every_signup_in_the_local_month(self):
+        import calendar
+
+        from .models import ReferralVisit
+
+        ist = timezone.get_current_timezone()
+        # 01:00 IST on the 1st is still the previous month in UTC — these
+        # must still bucket as the current local month.
+        this_month = timezone.make_aware(
+            datetime(timezone.localtime().year, timezone.localtime().month, 1, 1, 0, 0),
+            ist,
+        )
+        prev = this_month - timedelta(days=1)
+        last_month = timezone.make_aware(
+            datetime(prev.year, prev.month, 10, 12, 0, 0),
+            ist,
+        )
+        for i in range(3):
+            user = User.objects.create_user(
+                username=f"sep{i}",
+                email=f"sep{i}@example.com",
+                password="testpass123",
+            )
+            user.date_joined = this_month
+            user.save(update_fields=["date_joined"])
+        for i in range(2):
+            user = User.objects.create_user(
+                username=f"aug{i}",
+                email=f"aug{i}@example.com",
+                password="testpass123",
+            )
+            user.date_joined = last_month
+            user.save(update_fields=["date_joined"])
+
+        ReferralVisit.objects.create(source="linkedin")
+        ReferralVisit.objects.create(source="linkedin")
+        ReferralVisit.objects.create(source="reddit")
+
+        resp = self._insights()
+        self.assertEqual(resp.status_code, 200)
+
+        this_label = f"{calendar.month_abbr[this_month.month]} {this_month.year}"
+        last_label = f"{calendar.month_abbr[last_month.month]} {last_month.year}"
+        by_month = {item["month"]: item["count"] for item in resp.data["new_users"]}
+        # +1: the staff viewer also joined "now" (this local month).
+        self.assertEqual(by_month[this_label], 4)
+        self.assertEqual(by_month[last_label], 2)
+        self.assertEqual(resp.data["referrals"]["linkedin"], 2)
+        self.assertEqual(resp.data["referrals"]["reddit"], 1)
