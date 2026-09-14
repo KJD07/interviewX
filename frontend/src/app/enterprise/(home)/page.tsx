@@ -8,10 +8,11 @@ import PartnerReferralBanner from "@/components/PartnerReferralBanner";
 import EnterpriseInterestForm from "@/components/EnterpriseInterestForm";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { FaqAccordion } from "@/components/FaqSection";
+import EnterprisePricingCard, {
+  ENTERPRISE_PRICE_PER_SEAT_RUPEES,
+} from "@/components/EnterprisePricingCard";
 import { useCurrency, formatPrice } from "@/lib/currency";
 import { ENTERPRISE_FAQS } from "./faqs";
-
-const ENTERPRISE_PRICE_PER_SEAT_RUPEES = 99;
 
 const PILLARS = [
   { label: "You bring", value: "Your roles and rounds" },
@@ -229,14 +230,8 @@ export default function EnterpriseHomePage() {
               className="mt-8 flex flex-wrap gap-2.5"
             >
               <Link
-                href="#enterprise-interest"
-                className="rounded-full bg-[var(--ink)] px-[26px] py-[15px] text-[15px] font-semibold text-[var(--page)] hover:bg-[var(--accent-dim)]"
-              >
-                Request access
-              </Link>
-              <Link
                 href="/enterprise/dashboard"
-                className="rounded-full border border-[var(--border-mid)] px-[26px] py-[15px] text-[15px] font-semibold text-[var(--ink)] hover:bg-[var(--surface)]"
+                className="rounded-full bg-[var(--ink)] px-[26px] py-[15px] text-[15px] font-semibold text-[var(--page)] hover:bg-[var(--accent-dim)]"
               >
                 See the workspace →
               </Link>
@@ -271,7 +266,7 @@ export default function EnterpriseHomePage() {
         </div>
       </section>
 
-      <section id="product" className="mx-auto max-w-[1180px] px-6 pt-[88px] sm:px-8">
+      <section id="product" className="scroll-mt-24 mx-auto max-w-[1180px] px-6 pt-[88px] sm:px-8">
         <ScrollReveal className="flex flex-wrap items-end justify-between gap-10">
           <h2 className="font-display max-w-[600px] text-[34px] font-bold leading-[1.02] tracking-[-0.032em] text-[var(--ink)] sm:text-[46px]">
             One workspace. Bank, invites, scores.
@@ -325,7 +320,7 @@ export default function EnterpriseHomePage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-[1180px] px-6 pt-[88px] sm:px-8">
+      <section id="how-it-works" className="scroll-mt-24 mx-auto max-w-[1180px] px-6 pt-[88px] sm:px-8">
         <ScrollReveal>
           <div className="font-label mb-3.5">How it works</div>
           <h2 className="font-display mb-9 text-[32px] font-bold leading-[1.04] tracking-[-0.032em] text-[var(--ink)] sm:text-[42px]">
@@ -346,7 +341,7 @@ export default function EnterpriseHomePage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-[1180px] px-6 pt-[88px] sm:px-8">
+      <section id="teams" className="scroll-mt-24 mx-auto max-w-[1180px] px-6 pt-[88px] sm:px-8">
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           <ScrollReveal>
             <div className="flex h-full flex-col rounded-[24px] bg-[var(--ink)] p-8 text-[var(--page)] sm:p-10">
@@ -386,6 +381,20 @@ export default function EnterpriseHomePage() {
             </div>
           </ScrollReveal>
         </div>
+      </section>
+
+      <section id="pricing" className="scroll-mt-24 mx-auto max-w-[1180px] px-6 pt-[88px] sm:px-8">
+        <ScrollReveal>
+          <div className="font-label mb-3.5">Pricing</div>
+          <h2 className="font-display mb-3 text-[32px] font-bold leading-[1.04] tracking-[-0.032em] text-[var(--ink)] sm:text-[42px]">
+            Seat-based, or unlimited.
+          </h2>
+          <p className="mb-9 max-w-[480px] text-[15px] leading-relaxed text-[var(--ink-dim)]">
+            Same plans as the enterprise workspace. Start with seats, or go
+            unlimited when the batch is bigger than a calendar.
+          </p>
+        </ScrollReveal>
+        <EnterprisePricingCard />
       </section>
 
       <FaqAccordion items={ENTERPRISE_FAQS} heading="Hiring questions, answered." />

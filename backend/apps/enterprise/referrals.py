@@ -75,24 +75,18 @@ def register_partner(
     preferred_code: str = "",
     payout_notes: str = "",
 ):
-    """Self-serve partner enrollment. One active partner record per user."""
+    """Self-serve partner enrollment. One application per logged-in email."""
     from .models import ReferralPartner
 
-    existing = ReferralPartner.objects.filter(user=user).first()
-    if existing is not None:
-        if existing.status != ReferralPartner.Status.ACTIVE:
-            existing.status = ReferralPartner.Status.ACTIVE
-            existing.name = name.strip() or existing.name
-            if contact_email.strip():
-                existing.contact_email = contact_email.strip().lower()
-            if payout_notes.strip():
-                existing.payout_notes = payout_notes.strip()
-            existing.save()
-        return existing, False
-
-    email = (contact_email or user.email or "").strip().lower()
+    email = (getattr(user, "email", None) or contact_email or "").strip().lower()
     if not email:
         raise ValueError("A contact email is required to register as a partner.")
+
+    existing = ReferralPartner.objects.filter(user=user).first()
+    if existing is None:
+        existing = ReferralPartner.objects.filter(contact_email__iexact=email).first()
+    if existing is not None:
+        raise ValueError("This email has already applied to the partner program.")
 
     partner = ReferralPartner.objects.create(
         name=name.strip(),

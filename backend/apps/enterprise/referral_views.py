@@ -159,12 +159,17 @@ class PartnerRegisterView(APIView):
             partner, created = register_partner(
                 request.user,
                 name=data["name"],
-                contact_email=data.get("contact_email") or request.user.email,
+                contact_email=request.user.email,
                 preferred_code=data.get("preferred_code") or "",
                 payout_notes=data.get("payout_notes") or "",
             )
         except ValueError as exc:
-            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            status_code = (
+                status.HTTP_409_CONFLICT
+                if "already applied" in str(exc).lower()
+                else status.HTTP_400_BAD_REQUEST
+            )
+            return Response({"detail": str(exc)}, status=status_code)
 
         return Response(
             {

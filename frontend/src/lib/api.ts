@@ -897,7 +897,6 @@ export const partnerReferrals = {
 
   register: (payload: {
     name: string;
-    contact_email?: string;
     preferred_code?: string;
     payout_notes?: string;
   }) =>

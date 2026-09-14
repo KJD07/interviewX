@@ -54,7 +54,7 @@ export default function EnterpriseInterestForm() {
   };
 
   return (
-    <section id="enterprise-interest" className="mx-auto max-w-[1180px] px-6 pb-4 sm:px-8">
+    <section id="enterprise-interest" className="scroll-mt-24 mx-auto max-w-[1180px] px-6 pb-4 sm:px-8">
       <div
         className="relative overflow-hidden rounded-[28px] px-8 py-14 sm:px-[54px] sm:py-[62px]"
         style={{ background: "var(--hero-bg)", color: "var(--hero-text)" }}

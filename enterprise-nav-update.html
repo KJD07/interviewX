@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Enterprise — Hire with Structured AI Interviews | EvaluLabs</title>
+<style>
+  :root{
+    --bg:#f2f0ea;
+    --ink:#1c1a16;
+    --ink-soft:#5c584f;
+    --line:#ded9cc;
+    --panel:#fbfaf6;
+    --accent:#c2410c;
+    --radius:2px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Iowan Old Style","Georgia",serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;text-decoration:none;}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 28px;}
+
+  /* ---------- NAV ---------- */
+  header.site{
+    border-bottom:1px solid var(--line);
+    background:var(--bg);
+  }
+  .navbar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:20px 0;
+  }
+  .logo{
+    display:flex;align-items:center;gap:10px;
+    font-size:17px;font-weight:600;letter-spacing:.2px;
+  }
+  .logo .mark{
+    width:22px;height:22px;border-radius:5px;
+    background:var(--ink);
+  }
+  nav.primary{
+    display:flex;align-items:center;gap:34px;
+    font-family:"Helvetica Neue",Arial,sans-serif;
+    font-size:14.5px;
+  }
+  nav.primary > a{
+    color:var(--ink-soft);
+    padding:6px 0;
+    border-bottom:1px solid transparent;
+    transition:color .15s ease, border-color .15s ease;
+  }
+  nav.primary > a:hover{ color:var(--ink); border-color:var(--ink); }
+
+  /* dropdown */
+  .nav-dropdown{ position:relative; }
+  .nav-dropdown > button{
+    all:unset;
+    display:inline-flex; align-items:center; gap:6px;
+    cursor:pointer;
+    color:var(--ink-soft);
+    font:inherit;
+    padding:6px 0;
+    border-bottom:1px solid transparent;
+    transition:color .15s ease, border-color .15s ease;
+  }
+  .nav-dropdown:hover > button,
+  .nav-dropdown.open > button{
+    color:var(--ink);
+    border-color:var(--ink);
+  }
+  .nav-dropdown .caret{
+    display:inline-block;
+    font-size:10px;
+    transform:translateY(-1px);
+    transition:transform .15s ease;
+  }
+  .nav-dropdown:hover .caret,
+  .nav-dropdown.open .caret{ transform:rotate(180deg) translateY(1px); }
+
+  .dropdown-panel{
+    position:absolute;
+    top:calc(100% + 14px);
+    left:50%;
+    transform:translateX(-50%) translateY(6px);
+    min-width:228px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    box-shadow:0 10px 24px rgba(28,26,22,.08);
+    padding:6px;
+    opacity:0;
+    visibility:hidden;
+    transition:opacity .15s ease, transform .15s ease, visibility .15s;
+    z-index:50;
+  }
+  /* invisible bridge so the pointer can travel from trigger to panel */
+  .dropdown-panel::before{
+    content:"";
+    position:absolute;
+    top:-14px; left:0; right:0; height:14px;
+  }
+  .nav-dropdown:hover .dropdown-panel,
+  .nav-dropdown.open .dropdown-panel{
+    opacity:1; visibility:visible;
+    transform:translateX(-50%) translateY(0);
+  }
+  .dropdown-panel a{
+    display:flex; flex-direction:column; gap:2px;
+    padding:10px 12px;
+    border-radius:1px;
+    color:var(--ink);
+  }
+  .dropdown-panel a:hover{ background:var(--bg); }
+  .dropdown-panel a .item-title{ font-size:14px; font-weight:600; }
+  .dropdown-panel a .item-sub{
+    font-family:"Helvetica Neue",Arial,sans-serif;
+    font-size:12px; color:var(--ink-soft);
+  }
+  .dropdown-panel hr{ border:none; border-top:1px solid var(--line); margin:6px 4px; }
+
+  /* ---------- HERO ---------- */
+  .hero{ padding:76px 0 56px; }
+  .eyebrow{
+    font-family:"Helvetica Neue",Arial,sans-serif;
+    font-size:12.5px; letter-spacing:.03em;
+    color:var(--ink-soft);
+    margin-bottom:18px;
+  }
+  h1.display{
+    font-size:44px; line-height:1.15; margin:0 0 22px;
+    max-width:11.5em;
+  }
+  h1.display em{ font-style:italic; }
+  .sub{
+    font-family:"Helvetica Neue",Arial,sans-serif;
+    font-size:16px; color:var(--ink-soft);
+    max-width:540px; line-height:1.55; margin:0 0 34px;
+  }
+  .cta-row{ display:flex; gap:14px; align-items:center; }
+  .btn{
+    font-family:"Helvetica Neue",Arial,sans-serif;
+    font-size:14.5px; font-weight:600;
+    padding:13px 22px;
+    border-radius:var(--radius);
+    display:inline-block;
+    transition:opacity .15s ease, transform .1s ease;
+  }
+  .btn-primary{ background:var(--ink); color:var(--bg); }
+  .btn-primary:hover{ opacity:.88; }
+
+  /* ---------- PARTNER FORM (for /enterprise/partner) ---------- */
+  .partner-section{ padding:64px 0 96px; border-top:1px solid var(--line); }
+  .partner-head{ max-width:560px; margin-bottom:34px; }
+  .partner-head h2{ font-size:28px; margin:0 0 10px; }
+  .partner-head p{
+    font-family:"Helvetica Neue",Arial,sans-serif;
+    font-size:15px; color:var(--ink-soft); line-height:1.6; margin:0;
+  }
+  form.partner-form{
+    max-width:520px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:28px;
+  }
+  .field{ margin-bottom:18px; }
+  .field label{
+    display:block;
+    font-family:"Helvetica Neue",Arial,sans-serif;
+    font-size:13px; color:var(--ink-soft); margin-bottom:6px;
+  }
+  .field input,
+  .field select,
+  .field textarea{
+    width:100%;
+    font-family:"Helvetica Neue",Arial,sans-serif;
+    font-size:14.5px;
+    padding:11px 12px;
+    border:1px solid var(--line);
+    border-radius:1px;
+    background:#fff;
+    color:var(--ink);
+  }
+  .field input:focus,
+  .field select:focus,
+  .field textarea:focus{
+    outline:2px solid var(--ink);
+    outline-offset:1px;
+  }
+  .signed-in-row{
+    display:flex; align-items:center; gap:8px;
+    font-family:"Helvetica Neue",Arial,sans-serif;
+    font-size:13px; color:var(--ink-soft);
+    margin-bottom:20px;
+    padding:10px 12px;
+    background:var(--bg);
+    border:1px solid var(--line);
+  }
+  .signed-in-row strong{ color:var(--ink); }
+  button.submit-btn{
+    all:unset;
+    cursor:pointer;
+    width:100%;
+    text-align:center;
+    background:var(--ink); color:var(--bg);
+    font-family:"Helvetica Neue",Arial,sans-serif;
+    font-size:14.5px; font-weight:600;
+    padding:13px 22px;
+    border-radius:var(--radius);
+    transition:opacity .15s ease;
+  }
+  button.submit-btn:hover{ opacity:.88; }
+  button.submit-btn:disabled{
+    background:var(--line); color:var(--ink-soft);
+    cursor:not-allowed;
+  }
+  .already-submitted{
+    display:none;
+    align-items:flex-start; gap:10px;
+    font-family:"Helvetica Neue",Arial,sans-serif;
+    font-size:14px; color:var(--ink);
+    background:var(--bg);
+    border:1px solid var(--line);
+    padding:16px;
+    border-radius:var(--radius);
+  }
+  .already-submitted .dot{
+    width:8px;height:8px;border-radius:50%;
+    background:var(--accent);
+    margin-top:5px; flex-shrink:0;
+  }
+  .note{
+    font-family:"Helvetica Neue",Arial,sans-serif;
+    font-size:12px; color:var(--ink-soft);
+    margin-top:14px;
+  }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap navbar">
+    <a class="logo" href="/">
+      <span class="mark"></span>
+      EvaluLabs
+    </a>
+
+    <nav class="primary">
+      <a href="/#product">Features</a>
+      <a href="/pricing">Pricing</a>
+      <a href="/companies">Companies</a>
+
+      <!-- 1) & 3) & 4): "Hire with us" becomes a hover dropdown -->
+      <div class="nav-dropdown" id="hireDropdown">
+        <button type="button" aria-haspopup="true" aria-expanded="false">
+          Hire with us <span class="caret">▾</span>
+        </button>
+        <div class="dropdown-panel" role="menu">
+          <a href="/enterprise/partner" role="menuitem">
+            <span class="item-title">Partnership Program</span>
+            <span class="item-sub">Refer orgs, earn 20% commission</span>
+          </a>
+          <hr>
+          <a href="/enterprise/dashboard" role="menuitem">
+            <span class="item-title">Enterprise Dashboard</span>
+            <span class="item-sub">Manage your hiring workspace</span>
+          </a>
+        </div>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<!-- ============================================================ -->
+<!-- 2) /enterprise hero — single CTA, "See the workspace" only   -->
+<!-- ============================================================ -->
+<section class="hero">
+  <div class="wrap">
+    <div class="eyebrow">FOR HIRING TEAMS · COLLEGES</div>
+    <h1 class="display">Screen candidates with the same <em>pressure</em> as a real panel.</h1>
+    <p class="sub">
+      Upload your question bank, invite candidates, and get scored reports back —
+      without booking a room for every first round.
+    </p>
+    <div class="cta-row">
+      <!-- "Request access" button removed. Only this remains, and it now
+           links straight to the dashboard instead of the #enterprise-interest anchor. -->
+      <a class="btn btn-primary" href="/enterprise/dashboard">See the workspace →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 3) /enterprise/partner — the form now lives here, gated to   -->
+<!--    one submission per logged-in email                        -->
+<!-- ============================================================ -->
+<section class="partner-section">
+  <div class="wrap">
+    <div class="partner-head">
+      <h2>Become a partner.</h2>
+      <p>Agencies, colleges, and consultants can register for a referral code and earn 20% commission on attributed enterprise revenue. Payouts within 7 days.</p>
+    </div>
+
+    <!--
+      SIGNED-IN EMAIL:
+      Replace `currentUser` below with the real session object from your auth
+      layer (e.g. NextAuth session, Supabase user, etc). The email is shown
+      read-only and sent with the submission — it should not be a free-text
+      field the person can change.
+    -->
+    <div class="signed-in-row" id="signedInRow">
+      Submitting as <strong id="signedInEmail">you@example.com</strong>
+    </div>
+
+    <form class="partner-form" id="partnerForm">
+      <div class="field">
+        <label for="orgName">Organization / individual name</label>
+        <input type="text" id="orgName" name="orgName" required>
+      </div>
+      <div class="field">
+        <label for="orgType">Type</label>
+        <select id="orgType" name="orgType" required>
+          <option value="">Select one</option>
+          <option value="agency">Agency</option>
+          <option value="college">College</option>
+          <option value="consultant">Consultant</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="website">Website / LinkedIn (optional)</label>
+        <input type="url" id="website" name="website">
+      </div>
+      <div class="field">
+        <label for="notes">Anything else?</label>
+        <textarea id="notes" name="notes" rows="3"></textarea>
+      </div>
+
+      <button type="submit" class="submit-btn" id="submitBtn">Apply for a referral code →</button>
+      <p class="note">One application per account. You'll get your referral code and link by email once approved.</p>
+    </form>
+
+    <!-- Shown instead of the form once this email has already submitted -->
+    <div class="already-submitted" id="alreadySubmitted">
+      <span class="dot"></span>
+      <span>You've already applied to the partner program with this account. We'll email your referral code once it's approved — no need to submit again.</span>
+    </div>
+  </div>
+</section>
+
+<script>
+  /* ---------------- 1) Dropdown open/close on hover + keyboard ---------------- */
+  const dropdown = document.getElementById('hireDropdown');
+  const trigger = dropdown.querySelector('button');
+  trigger.addEventListener('click', () => {
+    const open = dropdown.classList.toggle('open');
+    trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  document.addEventListener('click', (e) => {
+    if (!dropdown.contains(e.target)) {
+      dropdown.classList.remove('open');
+      trigger.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  /*
+    ---------------- 3) One submission per logged-in email ----------------
+    This is a front-end reference only. The real guarantee has to be
+    enforced server-side (unique constraint on the user's email in the
+    partner_applications table, checked in the API route before insert).
+
+    On page load for the real app:
+      1. Get the logged-in user's email from your session/auth.
+      2. Call your API (e.g. GET /api/partner/application?email=...) to check
+         if that email already has an application.
+      3. If yes -> hide the form, show #alreadySubmitted.
+         If no  -> show the form pre-filled/locked to that email.
+
+    Below is a stand-in using a fake "current user" + in-memory flag so the
+    page is runnable on its own; swap the marked lines for real calls.
+  */
+  const currentUser = { email: 'you@example.com', hasApplied: false }; // ← replace with real session + DB check
+
+  const form = document.getElementById('partnerForm');
+  const signedInRow = document.getElementById('signedInRow');
+  const alreadySubmitted = document.getElementById('alreadySubmitted');
+  const submitBtn = document.getElementById('submitBtn');
+  document.getElementById('signedInEmail').textContent = currentUser.email;
+
+  function renderPartnerFormState() {
+    if (currentUser.hasApplied) {
+      form.style.display = 'none';
+      signedInRow.style.display = 'none';
+      alreadySubmitted.style.display = 'flex';
+    } else {
+      form.style.display = 'block';
+      signedInRow.style.display = 'flex';
+      alreadySubmitted.style.display = 'none';
+    }
+  }
+  renderPartnerFormState();
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting…';
+
+    // Replace with: await fetch('/api/partner/apply', { method: 'POST', body: ... })
+    // The API should upsert keyed on the user's email and reject a second
+    // application for the same email with a 409.
+    await new Promise(r => setTimeout(r, 500));
+
+    currentUser.hasApplied = true;
+    renderPartnerFormState();
+  });
+</script>
+
+</body>
+</html>

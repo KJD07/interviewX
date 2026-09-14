@@ -120,7 +120,7 @@ export function FaqAccordion({
   return (
     <section
       id="faq"
-      className="mx-auto grid max-w-[1180px] grid-cols-1 gap-10 px-6 py-[88px] sm:px-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-[52px]"
+      className="scroll-mt-24 mx-auto grid max-w-[1180px] grid-cols-1 gap-10 px-6 py-[88px] sm:px-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-[52px]"
     >
       <div>
         <div className="font-label mb-3.5">FAQ</div>
