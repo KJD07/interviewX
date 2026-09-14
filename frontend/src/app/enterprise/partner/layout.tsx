@@ -8,6 +8,6 @@ export const metadata: Metadata = pageMetadata({
   noIndex: true,
 });
 
-export default function PartnerLayout({ children }: { children: React.ReactNode }) {
+export default function EnterprisePartnerLayout({ children }: { children: React.ReactNode }) {
   return children;
 }

@@ -140,14 +140,13 @@ class ReferralSystemTests(TestCase):
         self.assertEqual(partner.name, "Campus Connect")
         self.assertEqual(partner.payout_notes, "UPI: campus@upi")
 
-        # Idempotent re-register returns existing partner.
+        # A second application for the same logged-in email is rejected.
         res2 = client.post(
             "/api/enterprise/partner/register/",
             {"name": "Campus Connect"},
             format="json",
         )
-        self.assertEqual(res2.status_code, 200)
-        self.assertFalse(res2.json()["created"])
+        self.assertEqual(res2.status_code, 409)
         self.assertEqual(ReferralPartner.objects.filter(user=user).count(), 1)
 
     def test_me_includes_is_partner(self):

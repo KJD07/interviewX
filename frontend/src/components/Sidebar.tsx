@@ -203,8 +203,8 @@ export default function Sidebar({ enterprise = false, partner = false, mobileOpe
 
   const NAV_ITEMS = partner
     ? [
-        { href: "/partner", label: "Partner", icon: HandshakeIcon },
-        { href: "/enterprise", label: "Enterprise", icon: BuildingIcon },
+        { href: "/enterprise/partner", label: "Partner", icon: HandshakeIcon },
+        { href: "/enterprise/dashboard", label: "Enterprise", icon: BuildingIcon },
         { href: "/dashboard", label: "Practice", icon: GridIcon },
       ]
     : enterprise
@@ -220,7 +220,7 @@ export default function Sidebar({ enterprise = false, partner = false, mobileOpe
           ? [{ href: "/skills", label: "Skills", icon: SparkleIcon }]
           : []),
         { href: "/progress", label: "Progress", icon: TrendIcon },
-        ...(user?.is_partner ? [{ href: "/partner", label: "Partner", icon: HandshakeIcon }] : []),
+        ...(user?.is_partner ? [{ href: "/enterprise/partner", label: "Partner", icon: HandshakeIcon }] : []),
       ];
 
   const handleLogout = () => {

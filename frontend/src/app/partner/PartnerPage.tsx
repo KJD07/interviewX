@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import AppShell from "@/components/AppShell";
+import MarketingFooter from "@/components/MarketingFooter";
+import MarketingNav from "@/components/MarketingNav";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { ApiError, partnerReferrals, type PartnerDashboard } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
@@ -28,9 +30,11 @@ function statusLabel(status: string) {
 
 function MetricCard({ title, value }: { title: string; value: string }) {
   return (
-    <div className="rounded-2xl border p-4" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-      <div className="font-label mb-2">{title}</div>
-      <div className="font-display text-2xl font-semibold" style={{ color: "var(--ink)" }}>{value}</div>
+    <div className="h-full px-[22px] py-5" style={{ background: "var(--surface)" }}>
+      <p className="font-display text-[26px] font-bold leading-none tracking-[-0.035em] tabular-nums text-[var(--ink)]">
+        {value}
+      </p>
+      <p className="mt-2 text-xs text-[var(--ink-dim)]">{title}</p>
     </div>
   );
 }
@@ -41,6 +45,7 @@ function PartnerRegisterForm({ onRegistered }: { onRegistered: () => void }) {
   const [preferredCode, setPreferredCode] = useState("");
   const [payoutNotes, setPayoutNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -50,78 +55,120 @@ function PartnerRegisterForm({ onRegistered }: { onRegistered: () => void }) {
     try {
       await partnerReferrals.register({
         name: name.trim(),
-        contact_email: user?.email,
         preferred_code: preferredCode.trim(),
         payout_notes: payoutNotes.trim(),
       });
       await refreshUser().catch(() => undefined);
       onRegistered();
     } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        setAlreadySubmitted(true);
+        await refreshUser().catch(() => undefined);
+        onRegistered();
+        return;
+      }
       setError(err instanceof Error ? err.message : "Unable to register as a partner.");
     } finally {
       setSubmitting(false);
     }
   };
 
+  const inputClass =
+    "w-full rounded-xl border border-[var(--border-mid)] bg-[var(--page)] px-4 py-3 text-sm text-[var(--ink)] outline-none focus:border-[var(--ink)]";
+
   return (
     <div
-      className="rounded-2xl border p-6 sm:p-8 max-w-xl"
-      style={{ borderColor: "var(--border)", background: "var(--surface)" }}
+      className="relative overflow-hidden rounded-[28px] px-6 py-12 sm:px-[54px] sm:py-[62px]"
+      style={{ background: "var(--hero-bg)", color: "var(--hero-text)" }}
     >
-      <div className="font-label mb-2">Partner program</div>
-      <h1 className="font-display text-3xl font-semibold" style={{ color: "var(--ink)" }}>
-        Register your company
-      </h1>
-      <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--ink-dim)" }}>
-        Get a unique referral code and link. When an organization signs up for enterprise with
-        your code, they appear on your dashboard automatically and you earn 20% commission —
-        paid out within 7 days.
-      </p>
+      <div
+        className="el-float pointer-events-none absolute -bottom-[100px] -right-[70px] h-[300px] w-[300px] rounded-full"
+        style={{ background: "var(--lime)" }}
+      />
+      <div className="relative grid gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
+        <div>
+          <div className="mb-[18px] font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--lime)]">
+            Partnership program
+          </div>
+          <h1 className="font-display text-[36px] font-bold leading-none tracking-[-0.035em] sm:text-[52px]">
+            Become a partner.
+          </h1>
+          <p className="mt-[18px] max-w-[440px] text-base leading-relaxed text-[#A3A29A]">
+            Agencies, colleges, and consultants get a referral code and earn 20%
+            commission on attributed enterprise revenue. Payouts within 7 days.
+          </p>
+        </div>
 
-      <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-        <label className="block">
-          <span className="font-label mb-2 block">Company / agency name</span>
-          <input
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-xl border px-4 py-3 text-sm outline-none"
-            style={{ borderColor: "var(--border-mid)", background: "var(--page)", color: "var(--ink)" }}
-            placeholder="e.g. Campus Connect"
-          />
-        </label>
-        <label className="block">
-          <span className="font-label mb-2 block">Preferred referral code (optional)</span>
-          <input
-            value={preferredCode}
-            onChange={(e) => setPreferredCode(e.target.value)}
-            className="w-full rounded-xl border px-4 py-3 text-sm outline-none font-mono uppercase"
-            style={{ borderColor: "var(--border-mid)", background: "var(--page)", color: "var(--ink)" }}
-            placeholder="e.g. CAMPUS20"
-          />
-        </label>
-        <label className="block">
-          <span className="font-label mb-2 block">Payout details (optional)</span>
-          <textarea
-            value={payoutNotes}
-            onChange={(e) => setPayoutNotes(e.target.value)}
-            className="w-full min-h-[90px] rounded-xl border px-4 py-3 text-sm outline-none resize-y"
-            style={{ borderColor: "var(--border-mid)", background: "var(--page)", color: "var(--ink)" }}
-            placeholder="UPI / bank account notes for commission payouts"
-          />
-        </label>
-        {error && (
-          <p className="text-sm" style={{ color: "var(--danger)" }}>{error}</p>
+        {alreadySubmitted ? (
+          <div
+            className="flex items-start gap-3 rounded-[20px] border px-6 py-8"
+            style={{ borderColor: "rgba(255,255,255,0.12)", background: "#17171A" }}
+          >
+            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[var(--lime)]" />
+            <p className="text-sm leading-relaxed text-[#D6D4CC]">
+              You&apos;ve already applied to the partner program with this account.
+              Your referral code appears here once the workspace is ready — no need
+              to submit again.
+            </p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div
+              className="rounded-xl border px-4 py-3 text-[13px] text-[#A3A29A]"
+              style={{ borderColor: "rgba(255,255,255,0.12)", background: "#17171A" }}
+            >
+              Submitting as <strong className="text-[var(--hero-text)]">{user?.email}</strong>
+            </div>
+            <label className="block">
+              <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.14em] text-[#A3A29A]">
+                Organization / individual name
+              </span>
+              <input
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className={inputClass}
+                placeholder="e.g. Campus Connect"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.14em] text-[#A3A29A]">
+                Preferred referral code (optional)
+              </span>
+              <input
+                value={preferredCode}
+                onChange={(e) => setPreferredCode(e.target.value)}
+                className={`${inputClass} font-mono uppercase`}
+                placeholder="e.g. CAMPUS20"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.14em] text-[#A3A29A]">
+                Payout details (optional)
+              </span>
+              <textarea
+                value={payoutNotes}
+                onChange={(e) => setPayoutNotes(e.target.value)}
+                className={`${inputClass} min-h-[90px] resize-y`}
+                placeholder="UPI / bank account notes for commission payouts"
+              />
+            </label>
+            {error && <p className="text-sm text-[#E58A72]">{error}</p>}
+            <button
+              type="submit"
+              disabled={submitting}
+              className="rounded-full px-[30px] py-4 text-[15px] font-bold text-[var(--ink)] hover:brightness-95 disabled:opacity-60"
+              style={{ background: "var(--lime)" }}
+            >
+              {submitting ? "Submitting…" : "Apply for a referral code →"}
+            </button>
+            <p className="text-xs text-[#A3A29A]">
+              One application per logged-in email. Your referral code and link appear
+              here once the account is created.
+            </p>
+          </form>
         )}
-        <button
-          type="submit"
-          disabled={submitting}
-          className="rounded-full px-6 py-3 text-sm font-semibold disabled:opacity-60"
-          style={{ background: "var(--ink)", color: "var(--page)" }}
-        >
-          {submitting ? "Creating partner account…" : "Join partner program →"}
-        </button>
-      </form>
+      </div>
     </div>
   );
 }
@@ -175,45 +222,56 @@ function PartnerDashboardContent() {
     }
   };
 
+  if (loading || needsRegistration || error) {
+    return (
+      <div className="relative min-h-screen bg-[var(--page)]">
+        <MarketingNav />
+        <section className="mx-auto max-w-[1180px] px-6 pt-32 pb-16 sm:px-8 sm:pt-36">
+          {loading && (
+            <div className="rounded-2xl border p-8 text-sm" style={{ borderColor: "var(--border)", color: "var(--ink-dim)" }}>
+              Loading partner data…
+            </div>
+          )}
+          {!loading && needsRegistration && (
+            <PartnerRegisterForm
+              onRegistered={() => {
+                void refreshUser().catch(() => undefined);
+                loadDashboard();
+              }}
+            />
+          )}
+          {!loading && error && (
+            <div className="rounded-2xl border p-8 text-sm" style={{ borderColor: "var(--border)", color: "var(--ink-dim)" }}>
+              {error}
+            </div>
+          )}
+        </section>
+        <MarketingFooter />
+      </div>
+    );
+  }
+
   return (
     <AppShell partner>
       <main className="p-4 sm:p-8 max-w-[1100px] fade-up">
-        {loading && (
-          <div className="rounded-2xl border p-8 text-sm" style={{ borderColor: "var(--border)", color: "var(--ink-dim)" }}>
-            Loading partner data…
-          </div>
-        )}
-
-        {!loading && needsRegistration && (
-          <PartnerRegisterForm
-            onRegistered={() => {
-              void refreshUser().catch(() => undefined);
-              loadDashboard();
-            }}
-          />
-        )}
-
-        {!loading && error && (
-          <div className="rounded-2xl border p-8 text-sm" style={{ borderColor: "var(--border)", color: "var(--ink-dim)" }}>
-            {error}
-          </div>
-        )}
-
-        {!loading && data && (
+        {data && (
           <>
             <div className="mb-8">
-              <div className="font-label mb-2">B2B partner program</div>
-              <h1 className="font-display text-3xl font-semibold" style={{ color: "var(--ink)" }}>
+              <div className="font-label mb-2.5">B2B partner program</div>
+              <h1 className="font-display text-[32px] font-bold leading-none tracking-[-0.035em] text-[var(--ink)] sm:text-[44px]">
                 Partner dashboard
               </h1>
-              <p className="mt-2 text-sm" style={{ color: "var(--ink-dim)" }}>
+              <p className="mt-3 max-w-[560px] text-sm leading-relaxed text-[var(--ink-dim)]">
                 Earn {(Number(data.partner.commission_rate) * 100).toFixed(0)}% commission on
                 enterprise revenue from organizations you refer. Commissions auto-pay within{" "}
                 {data.partner.payout_days} days.
               </p>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
+            <div
+              className="mb-6 grid grid-cols-2 gap-px overflow-hidden rounded-[16px] lg:grid-cols-5"
+              style={{ background: "var(--border-mid)", border: "1px solid var(--border-mid)" }}
+            >
               <MetricCard title="Referred orgs" value={String(data.summary.referred_organizations)} />
               <MetricCard title="Open leads" value={String(data.summary.open_leads ?? 0)} />
               <MetricCard title="Total earned" value={moneyFromPaise(data.summary.earned_paise, currency)} />
@@ -222,8 +280,8 @@ function PartnerDashboardContent() {
             </div>
 
             <div
-              className="rounded-2xl border p-5 mb-6"
-              style={{ borderColor: "var(--border)", background: "var(--surface)" }}
+              className="mb-6 rounded-[16px] p-[22px]"
+              style={{ borderColor: "var(--border-mid)", borderWidth: 1, borderStyle: "solid", background: "var(--surface)" }}
             >
               <div className="font-label mb-2">Your referral link & code</div>
               <p className="text-sm mb-3" style={{ color: "var(--ink-dim)" }}>
