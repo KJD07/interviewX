@@ -43,9 +43,9 @@ const FEATURES = [
     icon: "△",
   },
   {
-    title: "Live sessions",
-    body: "See when a candidate is in the room. Optional camera feed for orgs that turn proctoring on.",
-    icon: "▲",
+    title: "Proctoring",
+    body: "Camera-on rounds flag no face, extra people, a phone in frame, and tab switches — and keep a short clip of each violation. Watch live while the candidate is in the room.",
+    icon: "◉",
   },
   {
     title: "Campus sponsorships",

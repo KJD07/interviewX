@@ -20,6 +20,11 @@ export const ENTERPRISE_FAQS = [
       "Yes. Institutional sponsorships grant a full EvaluLabs plan to everyone on a given email domain, with a per-cycle interview limit you set. Students sign up with their college address and the plan attaches automatically.",
   },
   {
+    question: "Is the interview proctored?",
+    answer:
+      "Yes, for enterprise invites. The camera is required. We flag no-face, multiple faces, a phone in frame, and tab switches, and store a short clip of each violation. Orgs can also watch a live camera feed while the candidate is in the round.",
+  },
+  {
     question: "How do we get started?",
     answer:
       "See the workspace from this page, or pick a plan in Pricing and talk to sales. If a partner referred you, include their code on the interest form — we credit them automatically when you sign up and set up your organization.",
