@@ -670,14 +670,14 @@ export default function InterviewPage() {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
     if (!speechEnabledRef.current) return; // candidate muted the interviewer
 
-    // Belt-and-suspenders: make sure the mic is actually dead before we
-    // start talking, in case a recognition instance is still winding down.
-    // Only relevant in voice mode — in text mode there's no mic running for
-    // the AI's own voice to leak into.
-    if (voiceModeRef.current) {
-      micMutedRef.current = true;
-      stopListening();
-    }
+    // Always kill the mic before the interviewer speaks — including right
+    // after a code/system-design submit closes the workspace. In that path
+    // voiceModeRef is still false (the workspace auto-disabled it), so the
+    // old voiceMode-only guard let the workspace-close effect re-arm the mic
+    // while TTS was starting and the AI's own voice got transcribed as the
+    // candidate's answer. speak()'s onend re-arms the mic once TTS finishes.
+    micMutedRef.current = true;
+    stopListening();
 
     window.speechSynthesis.cancel(); // stop anything currently playing
 
@@ -995,10 +995,9 @@ export default function InterviewPage() {
   //
   // Once the workspace closes again, resume voice mode automatically if it
   // was on beforehand — otherwise every coding question would permanently
-  // strand the candidate in text mode. The toggle button is disabled while a
-  // workspace is open (see below), so voiceModeRef can't flip back on mid-open
-  // and re-trigger this; that also means every open_workspace payload from a
-  // still-open workspace (a fresh object each response) is a harmless no-op here.
+  // strand the candidate in text mode. Do not arm the mic here when TTS is
+  // enabled: the post-submit AI reply is spoken immediately and speak()'s
+  // onend re-arms the mic after it finishes.
   useEffect(() => {
     if (openWorkspace) {
       if (voiceModeRef.current) {
@@ -1013,7 +1012,18 @@ export default function InterviewPage() {
       setVoiceError("");
       setVoiceMode(true);
       shouldListenRef.current = true;
-      if (!sending && !aiTyping && !isAiSpeaking && !timeUp) {
+      // Do not startListening() here. After a workspace submit the AI reply
+      // is spoken immediately; arming the mic in the same tick races TTS and
+      // lets the interviewer answer itself. speak()'s onend resumes the mic
+      // once the AI finishes (normal voice-turn flow). Only skip straight to
+      // listening when the AI won't speak aloud.
+      if (
+        !sending &&
+        !aiTyping &&
+        !isAiSpeaking &&
+        !timeUp &&
+        (!speechEnabled || !ttsSupported)
+      ) {
         startListening();
       }
     }
