@@ -201,6 +201,12 @@ function PartnerDashboardContent() {
           setNeedsRegistration(false);
           setData(null);
           setError(null);
+        } else if (err instanceof ApiError && err.status >= 500) {
+          setNeedsRegistration(true);
+          setData(null);
+          setError(
+            "Partner dashboard is temporarily unavailable. You can still request access below; if checkout or links fail, try again in a few minutes.",
+          );
         } else {
           setError(err.message || "Unable to load partner dashboard.");
         }
@@ -237,6 +243,11 @@ function PartnerDashboardContent() {
               Loading partner data…
             </div>
           )}
+          {!loading && error && needsRegistration && (
+            <p className="mb-6 rounded-2xl border px-5 py-4 text-sm" style={{ borderColor: "var(--border)", color: "var(--ink-dim)" }}>
+              {error}
+            </p>
+          )}
           {!loading && needsRegistration && (
             <PartnerAccessRequestForm
               onSubmitted={() => {
@@ -246,7 +257,7 @@ function PartnerDashboardContent() {
             />
           )}
           {!loading && pendingApproval && <PartnerPendingCard />}
-          {!loading && error && (
+          {!loading && error && !needsRegistration && (
             <div className="rounded-2xl border p-8 text-sm" style={{ borderColor: "var(--border)", color: "var(--ink-dim)" }}>
               {error}
             </div>
