@@ -8,6 +8,17 @@ if [[ ! -f .env ]]; then
   cp .env.example .env
 fi
 
+# Bootstrap system packages on the default Cloud Agent image (idempotent).
+if ! command -v pg_isready >/dev/null || ! command -v uv >/dev/null; then
+  sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    build-essential libpq-dev postgresql postgresql-contrib
+  if ! command -v uv >/dev/null; then
+    curl -fsSL https://astral.sh/uv/install.sh | sh
+  fi
+fi
+export PATH="${HOME}/.local/bin:${PATH}"
+
 # Start Postgres if the cluster is down (install may run before start).
 if ! pg_isready -q 2>/dev/null; then
   sudo service postgresql start
