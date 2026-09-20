@@ -14,9 +14,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+RUN chmod +x docker-entrypoint.sh
+
 EXPOSE 8000
 
 # daphne (ASGI), not gunicorn (WSGI) — see docker-compose.yml's backend
 # command for why (apps.enterprise's live-camera WebSocket signaling needs
-# to share this same port/process).
-CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "config.asgi:application"]
+# to share this same port/process). Migrations run in docker-entrypoint.sh.
+CMD ["./docker-entrypoint.sh"]
