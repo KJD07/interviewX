@@ -7,6 +7,18 @@
   "user": "ubuntu",
   "install": "./scripts/cloud-agent-install.sh",
   "start": "./scripts/cloud-agent-start.sh",
+  "terminals": [
+    {
+      "name": "Backend (Django)",
+      "command": "export POSTGRES_HOST=localhost POSTGRES_PORT=5432 POSTGRES_DB=aiis POSTGRES_USER=aiis_user POSTGRES_PASSWORD=aiis_pass && source backend/.venv/bin/activate && cd backend && daphne -b 0.0.0.0 -p 8000 config.asgi:application",
+      "description": "Django ASGI server (daphne) on port 8000"
+    },
+    {
+      "name": "Frontend (Next.js)",
+      "command": "cd frontend && npm run dev",
+      "description": "Next.js dev server on port 3000"
+    }
+  ],
   "ports": [
     { "port": 3000, "name": "Frontend (Next.js)" },
     { "port": 8000, "name": "Backend (Django)" }
