@@ -141,18 +141,19 @@ function sparkPoints(values: number[], w: number, h: number) {
 }
 
 function InviteSparkline({ values }: { values: number[] }) {
+  const chartHeight = 48;
   const series = values.length > 0 ? values : Array(12).fill(0);
-  const pts = sparkPoints(series, 300, 64);
+  const pts = sparkPoints(series, 300, chartHeight);
   const last = pts[pts.length - 1];
   const line = pts.map((p) => `${p.x},${p.y}`).join(" ");
   const area = pts.length
-    ? `M${pts[0].x},${64} L${pts.map((p) => `${p.x},${p.y}`).join(" ")} L${last.x},64 Z`
+    ? `M${pts[0].x},${chartHeight} L${pts.map((p) => `${p.x},${p.y}`).join(" ")} L${last.x},${chartHeight} Z`
     : "";
   const total = series.reduce((sum, n) => sum + n, 0);
 
   return (
     <div
-      className="relative overflow-hidden rounded-[24px] p-[22px]"
+      className="relative h-fit self-start overflow-hidden rounded-[20px] p-5"
       style={{ background: "var(--hero-bg)", color: "var(--hero-text)" }}
     >
       <div
@@ -165,7 +166,7 @@ function InviteSparkline({ values }: { values: number[] }) {
           {total} in last 12 weeks
         </span>
       </div>
-      <svg viewBox="0 0 300 64" preserveAspectRatio="none" className="relative block h-16 w-full">
+      <svg viewBox={`0 0 300 ${chartHeight}`} preserveAspectRatio="xMidYMid meet" className="relative block h-12 w-full">
         <path d={area} fill="rgba(216,250,75,.14)" />
         <polyline
           points={line}
@@ -229,11 +230,28 @@ function StatCard({ label, value, tone }: { label: string; value: string | numbe
   );
 }
 
+function notifyEnterpriseQuotaChanged() {
+  window.dispatchEvent(new CustomEvent("enterprise-quota-changed"));
+}
+
 function UploadCard({ onUploaded }: { onUploaded: () => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState("");
   const [summary, setSummary] = useState("");
+
+  const handleDownloadTemplate = async () => {
+    setDownloading(true);
+    setError("");
+    try {
+      await organizations.downloadQuestionTemplate();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.detail : "Could not download template.");
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const handleUpload = async () => {
     if (!file) return;
@@ -275,6 +293,15 @@ function UploadCard({ onUploaded }: { onUploaded: () => void }) {
         Ideal Answer
       </div>
       <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={handleDownloadTemplate}
+          disabled={downloading}
+          className="text-sm font-semibold px-[18px] py-[11px] rounded-full border transition-colors hover:bg-white/[0.08] disabled:opacity-60"
+          style={{ borderColor: "rgba(255,255,255,0.22)" }}
+        >
+          {downloading ? "Downloading…" : "Download template"}
+        </button>
         <label
           className="text-sm font-semibold px-[18px] py-[11px] rounded-full border cursor-pointer transition-colors hover:bg-white/[0.08]"
           style={{ borderColor: "rgba(255,255,255,0.22)" }}
@@ -380,24 +407,36 @@ function QuestionBankCard({ dashboard }: { dashboard: OrgDashboard }) {
   );
 }
 
+function parseBulkEmails(raw: string) {
+  return raw
+    .split(/[\n,;]+/)
+    .map((email) => email.trim())
+    .filter(Boolean);
+}
+
 function InviteForm({ dashboard, onInvited }: { dashboard: OrgDashboard; onInvited: () => void }) {
   const rounds: (OrgRound & { roleTitle: string })[] = dashboard.question_bank.flatMap((role) =>
     role.rounds.map((round) => ({ ...round, roleTitle: role.title }))
   );
   const [roundId, setRoundId] = useState<number | "">("");
   const [email, setEmail] = useState("");
+  const [bulkEmails, setBulkEmails] = useState("");
   const [expiresInDays, setExpiresInDays] = useState(7);
   const [busy, setBusy] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [error, setError] = useState("");
+  const [bulkSummary, setBulkSummary] = useState("");
 
   const handleInvite = async () => {
     if (!roundId || !email) return;
     setBusy(true);
     setError("");
+    setBulkSummary("");
     try {
       const expiresAt = new Date(Date.now() + expiresInDays * 86400000).toISOString();
       await organizations.invites.create(Number(roundId), email, expiresAt);
       setEmail("");
+      notifyEnterpriseQuotaChanged();
       onInvited();
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : "Could not create invite.");
@@ -406,7 +445,30 @@ function InviteForm({ dashboard, onInvited }: { dashboard: OrgDashboard; onInvit
     }
   };
 
+  const handleBulkInvite = async () => {
+    const emails = parseBulkEmails(bulkEmails);
+    if (!roundId || emails.length === 0) return;
+    setBulkBusy(true);
+    setError("");
+    setBulkSummary("");
+    try {
+      const expiresAt = new Date(Date.now() + expiresInDays * 86400000).toISOString();
+      const result = await organizations.invites.createBulk(Number(roundId), emails, expiresAt);
+      setBulkEmails("");
+      setBulkSummary(`Sent ${result.created_count} invite(s).`);
+      notifyEnterpriseQuotaChanged();
+      onInvited();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.detail : "Could not send bulk invites.");
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const bulkCount = parseBulkEmails(bulkEmails).length;
+
   return (
+    <>
     <Card title="Invite a candidate" subtitle={rounds.length === 0 ? "Upload a question bank first" : undefined}>
       <div className="flex flex-wrap items-center gap-2">
         <select
@@ -454,6 +516,60 @@ function InviteForm({ dashboard, onInvited }: { dashboard: OrgDashboard; onInvit
       </div>
       {error && <p className="text-sm mt-3" style={{ color: "var(--danger)" }}>{error}</p>}
     </Card>
+
+    <Card
+      title="Bulk invite candidates"
+      subtitle="One email per line, or separated by commas"
+    >
+      <div className="space-y-3">
+        <select
+          value={roundId}
+          onChange={(e) => setRoundId(e.target.value ? Number(e.target.value) : "")}
+          disabled={rounds.length === 0}
+          className="text-sm px-3 py-2 rounded-lg border disabled:opacity-40 w-full sm:w-auto"
+          style={{ borderColor: "var(--border-mid)", color: "var(--ink)", background: "var(--surface)" }}
+        >
+          <option value="">Select round…</option>
+          {rounds.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.roleTitle} — {r.title}
+            </option>
+          ))}
+        </select>
+        <textarea
+          placeholder={"candidate1@email.com\ncandidate2@email.com"}
+          value={bulkEmails}
+          onChange={(e) => setBulkEmails(e.target.value)}
+          rows={5}
+          className="text-sm px-3 py-2 rounded-lg border w-full resize-y"
+          style={{ borderColor: "var(--border-mid)", color: "var(--ink)", background: "var(--surface)" }}
+        />
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <input
+              type="number"
+              min={1}
+              value={expiresInDays}
+              onChange={(e) => setExpiresInDays(Number(e.target.value) || 1)}
+              className="text-sm px-3 py-2 rounded-lg border w-full sm:w-24"
+              style={{ borderColor: "var(--border-mid)", color: "var(--ink)", background: "var(--surface)" }}
+              title="Expires in (days)"
+            />
+            <span className="text-sm whitespace-nowrap" style={{ color: "var(--ink-dim)" }}>day(s)</span>
+          </div>
+          <button
+            onClick={handleBulkInvite}
+            disabled={!roundId || bulkCount === 0 || bulkBusy}
+            className="px-4 py-2 rounded-full text-sm font-semibold disabled:opacity-40 transition-opacity"
+            style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
+          >
+            {bulkBusy ? "Sending…" : `Send ${bulkCount > 0 ? bulkCount : ""} invite${bulkCount === 1 ? "" : "s"}`}
+          </button>
+        </div>
+        {bulkSummary && <p className="text-sm" style={{ color: "var(--success)" }}>{bulkSummary}</p>}
+      </div>
+    </Card>
+    </>
   );
 }
 
@@ -907,13 +1023,13 @@ function EnterprisePageContent({ view = "overview" }: { view?: "overview" | "can
                     <StatCard label="Roles in bank" value={dashboard.question_bank.length} />
                     <StatCard label="Questions" value={totalQuestions} />
                     <StatCard label="Pending" value={counts.pending ?? 0} />
-                    <StatCard label="Live" value={counts.started ?? 0} tone="var(--accent)" />
-                    <StatCard label="Finished" value={counts.completed ?? 0} tone="var(--success)" />
+                    <StatCard label="Live" value={counts.live ?? 0} tone="var(--accent)" />
+                    <StatCard label="Finished" value={counts.finished ?? 0} tone="var(--success)" />
                 </div>
               )}
 
               {view === "overview" && (
-                <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2 lg:items-start">
                   <InviteSparkline values={inviteSeries.map((w) => w.count)} />
                   <RecentActivity items={activityItems} />
                 </div>

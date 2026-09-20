@@ -116,6 +116,92 @@ class OrgDashboardActivityTests(TestCase):
         self.assertEqual(res.status_code, 404)
         self.assertNotIn("invite_series", res.json())
 
+    def test_invite_dashboard_counts_use_candidate_status(self):
+        pending = self._invite("pending@acme.test")
+        expired = self._invite(
+            "expired@acme.test",
+            expires_at=timezone.now() - timedelta(days=1),
+        )
+        live_invite = self._invite("live@acme.test")
+        live_session = InterviewSession.objects.create(
+            user=self.user,
+            round=self.round,
+            status=InterviewSession.Status.IN_PROGRESS,
+        )
+        live_invite.session = live_session
+        live_invite.status = OrgCandidateInvite.Status.STARTED
+        live_invite.save()
+
+        done_invite = self._invite("done@acme.test")
+        done_session = InterviewSession.objects.create(
+            user=self.user,
+            round=self.round,
+            status=InterviewSession.Status.COMPLETED,
+        )
+        done_invite.session = done_session
+        done_invite.status = OrgCandidateInvite.Status.COMPLETED
+        done_invite.save()
+
+        stale_started = self._invite("stale@acme.test")
+        stale_session = InterviewSession.objects.create(
+            user=self.user,
+            round=self.round,
+            status=InterviewSession.Status.COMPLETED,
+        )
+        stale_started.session = stale_session
+        stale_started.status = OrgCandidateInvite.Status.STARTED
+        stale_started.save()
+
+        res = self.client.get("/api/enterprise/dashboard/")
+        counts = res.json()["invite_counts"]
+        self.assertEqual(counts["pending"], 1)
+        self.assertEqual(counts["expired"], 1)
+        self.assertEqual(counts["live"], 1)
+        self.assertEqual(counts["finished"], 2)
+
+    def test_invite_create_increments_candidate_quota(self):
+        self.assertEqual(self.org.candidates_used, 0)
+        expires = (timezone.now() + timedelta(days=7)).isoformat()
+        with patch("apps.enterprise.emails.send_mail"):
+            res = self.client.post(
+                "/api/enterprise/invites/",
+                {
+                    "round": self.round.pk,
+                    "candidate_email": "candidate@local.test",
+                    "expires_at": expires,
+                },
+                format="json",
+            )
+        self.assertEqual(res.status_code, 201)
+        self.org.refresh_from_db()
+        self.assertEqual(self.org.candidates_used, 1)
+
+    def test_bulk_invite_create_increments_candidate_quota(self):
+        expires = (timezone.now() + timedelta(days=7)).isoformat()
+        with patch("apps.enterprise.emails.send_mail"):
+            res = self.client.post(
+                "/api/enterprise/invites/bulk/",
+                {
+                    "round": self.round.pk,
+                    "candidate_emails": ["one@acme.test", "two@acme.test"],
+                    "expires_at": expires,
+                },
+                format="json",
+            )
+        self.assertEqual(res.status_code, 201)
+        self.assertEqual(res.json()["created_count"], 2)
+        self.org.refresh_from_db()
+        self.assertEqual(self.org.candidates_used, 2)
+
+    def test_question_bank_template_download(self):
+        res = self.client.get("/api/enterprise/question-bank/template/")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(
+            res["Content-Type"],
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        self.assertIn("evalulabs-question-bank-template.xlsx", res["Content-Disposition"])
+
     def test_invite_create_succeeds_when_email_times_out(self):
         expires = (timezone.now() + timedelta(days=7)).isoformat()
         with patch(

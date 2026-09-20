@@ -794,6 +794,26 @@ export const organizations = {
   // Bypasses the shared request() wrapper: it always sets
   // Content-Type: application/json, which breaks a multipart file upload
   // (the browser needs to set its own boundary on the Content-Type header).
+  downloadQuestionTemplate: async (): Promise<void> => {
+    const access = tokens.getAccess();
+    const res = await fetch(`${API_URL}/api/enterprise/question-bank/template/`, {
+      headers: access ? { Authorization: `Bearer ${access}` } : {},
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => undefined);
+      throw new ApiError(res.status, extractDetail(body) || `Request failed (${res.status})`, undefined, body);
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "evalulabs-question-bank-template.xlsx";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  },
+
   uploadQuestions: async (file: File): Promise<OrgQuestionUploadResult> => {
     const access = tokens.getAccess();
     const form = new FormData();
@@ -818,6 +838,15 @@ export const organizations = {
         method: "POST",
         body: JSON.stringify({ round, candidate_email, expires_at }),
       }),
+
+    createBulk: (round: number, candidate_emails: string[], expires_at: string) =>
+      request<{ created: OrgCandidateInvite[]; created_count: number; errors: unknown[] }>(
+        "/api/enterprise/invites/bulk/",
+        {
+          method: "POST",
+          body: JSON.stringify({ round, candidate_emails, expires_at }),
+        }
+      ),
 
     start: (token: string) =>
       request<StartInterviewResponse>(`/api/enterprise/invites/${token}/start/`, {

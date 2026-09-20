@@ -10,6 +10,28 @@ INVITE_SERIES_WEEKS = 12
 RECENT_ACTIVITY_LIMIT = 8
 
 
+def invite_dashboard_counts(organization):
+    """Counts aligned with OrgCandidateInviteSerializer.candidate_status — pending
+    means not started yet, live means an in-progress session, finished means
+    done, expired means the invite window passed without a start."""
+    now = timezone.now()
+    counts = {"pending": 0, "live": 0, "finished": 0, "expired": 0}
+    invites = OrgCandidateInvite.objects.filter(organization=organization).select_related("session")
+    for inv in invites:
+        if inv.status == OrgCandidateInvite.Status.PENDING:
+            if inv.is_expired:
+                counts["expired"] += 1
+            else:
+                counts["pending"] += 1
+        elif inv.status == OrgCandidateInvite.Status.EXPIRED:
+            counts["expired"] += 1
+        elif inv.session_id and inv.session.status == InterviewSession.Status.IN_PROGRESS:
+            counts["live"] += 1
+        else:
+            counts["finished"] += 1
+    return counts
+
+
 def _iso_week_start(dt):
     local = timezone.localtime(dt)
     d = local.date()

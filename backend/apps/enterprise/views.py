@@ -1,8 +1,12 @@
 import random
 
+import io
+
 from django import forms
 from django.db import transaction
-from django.db.models import Count, F
+from django.db.models import F
+from django.http import HttpResponse
+from openpyxl import Workbook
 from rest_framework import status
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
@@ -22,7 +26,7 @@ from apps.interviews.views import (
 )
 from core.openrouter_client import build_interview_system_prompt, chat_completion, extract_workspace_action
 
-from .dashboard import invite_series, recent_activity
+from .dashboard import invite_dashboard_counts, invite_series, recent_activity
 from .emails import send_candidate_invite_email
 from .imports import OrgImportError, get_or_create_org_company, import_org_questions
 from .models import Organization, OrgCandidateInvite, OrganizationMember, ProctoringEvent
@@ -41,6 +45,22 @@ MAX_PROCTORING_CLIP_BYTES = 15 * 1024 * 1024
 
 class UploadQuestionsForm(forms.Form):
     file = forms.FileField()
+
+
+def _reserve_candidate_quota(organization, count=1):
+    """Atomically check the org still has room for `count` new invites and
+    bump candidates_used by that many. Returns the refreshed Organization row
+    or None when quota would be exceeded."""
+    if count <= 0:
+        return organization
+    with transaction.atomic():
+        org = Organization.objects.select_for_update().get(pk=organization.pk)
+        if org.candidates_used + count > org.candidate_quota:
+            return None
+        org.candidates_used = F("candidates_used") + count
+        org.save(update_fields=["candidates_used"])
+        org.refresh_from_db()
+        return org
 
 
 def _get_membership(user):
@@ -70,11 +90,7 @@ class OrgDashboardView(APIView):
         organization = membership.organization
         company = get_or_create_org_company(organization)
         roles = Role.objects.filter(company=company).prefetch_related("rounds__questions")
-        invite_counts = dict(
-            OrgCandidateInvite.objects.filter(organization=organization)
-            .values_list("status")
-            .annotate(count=Count("id"))
-        )
+        invite_counts = invite_dashboard_counts(organization)
 
         return Response(
             {
@@ -86,6 +102,43 @@ class OrgDashboardView(APIView):
                 "recent_activity": recent_activity(organization),
             }
         )
+
+
+class OrgQuestionTemplateView(APIView):
+    """GET /api/enterprise/question-bank/template/ — downloadable .xlsx with the
+    expected upload columns and one example row."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        membership = _get_membership(request.user)
+        if membership is None:
+            return Response({"detail": "Not a member of any organization."}, status=status.HTTP_404_NOT_FOUND)
+
+        from .imports import REQUIRED_COLUMNS
+
+        workbook = Workbook()
+        sheet = workbook.active
+        sheet.title = "Question bank"
+        sheet.append(REQUIRED_COLUMNS)
+        sheet.append([
+            "Software Engineer",
+            "Technical Screen",
+            "technical",
+            "Explain the difference between a stack and a queue.",
+            "conceptual",
+            "A stack is LIFO; a queue is FIFO.",
+        ])
+
+        buffer = io.BytesIO()
+        workbook.save(buffer)
+        buffer.seek(0)
+        response = HttpResponse(
+            buffer.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response["Content-Disposition"] = 'attachment; filename="evalulabs-question-bank-template.xlsx"'
+        return response
 
 
 class OrgQuestionUploadView(APIView):
@@ -162,13 +215,106 @@ class OrgCandidateInviteListCreateView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        organization = membership.organization
         serializer = OrgCandidateInviteSerializer(
-            data=request.data, context={"organization": membership.organization}
+            data=request.data, context={"organization": organization}
         )
         serializer.is_valid(raise_exception=True)
-        invite = serializer.save(organization=membership.organization)
+        if not _reserve_candidate_quota(organization, 1):
+            return Response(
+                {"detail": "This organization has used all of its candidate quota."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        invite = serializer.save(organization=organization)
         send_candidate_invite_email(invite)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class OrgCandidateInviteBulkCreateView(APIView):
+    """
+    POST /api/enterprise/invites/bulk/ — create many invites at once.
+    Body: {round, candidate_emails: string[], expires_at}.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        membership = _get_membership(request.user)
+        if membership is None:
+            return Response({"detail": "Not a member of any organization."}, status=status.HTTP_404_NOT_FOUND)
+
+        round_id = request.data.get("round")
+        raw_emails = request.data.get("candidate_emails") or []
+        expires_at = request.data.get("expires_at")
+
+        if not isinstance(raw_emails, list) or not raw_emails:
+            return Response(
+                {"candidate_emails": "Provide a non-empty list of email addresses."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not expires_at:
+            return Response({"expires_at": "This field is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            round_obj = Round.objects.select_related("role__company").get(pk=round_id)
+        except (Round.DoesNotExist, ValueError, TypeError):
+            return Response({"round": "Round not found."}, status=status.HTTP_400_BAD_REQUEST)
+        if round_obj.role.company.organization_id != membership.organization_id:
+            return Response(
+                {"round": "This round doesn't belong to your organization."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        seen = set()
+        emails = []
+        for raw in raw_emails:
+            email = str(raw).strip().lower()
+            if not email or email in seen:
+                continue
+            seen.add(email)
+            emails.append(email)
+
+        if not emails:
+            return Response(
+                {"candidate_emails": "No valid email addresses were provided."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        organization = membership.organization
+        validated = []
+        errors = []
+        for email in emails:
+            serializer = OrgCandidateInviteSerializer(
+                data={"round": round_obj.pk, "candidate_email": email, "expires_at": expires_at},
+                context={"organization": organization},
+            )
+            if serializer.is_valid():
+                validated.append(serializer)
+            else:
+                errors.append({"email": email, "errors": serializer.errors})
+
+        if not validated:
+            return Response(
+                {"detail": "No invites were created.", "errors": errors},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not _reserve_candidate_quota(organization, len(validated)):
+            return Response(
+                {"detail": "This organization does not have enough candidate quota for this batch."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        created = []
+        for serializer in validated:
+            invite = serializer.save(organization=organization)
+            send_candidate_invite_email(invite)
+            created.append(serializer.data)
+
+        return Response(
+            {"created": created, "created_count": len(created), "errors": errors},
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class OrgInviteStartView(APIView):
@@ -215,12 +361,6 @@ class OrgInviteStartView(APIView):
         organization = invite.organization
         if not organization.is_covered:
             return Response({"detail": "This organization's access has expired."}, status=status.HTTP_403_FORBIDDEN)
-        if not organization.has_quota_remaining:
-            return Response(
-                {"detail": "This organization has used all of its interview quota."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
         try:
             round_obj, questions = _get_round_with_context(invite.round_id)
         except Round.DoesNotExist:
@@ -246,20 +386,12 @@ class OrgInviteStartView(APIView):
             open_workspace = _fallback_opening_workspace(round_obj, questions)
 
         with transaction.atomic():
-            organization = Organization.objects.select_for_update().get(pk=organization.pk)
-            if not organization.has_quota_remaining:
-                return Response(
-                    {"detail": "This organization has used all of its interview quota."},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
             session = InterviewSession.objects.create(
                 user=request.user,
                 round=round_obj,
                 transcript=[{"role": "ai", "text": opening, "ts": _now_iso()}],
                 duration_minutes=random.randint(MIN_INTERVIEW_MINUTES, MAX_INTERVIEW_MINUTES),
             )
-            organization.candidates_used = F("candidates_used") + 1
-            organization.save(update_fields=["candidates_used"])
             invite.session = session
             invite.status = OrgCandidateInvite.Status.STARTED
             invite.save(update_fields=["session", "status"])
