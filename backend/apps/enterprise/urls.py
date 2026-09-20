@@ -7,9 +7,11 @@ from .referral_views import (
     PartnerRegisterView,
 )
 from .views import (
+    OrgCandidateInviteBulkCreateView,
     OrgCandidateInviteListCreateView,
     OrgDashboardView,
     OrgInviteStartView,
+    OrgQuestionTemplateView,
     OrgQuestionUploadView,
     ProctoringEventCreateView,
 )
@@ -17,7 +19,9 @@ from .views import (
 urlpatterns = [
     path("dashboard/", OrgDashboardView.as_view(), name="enterprise-dashboard"),
     path("question-bank/upload/", OrgQuestionUploadView.as_view(), name="enterprise-question-upload"),
+    path("question-bank/template/", OrgQuestionTemplateView.as_view(), name="enterprise-question-template"),
     path("invites/", OrgCandidateInviteListCreateView.as_view(), name="enterprise-invite-list-create"),
+    path("invites/bulk/", OrgCandidateInviteBulkCreateView.as_view(), name="enterprise-invite-bulk-create"),
     path("invites/<str:token>/start/", OrgInviteStartView.as_view(), name="enterprise-invite-start"),
     path(
         "sessions/<int:session_id>/proctoring-events/",

@@ -175,52 +175,47 @@ export default function MarketingNav() {
             );
           })}
 
-          {hireActive ? (
-            <div
-              ref={hireRef}
-              className="group relative"
-              onMouseEnter={() => setHireOpen(true)}
-              onMouseLeave={() => setHireOpen(false)}
-            >
-              <Link
-                href={ENTERPRISE_HREF}
-                aria-haspopup="menu"
-                aria-expanded={hireOpen}
-                className="inline-flex items-center gap-1.5 rounded-full bg-[var(--lime)] px-[17px] py-[9px] text-sm font-semibold text-[var(--ink)]"
-              >
-                Hire with Us
-                <span
-                  className={`text-[10px] leading-none transition-transform duration-150 ${hireOpen ? "rotate-180" : "group-hover:rotate-180"}`}
-                  aria-hidden
-                >
-                  ▾
-                </span>
-              </Link>
-
-              <div
-                role="menu"
-                className={`invisible absolute left-1/2 top-full z-50 w-[268px] -translate-x-1/2 pt-2.5 opacity-0 transition-[opacity,visibility,transform] duration-150 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 ${
-                  hireOpen ? "!visible translate-y-0 opacity-100" : "translate-y-1.5"
-                }`}
-              >
-                <div
-                  className="overflow-hidden rounded-[18px] border p-1.5 shadow-[0_12px_28px_rgba(12,12,11,0.10)]"
-                  style={{ background: "var(--page)", borderColor: "var(--border-mid)" }}
-                >
-                  {HIRE_SECTIONS.map(renderHireLink)}
-                  <div className="mx-2 my-1.5 h-px" style={{ background: "var(--border-mid)" }} />
-                  {HIRE_ACTIONS.map(renderHireLink)}
-                </div>
-              </div>
-            </div>
-          ) : (
+          <div
+            ref={hireRef}
+            className="group relative"
+            onMouseEnter={() => setHireOpen(true)}
+            onMouseLeave={() => setHireOpen(false)}
+          >
             <Link
               href={ENTERPRISE_HREF}
-              className="rounded-full px-[17px] py-[9px] text-sm font-semibold text-[var(--olive)] transition-colors hover:bg-[var(--lime)]/10"
+              aria-haspopup="menu"
+              aria-expanded={hireOpen}
+              className={`inline-flex items-center gap-1.5 rounded-full px-[17px] py-[9px] text-sm font-semibold ${
+                hireActive
+                  ? "bg-[var(--lime)] text-[var(--ink)]"
+                  : "text-[var(--olive)] hover:bg-[var(--lime)]/10"
+              }`}
             >
               Hire with Us
+              <span
+                className={`text-[10px] leading-none transition-transform duration-150 ${hireOpen ? "rotate-180" : "group-hover:rotate-180"}`}
+                aria-hidden
+              >
+                ▾
+              </span>
             </Link>
-          )}
+
+            <div
+              role="menu"
+              className={`invisible absolute left-1/2 top-full z-50 w-[268px] -translate-x-1/2 pt-2.5 opacity-0 transition-[opacity,visibility,transform] duration-150 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 ${
+                hireOpen ? "!visible translate-y-0 opacity-100" : "translate-y-1.5"
+              }`}
+            >
+              <div
+                className="overflow-hidden rounded-[18px] border p-1.5 shadow-[0_12px_28px_rgba(12,12,11,0.10)]"
+                style={{ background: "var(--page)", borderColor: "var(--border-mid)" }}
+              >
+                {HIRE_SECTIONS.map(renderHireLink)}
+                <div className="mx-2 my-1.5 h-px" style={{ background: "var(--border-mid)" }} />
+                {HIRE_ACTIONS.map(renderHireLink)}
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="flex shrink-0 items-center gap-1 sm:gap-2.5">
@@ -300,44 +295,35 @@ export default function MarketingNav() {
                 {link.label}
               </Link>
             ))}
-            {hireActive ? (
-              <>
-                <button
-                  type="button"
-                  aria-expanded={mobileHireOpen}
-                  onClick={() => setMobileHireOpen((open: boolean) => !open)}
-                  className="flex items-center justify-between rounded-xl bg-[var(--lime)] px-3 py-2.5 text-left text-sm font-semibold text-[var(--ink)]"
-                >
-                  Hire with Us
-                  <span className={`text-[10px] transition-transform ${mobileHireOpen ? "rotate-180" : ""}`} aria-hidden>
-                    ▾
-                  </span>
-                </button>
-                {mobileHireOpen && (
-                  <div className="ml-2 flex flex-col gap-1 border-l pl-3" style={{ borderColor: "var(--border-mid)" }}>
-                    {[...HIRE_SECTIONS, ...HIRE_ACTIONS].map((item) => {
-                      const itemActive = isItemActive(item.href);
-                      return (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          className={`rounded-xl px-3 py-2.5 ${itemActive ? "bg-[var(--lime)]/40" : ""}`}
-                        >
-                          <span className="block text-sm font-semibold text-[var(--ink)]">{item.title}</span>
-                          <span className="mt-0.5 block text-xs text-[var(--olive)]">{item.sub}</span>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
-            ) : (
-              <Link
-                href={ENTERPRISE_HREF}
-                className="rounded-xl px-3 py-2.5 text-sm font-semibold text-[var(--olive)]"
-              >
-                Hire with Us
-              </Link>
+            <button
+              type="button"
+              aria-expanded={mobileHireOpen}
+              onClick={() => setMobileHireOpen((open: boolean) => !open)}
+              className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-semibold ${
+                hireActive ? "bg-[var(--lime)] text-[var(--ink)]" : "text-[var(--olive)]"
+              }`}
+            >
+              Hire with Us
+              <span className={`text-[10px] transition-transform ${mobileHireOpen ? "rotate-180" : ""}`} aria-hidden>
+                ▾
+              </span>
+            </button>
+            {mobileHireOpen && (
+              <div className="ml-2 flex flex-col gap-1 border-l pl-3" style={{ borderColor: "var(--border-mid)" }}>
+                {[...HIRE_SECTIONS, ...HIRE_ACTIONS].map((item) => {
+                  const itemActive = isItemActive(item.href);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`rounded-xl px-3 py-2.5 ${itemActive ? "bg-[var(--lime)]/40" : ""}`}
+                    >
+                      <span className="block text-sm font-semibold text-[var(--ink)]">{item.title}</span>
+                      <span className="mt-0.5 block text-xs text-[var(--olive)]">{item.sub}</span>
+                    </Link>
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>

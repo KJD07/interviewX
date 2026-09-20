@@ -178,8 +178,7 @@ export default function Sidebar({ enterprise = false, partner = false, mobileOpe
   const bonusInterviews = user?.bonus_interviews ?? 0;
   const [orgQuota, setOrgQuota] = useState<{ used: number; total: number } | null>(null);
 
-  useEffect(() => {
-    if (!enterprise) return;
+  const refreshOrgQuota = () => {
     organizations
       .dashboard()
       .then((d) =>
@@ -189,6 +188,18 @@ export default function Sidebar({ enterprise = false, partner = false, mobileOpe
         })
       )
       .catch(() => setOrgQuota({ used: 0, total: 0 }));
+  };
+
+  useEffect(() => {
+    if (!enterprise) return;
+    refreshOrgQuota();
+  }, [enterprise]);
+
+  useEffect(() => {
+    if (!enterprise) return;
+    const onQuotaChanged = () => refreshOrgQuota();
+    window.addEventListener("enterprise-quota-changed", onQuotaChanged);
+    return () => window.removeEventListener("enterprise-quota-changed", onQuotaChanged);
   }, [enterprise]);
 
   useEffect(() => {
