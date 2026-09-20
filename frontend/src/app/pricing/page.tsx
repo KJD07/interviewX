@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -10,7 +10,8 @@ import MarketingNav from "@/components/MarketingNav";
 import MarketingFooter from "@/components/MarketingFooter";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { PLANS, PAID_PLAN_IDS, type PlanId } from "@/lib/plans";
-import { subscriptions, ApiError } from "@/lib/api";
+import { subscriptions, ApiError, partnerReferrals } from "@/lib/api";
+import { PARTNER_REF_KEY } from "@/components/ReferralTracker";
 import { submitPayUCheckout } from "@/lib/payuCheckout";
 import { useCurrency, formatPrice } from "@/lib/currency";
 
@@ -99,9 +100,54 @@ export default function Pricing() {
   const router = useRouter();
   const [loadingPlan, setLoadingPlan] = useState<PlanId | null>(null);
   const [error, setError] = useState("");
+  const [couponCode, setCouponCode] = useState("");
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponMessage, setCouponMessage] = useState<string | null>(null);
   const currency = useCurrency();
 
   const currentPlan = (user?.subscription_plan as PlanId) || "free";
+
+  const discountedPrice = (rupees: number) =>
+    couponDiscount > 0 ? Math.max(rupees * (1 - couponDiscount / 100), 0) : rupees;
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const initial = (params.get("ref") || localStorage.getItem(PARTNER_REF_KEY) || "").trim();
+    if (!initial) return;
+    setCouponCode(initial);
+    void partnerReferrals
+      .capture(initial)
+      .then((res) => {
+        setCouponDiscount(res.discount_percent ?? 0);
+        localStorage.setItem(PARTNER_REF_KEY, res.code);
+        if (res.discount_percent) {
+          setCouponMessage(`${res.discount_percent}% partner discount will apply at checkout.`);
+        }
+      })
+      .catch(() => undefined);
+  }, []);
+
+  const validateCoupon = async () => {
+    const code = couponCode.trim();
+    if (!code) {
+      setCouponDiscount(0);
+      setCouponMessage(null);
+      return;
+    }
+    try {
+      const res = await partnerReferrals.capture(code);
+      setCouponDiscount(res.discount_percent ?? 0);
+      localStorage.setItem(PARTNER_REF_KEY, res.code);
+      setCouponMessage(
+        res.discount_percent
+          ? `${res.discount_percent}% partner discount will apply at checkout.`
+          : "Valid partner code — applied at checkout.",
+      );
+    } catch {
+      setCouponDiscount(0);
+      setCouponMessage("Invalid or inactive coupon code.");
+    }
+  };
 
   const handleUpgrade = async (plan: PlanId) => {
     if (!user) {
@@ -113,7 +159,10 @@ export default function Pricing() {
     setError("");
 
     try {
-      const order = await subscriptions.createOrder(plan as "pro" | "premium" | "max");
+      const order = await subscriptions.createOrder(
+        plan as "pro" | "premium" | "max",
+        couponCode.trim() || undefined,
+      );
       submitPayUCheckout(order);
     } catch (err) {
       if (err instanceof ApiError) setError(err.detail);
@@ -154,6 +203,29 @@ export default function Pricing() {
       )}
 
       <section className="mx-auto max-w-[1180px] px-6 pb-16 pt-11 sm:px-8">
+        <div className="mb-8 max-w-xl rounded-[16px] border border-[var(--border-mid)] bg-[var(--surface)] p-5">
+          <label className="block font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--ink-faint)]">
+            Partner / coupon code
+          </label>
+          <div className="mt-2 flex flex-col gap-3 sm:flex-row">
+            <input
+              value={couponCode}
+              onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+              placeholder="e.g. CAMPUS20"
+              className="flex-1 rounded-xl border border-[var(--border-mid)] bg-[var(--page)] px-4 py-3 text-sm font-mono text-[var(--ink)] outline-none focus:border-[var(--ink)]"
+            />
+            <button
+              type="button"
+              onClick={() => void validateCoupon()}
+              className="rounded-full border border-[var(--border-mid)] px-5 py-3 text-sm font-semibold text-[var(--ink)] hover:border-[var(--ink)]"
+            >
+              Apply
+            </button>
+          </div>
+          {couponMessage && (
+            <p className="mt-2 text-xs text-[var(--ink-dim)]">{couponMessage}</p>
+          )}
+        </div>
         {currency === "USD" && (
           <p className="mb-4 text-xs text-[var(--ink-faint)]">
             Prices shown in USD for reference — checkout is billed in INR at the current exchange rate.
@@ -220,8 +292,13 @@ export default function Pricing() {
                     )}
                   </div>
                   <div className="font-display text-[42px] font-bold leading-none tracking-[-0.04em]">
-                    {formatPrice(plan.priceRupees, currency)}
+                    {formatPrice(discountedPrice(plan.priceRupees), currency)}
                   </div>
+                  {couponDiscount > 0 && (
+                    <div className="text-xs text-[var(--ink-faint)] line-through">
+                      {formatPrice(plan.priceRupees, currency)}
+                    </div>
+                  )}
                   <div className="mb-[22px] mt-1 text-xs text-[var(--ink-faint)]">/ month</div>
                   <ul className="mb-[26px] flex-1 space-y-2.5">
                     {plan.features.map((f) => (

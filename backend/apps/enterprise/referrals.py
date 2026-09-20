@@ -31,6 +31,18 @@ def commission_amount_paise(gross_amount_paise: int, rate: Decimal) -> int:
     return int((gross * rate).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
 
 
+def partner_discount_amount_paise(list_amount_paise: int, partner) -> int:
+    """Return charged amount in paise after partner candidate discount."""
+    if partner is None or list_amount_paise <= 0:
+        return list_amount_paise
+    pct = int(getattr(partner, "candidate_discount_percent", 0) or 0)
+    if pct <= 0:
+        return list_amount_paise
+    pct = min(pct, 100)
+    discount = int((Decimal(list_amount_paise) * Decimal(pct) / Decimal(100)).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+    return max(list_amount_paise - discount, 0)
+
+
 def get_active_partner(code: str):
     from .models import ReferralPartner
 
@@ -72,15 +84,20 @@ def register_partner(
     *,
     name: str,
     contact_email: str = "",
+    contact_phone: str = "",
     preferred_code: str = "",
     payout_notes: str = "",
 ):
-    """Self-serve partner enrollment. One application per logged-in email."""
+    """Self-serve partner access request. One application per logged-in email."""
     from .models import ReferralPartner
 
     email = (getattr(user, "email", None) or contact_email or "").strip().lower()
     if not email:
         raise ValueError("A contact email is required to register as a partner.")
+
+    phone = (contact_phone or "").strip()
+    if not phone:
+        raise ValueError("A contact phone number is required.")
 
     existing = ReferralPartner.objects.filter(user=user).first()
     if existing is None:
@@ -88,16 +105,26 @@ def register_partner(
     if existing is not None:
         raise ValueError("This email has already applied to the partner program.")
 
+    display_name = name.strip() or email.split("@", 1)[0]
     partner = ReferralPartner.objects.create(
-        name=name.strip(),
+        name=display_name,
         contact_email=email,
-        code=generate_unique_partner_code(name, preferred_code),
+        contact_phone=phone,
+        code=generate_unique_partner_code(display_name, preferred_code),
         commission_rate=DEFAULT_COMMISSION_RATE,
-        status=ReferralPartner.Status.ACTIVE,
+        status=ReferralPartner.Status.PENDING,
         user=user,
         payout_notes=payout_notes.strip(),
     )
     return partner, True
+
+
+def get_partner_for_user(user):
+    from .models import ReferralPartner
+
+    if user is None or not getattr(user, "is_authenticated", False):
+        return None
+    return ReferralPartner.objects.filter(user=user).first()
 
 
 def attribute_organization(partner, organization, source):

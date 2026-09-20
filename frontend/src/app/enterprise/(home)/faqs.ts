@@ -32,6 +32,6 @@ export const ENTERPRISE_FAQS = [
   {
     question: "Do you have a partner referral program?",
     answer:
-      "Yes. Agencies, colleges, and consultants can self-register at /enterprise/partner, get a unique code and referral link, and earn 20% commission on attributed enterprise revenue. Referred organizations appear on the partner dashboard automatically, and commissions pay out within 7 days.",
+      "Yes. Agencies, colleges, and consultants can request access at /partner. After admin approval you receive a referral code and link for both enterprise and practice signups, earn 20% commission on attributed enterprise revenue, and can offer candidate discounts on practice plans. Referred organizations appear on the partner dashboard automatically, and commissions pay out within 7 days.",
   },
 ];

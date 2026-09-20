@@ -120,7 +120,8 @@ class EnterpriseLeadCreateSerializer(serializers.Serializer):
 
 
 class PartnerRegisterSerializer(serializers.Serializer):
-    name = serializers.CharField(max_length=200)
+    name = serializers.CharField(required=False, allow_blank=True, max_length=200, default="")
+    contact_phone = serializers.CharField(max_length=40)
     contact_email = serializers.EmailField(required=False, allow_blank=True, default="")
     preferred_code = serializers.CharField(required=False, allow_blank=True, max_length=40, default="")
     payout_notes = serializers.CharField(required=False, allow_blank=True, max_length=2000, default="")

@@ -184,11 +184,18 @@ class ReferralPartner(models.Model):
     """External B2B partner who refers enterprise customers for commission."""
 
     class Status(models.TextChoices):
+        PENDING = "pending", "Pending approval"
         ACTIVE = "active", "Active"
         PAUSED = "paused", "Paused"
 
     name = models.CharField(max_length=200)
     contact_email = models.EmailField()
+    contact_phone = models.CharField(
+        max_length=40,
+        blank=True,
+        default="",
+        help_text="Contact number submitted with the partner access request.",
+    )
     code = models.CharField(
         max_length=40,
         unique=True,
@@ -203,7 +210,11 @@ class ReferralPartner(models.Model):
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
-        default=Status.ACTIVE,
+        default=Status.PENDING,
+    )
+    candidate_discount_percent = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Percent off practice plan purchases for candidates using this partner code (0–100).",
     )
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,

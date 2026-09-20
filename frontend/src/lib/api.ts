@@ -689,16 +689,22 @@ export interface CreateTopupOrderResponse extends PayUCheckoutResponse {
 }
 
 export const subscriptions = {
-  createOrder: (plan: "pro" | "premium" | "max") =>
+  createOrder: (plan: "pro" | "premium" | "max", partnerCode?: string) =>
     request<CreateOrderResponse>("/api/subscriptions/create-order/", {
       method: "POST",
-      body: JSON.stringify({ plan }),
+      body: JSON.stringify({
+        plan,
+        ...(partnerCode ? { partner_code: partnerCode } : {}),
+      }),
     }),
 
-  createTopupOrder: (pack: "spark" | "boost" | "power") =>
+  createTopupOrder: (pack: "spark" | "boost" | "power", partnerCode?: string) =>
     request<CreateTopupOrderResponse>("/api/subscriptions/topup/create-order/", {
       method: "POST",
-      body: JSON.stringify({ pack }),
+      body: JSON.stringify({
+        pack,
+        ...(partnerCode ? { partner_code: partnerCode } : {}),
+      }),
     }),
 };
 
@@ -900,7 +906,7 @@ export interface PartnerDashboard {
 
 export const partnerReferrals = {
   capture: (code: string) =>
-    request<{ code: string }>("/api/enterprise/referrals/capture/", {
+    request<{ code: string; discount_percent?: number }>("/api/enterprise/referrals/capture/", {
       method: "POST",
       body: JSON.stringify({ code }),
     }),
@@ -925,14 +931,16 @@ export const partnerReferrals = {
     }),
 
   register: (payload: {
-    name: string;
+    name?: string;
+    contact_phone: string;
     preferred_code?: string;
     payout_notes?: string;
   }) =>
     request<{
       created: boolean;
+      status?: string;
       detail: string;
-      partner: {
+      partner?: {
         name: string;
         code: string;
         commission_rate: string;

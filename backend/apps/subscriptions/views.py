@@ -22,6 +22,12 @@ from core.payu import (
     verify_payment_status,
 )
 
+from apps.enterprise.referrals import (
+    get_active_partner,
+    normalize_partner_code,
+    partner_discount_amount_paise,
+)
+
 from .models import PaymentOrder
 from .plans import PAID_PLANS, TOPUP_PACKS, amount_for, topup_amount_for, topup_credits_for
 
@@ -88,6 +94,17 @@ def _reconcile_stuck_orders(user):
             _settle_order(order.pk, details.get("mihpayid", ""))
 
 
+def _resolve_partner_pricing(list_amount_paise: int, partner_code: str):
+    code = normalize_partner_code(partner_code or "")
+    if not code:
+        return list_amount_paise, 0, ""
+    partner = get_active_partner(code)
+    if partner is None:
+        raise ValueError("Invalid or inactive coupon code.")
+    charged = partner_discount_amount_paise(list_amount_paise, partner)
+    return charged, int(partner.candidate_discount_percent or 0), code
+
+
 def _build_payu_payload(user, amount_paise: int, productinfo: str) -> dict:
     txnid = generate_txnid()
     amount = paise_to_amount_str(amount_paise)
@@ -148,7 +165,15 @@ class CreateOrderView(APIView):
 
         _reconcile_stuck_orders(request.user)
 
-        amount_paise = amount_for(plan)
+        list_amount_paise = amount_for(plan)
+        try:
+            amount_paise, discount_percent, applied_code = _resolve_partner_pricing(
+                list_amount_paise,
+                request.data.get("partner_code") or request.data.get("coupon_code") or "",
+            )
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
         plan_label = PAID_PLANS[plan]["label"]
         payload = _build_payu_payload(
             request.user,
@@ -160,6 +185,9 @@ class CreateOrderView(APIView):
             user=request.user,
             payu_txnid=payload["txnid"],
             amount=amount_paise,
+            list_amount_paise=list_amount_paise if discount_percent else 0,
+            partner_code=applied_code,
+            discount_percent=discount_percent,
             plan=plan,
         )
 
@@ -167,6 +195,9 @@ class CreateOrderView(APIView):
             {
                 **payload,
                 "plan": plan,
+                "list_amount_paise": list_amount_paise,
+                "discount_percent": discount_percent,
+                "partner_code": applied_code,
             },
             status=status.HTTP_201_CREATED,
         )
@@ -196,7 +227,15 @@ class CreateTopupOrderView(APIView):
 
         _reconcile_stuck_orders(request.user)
 
-        amount_paise = topup_amount_for(pack)
+        list_amount_paise = topup_amount_for(pack)
+        try:
+            amount_paise, discount_percent, applied_code = _resolve_partner_pricing(
+                list_amount_paise,
+                request.data.get("partner_code") or request.data.get("coupon_code") or "",
+            )
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
         credits = topup_credits_for(pack)
         pack_label = TOPUP_PACKS[pack]["label"]
         payload = _build_payu_payload(
@@ -209,6 +248,9 @@ class CreateTopupOrderView(APIView):
             user=request.user,
             payu_txnid=payload["txnid"],
             amount=amount_paise,
+            list_amount_paise=list_amount_paise if discount_percent else 0,
+            partner_code=applied_code,
+            discount_percent=discount_percent,
             plan="",
             topup_pack=pack,
             topup_credits=credits,
@@ -219,6 +261,9 @@ class CreateTopupOrderView(APIView):
                 **payload,
                 "pack": pack,
                 "credits": credits,
+                "list_amount_paise": list_amount_paise,
+                "discount_percent": discount_percent,
+                "partner_code": applied_code,
             },
             status=status.HTTP_201_CREATED,
         )

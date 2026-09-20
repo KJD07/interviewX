@@ -37,6 +37,20 @@ class PaymentOrder(models.Model):
         help_text="Interview credits granted by this order, if it's a top-up.",
     )
     amount = models.IntegerField(help_text="Amount in paise, e.g. 19900 = ₹199")
+    list_amount_paise = models.IntegerField(
+        default=0,
+        help_text="Pre-discount amount in paise; 0 when no discount was applied.",
+    )
+    partner_code = models.CharField(
+        max_length=40,
+        blank=True,
+        default="",
+        help_text="Partner referral / coupon code applied to this order, if any.",
+    )
+    discount_percent = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Partner discount percent applied to the list price for this order.",
+    )
     status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.CREATED
     )

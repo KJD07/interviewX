@@ -19,6 +19,7 @@ from .referrals import (
     ENTERPRISE_SEAT_PRICE_PAISE,
     attribute_organization,
     create_enterprise_lead,
+    partner_discount_amount_paise,
     record_enterprise_payment,
     register_partner,
     sync_partner_commission_payouts,
@@ -39,6 +40,7 @@ class ReferralSystemTests(TestCase):
             contact_email="partner@agency.test",
             code="AGENCY20",
             commission_rate=Decimal("0.20"),
+            status=ReferralPartner.Status.ACTIVE,
             user=self.partner_user,
         )
         self.org = Organization.objects.create(
@@ -50,6 +52,8 @@ class ReferralSystemTests(TestCase):
         self.client = APIClient()
 
     def test_capture_endpoint_accepts_active_partner_code(self):
+        self.partner.candidate_discount_percent = 15
+        self.partner.save(update_fields=["candidate_discount_percent"])
         res = self.client.post(
             "/api/enterprise/referrals/capture/",
             {"code": "agency20"},
@@ -57,6 +61,7 @@ class ReferralSystemTests(TestCase):
         )
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.json()["code"], "AGENCY20")
+        self.assertEqual(res.json()["discount_percent"], 15)
 
     def test_capture_endpoint_rejects_invalid_code(self):
         res = self.client.post(
@@ -127,6 +132,7 @@ class ReferralSystemTests(TestCase):
             "/api/enterprise/partner/register/",
             {
                 "name": "Campus Connect",
+                "contact_phone": "+91 99999 88888",
                 "preferred_code": "campus",
                 "payout_notes": "UPI: campus@upi",
             },
@@ -135,15 +141,26 @@ class ReferralSystemTests(TestCase):
         self.assertEqual(res.status_code, 201)
         body = res.json()
         self.assertTrue(body["created"])
-        self.assertEqual(body["partner"]["code"], "CAMPUS")
+        self.assertEqual(body["status"], ReferralPartner.Status.PENDING)
+        self.assertNotIn("partner", body)
         partner = ReferralPartner.objects.get(user=user)
         self.assertEqual(partner.name, "Campus Connect")
+        self.assertEqual(partner.contact_phone, "+91 99999 88888")
         self.assertEqual(partner.payout_notes, "UPI: campus@upi")
+        self.assertEqual(partner.code, "CAMPUS")
+
+        pending_dashboard = client.get("/api/enterprise/partner/dashboard/")
+        self.assertEqual(pending_dashboard.status_code, 403)
+
+        partner.status = ReferralPartner.Status.ACTIVE
+        partner.save(update_fields=["status"])
+        approved_dashboard = client.get("/api/enterprise/partner/dashboard/")
+        self.assertEqual(approved_dashboard.status_code, 200)
 
         # A second application for the same logged-in email is rejected.
         res2 = client.post(
             "/api/enterprise/partner/register/",
-            {"name": "Campus Connect"},
+            {"contact_phone": "+91 99999 88888"},
             format="json",
         )
         self.assertEqual(res2.status_code, 409)
@@ -282,8 +299,17 @@ class ReferralSystemTests(TestCase):
         user_b = User.objects.create_user(
             username="pb", email="b@p.test", password="pw12345!"
         )
-        partner_a, _ = register_partner(user_a, name="Twin Agency", preferred_code="TWIN")
-        partner_b, _ = register_partner(user_b, name="Twin Agency", preferred_code="TWIN")
+        partner_a, _ = register_partner(
+            user_a, name="Twin Agency", contact_phone="111", preferred_code="TWIN"
+        )
+        partner_b, _ = register_partner(
+            user_b, name="Twin Agency", contact_phone="222", preferred_code="TWIN"
+        )
         self.assertEqual(partner_a.code, "TWIN")
         self.assertNotEqual(partner_b.code, partner_a.code)
         self.assertTrue(partner_b.code.startswith("TWIN"))
+
+    def test_partner_discount_amount_paise(self):
+        self.partner.candidate_discount_percent = 10
+        self.partner.save(update_fields=["candidate_discount_percent"])
+        self.assertEqual(partner_discount_amount_paise(10000, self.partner), 9000)
