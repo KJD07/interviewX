@@ -16,7 +16,7 @@ const LINKS = [
 ];
 
 const ENTERPRISE_HREF = "/enterprise";
-const PARTNER_HREF = "/enterprise/partner";
+const PARTNER_HREF = "/partner";
 const ENTERPRISE_DASHBOARD_HREF = "/enterprise/dashboard";
 
 const HIRE_SECTIONS = [

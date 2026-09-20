@@ -39,35 +39,35 @@ function MetricCard({ title, value }: { title: string; value: string }) {
   );
 }
 
-function PartnerRegisterForm({ onRegistered }: { onRegistered: () => void }) {
+function PartnerAccessRequestForm({ onSubmitted }: { onSubmitted: () => void }) {
   const { user, refreshUser } = useAuth();
-  const [name, setName] = useState("");
-  const [preferredCode, setPreferredCode] = useState("");
-  const [payoutNotes, setPayoutNotes] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setSubmitting(true);
     setError(null);
     try {
-      await partnerReferrals.register({
-        name: name.trim(),
-        preferred_code: preferredCode.trim(),
-        payout_notes: payoutNotes.trim(),
+      const result = await partnerReferrals.register({
+        contact_phone: contactPhone.trim(),
       });
       await refreshUser().catch(() => undefined);
-      onRegistered();
+      if (result.status === "pending") {
+        setSubmitted(true);
+      } else {
+        onSubmitted();
+      }
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
-        setAlreadySubmitted(true);
+        setSubmitted(true);
         await refreshUser().catch(() => undefined);
-        onRegistered();
+        onSubmitted();
         return;
       }
-      setError(err instanceof Error ? err.message : "Unable to register as a partner.");
+      setError(err instanceof Error ? err.message : "Unable to submit your request.");
     } finally {
       setSubmitting(false);
     }
@@ -94,21 +94,22 @@ function PartnerRegisterForm({ onRegistered }: { onRegistered: () => void }) {
             Become a partner.
           </h1>
           <p className="mt-[18px] max-w-[440px] text-base leading-relaxed text-[#A3A29A]">
-            Agencies, colleges, and consultants get a referral code and earn 20%
-            commission on attributed enterprise revenue. Payouts within 7 days.
+            Request access to refer organizations and practice candidates. After approval you
+            get a referral link and code for Enterprise and Practice, plus commission on
+            attributed enterprise revenue.
           </p>
         </div>
 
-        {alreadySubmitted ? (
+        {submitted ? (
           <div
             className="flex items-start gap-3 rounded-[20px] border px-6 py-8"
             style={{ borderColor: "rgba(255,255,255,0.12)", background: "#17171A" }}
           >
             <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[var(--lime)]" />
             <p className="text-sm leading-relaxed text-[#D6D4CC]">
-              You&apos;ve already applied to the partner program with this account.
-              Your referral code appears here once the workspace is ready — no need
-              to submit again.
+              Thanks — your request is with our team. We&apos;ll email you at{" "}
+              <strong className="text-[var(--hero-text)]">{user?.email}</strong> once partner
+              access is approved.
             </p>
           </div>
         ) : (
@@ -117,40 +118,19 @@ function PartnerRegisterForm({ onRegistered }: { onRegistered: () => void }) {
               className="rounded-xl border px-4 py-3 text-[13px] text-[#A3A29A]"
               style={{ borderColor: "rgba(255,255,255,0.12)", background: "#17171A" }}
             >
-              Submitting as <strong className="text-[var(--hero-text)]">{user?.email}</strong>
+              Email <strong className="text-[var(--hero-text)]">{user?.email}</strong>
             </div>
             <label className="block">
               <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.14em] text-[#A3A29A]">
-                Organization / individual name
+                Contact number
               </span>
               <input
                 required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                type="tel"
+                value={contactPhone}
+                onChange={(e) => setContactPhone(e.target.value)}
                 className={inputClass}
-                placeholder="e.g. Campus Connect"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.14em] text-[#A3A29A]">
-                Preferred referral code (optional)
-              </span>
-              <input
-                value={preferredCode}
-                onChange={(e) => setPreferredCode(e.target.value)}
-                className={`${inputClass} font-mono uppercase`}
-                placeholder="e.g. CAMPUS20"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.14em] text-[#A3A29A]">
-                Payout details (optional)
-              </span>
-              <textarea
-                value={payoutNotes}
-                onChange={(e) => setPayoutNotes(e.target.value)}
-                className={`${inputClass} min-h-[90px] resize-y`}
-                placeholder="UPI / bank account notes for commission payouts"
+                placeholder="e.g. +91 98765 43210"
               />
             </label>
             {error && <p className="text-sm text-[#E58A72]">{error}</p>}
@@ -160,14 +140,32 @@ function PartnerRegisterForm({ onRegistered }: { onRegistered: () => void }) {
               className="rounded-full px-[30px] py-4 text-[15px] font-bold text-[var(--ink)] hover:brightness-95 disabled:opacity-60"
               style={{ background: "var(--lime)" }}
             >
-              {submitting ? "Submitting…" : "Apply for a referral code →"}
+              {submitting ? "Submitting…" : "Request access →"}
             </button>
             <p className="text-xs text-[#A3A29A]">
-              One application per logged-in email. Your referral code and link appear
-              here once the account is created.
+              One request per account. Your referral code and dashboard unlock after admin approval.
             </p>
           </form>
         )}
+      </div>
+    </div>
+  );
+}
+
+function PartnerPendingCard() {
+  const { user } = useAuth();
+  return (
+    <div
+      className="flex items-start gap-3 rounded-[20px] border px-6 py-8"
+      style={{ borderColor: "var(--border-mid)", background: "var(--surface)" }}
+    >
+      <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[var(--olive)]" />
+      <div>
+        <p className="font-display text-lg font-semibold text-[var(--ink)]">Access pending approval</p>
+        <p className="mt-2 text-sm leading-relaxed text-[var(--ink-dim)]">
+          We received your partner request for <strong>{user?.email}</strong>. You&apos;ll get
+          dashboard access, your referral link, and code once an admin approves the application.
+        </p>
       </div>
     </div>
   );
@@ -180,11 +178,13 @@ function PartnerDashboardContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [needsRegistration, setNeedsRegistration] = useState(false);
+  const [pendingApproval, setPendingApproval] = useState(false);
   const [copied, setCopied] = useState<"link" | "code" | null>(null);
 
   const loadDashboard = () => {
     setLoading(true);
     setError(null);
+    setPendingApproval(false);
     partnerReferrals
       .dashboard()
       .then((payload) => {
@@ -194,6 +194,11 @@ function PartnerDashboardContent() {
       .catch((err: Error) => {
         if (err instanceof ApiError && err.status === 404) {
           setNeedsRegistration(true);
+          setData(null);
+          setError(null);
+        } else if (err instanceof ApiError && err.status === 403) {
+          setPendingApproval(true);
+          setNeedsRegistration(false);
           setData(null);
           setError(null);
         } else {
@@ -207,10 +212,10 @@ function PartnerDashboardContent() {
     loadDashboard();
   }, []);
 
-  const shareUrl =
-    typeof window !== "undefined" && data
-      ? `${window.location.origin}/enterprise?ref=${encodeURIComponent(data.partner.code)}`
-      : "";
+  const shareBase =
+    typeof window !== "undefined" && data ? window.location.origin : "";
+  const practiceShareUrl = data ? `${shareBase}/pricing?ref=${encodeURIComponent(data.partner.code)}` : "";
+  const enterpriseShareUrl = data ? `${shareBase}/enterprise?ref=${encodeURIComponent(data.partner.code)}` : "";
 
   const copyText = async (value: string, kind: "link" | "code") => {
     try {
@@ -222,7 +227,7 @@ function PartnerDashboardContent() {
     }
   };
 
-  if (loading || needsRegistration || error) {
+  if (loading || needsRegistration || pendingApproval || error) {
     return (
       <div className="relative min-h-screen bg-[var(--page)]">
         <MarketingNav />
@@ -233,13 +238,14 @@ function PartnerDashboardContent() {
             </div>
           )}
           {!loading && needsRegistration && (
-            <PartnerRegisterForm
-              onRegistered={() => {
+            <PartnerAccessRequestForm
+              onSubmitted={() => {
                 void refreshUser().catch(() => undefined);
                 loadDashboard();
               }}
             />
           )}
+          {!loading && pendingApproval && <PartnerPendingCard />}
           {!loading && error && (
             <div className="rounded-2xl border p-8 text-sm" style={{ borderColor: "var(--border)", color: "var(--ink-dim)" }}>
               {error}
@@ -283,25 +289,51 @@ function PartnerDashboardContent() {
               className="mb-6 rounded-[16px] p-[22px]"
               style={{ borderColor: "var(--border-mid)", borderWidth: 1, borderStyle: "solid", background: "var(--surface)" }}
             >
-              <div className="font-label mb-2">Your referral link & code</div>
+              <div className="font-label mb-2">Your referral links & code</div>
               <p className="text-sm mb-3" style={{ color: "var(--ink-dim)" }}>
-                Share this with colleges, agencies, or hiring teams. When they register for enterprise,
-                they show up here automatically and your commission starts.
+                Use the same code for Enterprise interest forms and Practice plan checkout.
+                Candidate discounts apply on pricing when you set them in admin.
               </p>
-              <div
-                className="rounded-xl px-4 py-3 font-mono text-sm break-all mb-3"
-                style={{ background: "var(--page)", color: "var(--ink)" }}
-              >
-                {shareUrl}
+              <div className="space-y-3 mb-3">
+                <div>
+                  <div className="text-xs font-mono uppercase tracking-wide mb-1" style={{ color: "var(--ink-faint)" }}>
+                    Practice (pricing)
+                  </div>
+                  <div
+                    className="rounded-xl px-4 py-3 font-mono text-sm break-all"
+                    style={{ background: "var(--page)", color: "var(--ink)" }}
+                  >
+                    {practiceShareUrl}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs font-mono uppercase tracking-wide mb-1" style={{ color: "var(--ink-faint)" }}>
+                    Enterprise
+                  </div>
+                  <div
+                    className="rounded-xl px-4 py-3 font-mono text-sm break-all"
+                    style={{ background: "var(--page)", color: "var(--ink)" }}
+                  >
+                    {enterpriseShareUrl}
+                  </div>
+                </div>
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => copyText(shareUrl, "link")}
+                  onClick={() => copyText(practiceShareUrl, "link")}
                   className="rounded-full px-4 py-2 text-sm font-medium"
                   style={{ background: "var(--ink)", color: "var(--page)" }}
                 >
-                  {copied === "link" ? "Link copied" : "Copy link"}
+                  {copied === "link" ? "Link copied" : "Copy practice link"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => copyText(enterpriseShareUrl, "link")}
+                  className="rounded-full px-4 py-2 text-sm font-medium border"
+                  style={{ borderColor: "var(--border-mid)", color: "var(--ink)" }}
+                >
+                  Copy enterprise link
                 </button>
                 <button
                   type="button"
@@ -311,9 +343,6 @@ function PartnerDashboardContent() {
                 >
                   {copied === "code" ? "Code copied" : `Copy code · ${data.partner.code}`}
                 </button>
-                <span className="text-xs font-mono" style={{ color: "var(--ink-dim)" }}>
-                  {data.partner.code}
-                </span>
               </div>
             </div>
 

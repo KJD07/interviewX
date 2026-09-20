@@ -1,1 +1,5 @@
-export { default } from "@/app/partner/PartnerPage";
+import { redirect } from "next/navigation";
+
+export default function LegacyEnterprisePartnerPage() {
+  redirect("/partner");
+}

@@ -5,7 +5,7 @@ const nextConfig = {
     return [
       { source: "/career", destination: "/", permanent: true },
       { source: "/careers", destination: "/", permanent: true },
-      { source: "/partner", destination: "/enterprise/partner", permanent: true },
+      { source: "/enterprise/partner", destination: "/partner", permanent: true },
     ];
   },
   onDemandEntries: {

@@ -1,5 +1,1 @@
-import { redirect } from "next/navigation";
-
-export default function PartnerRedirectPage() {
-  redirect("/enterprise/partner");
-}
+export { default } from "@/app/partner/PartnerPage";

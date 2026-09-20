@@ -131,9 +131,19 @@ class EnterpriseLeadAdmin(admin.ModelAdmin):
 
 @admin.register(ReferralPartner)
 class ReferralPartnerAdmin(admin.ModelAdmin):
-    list_display = ("name", "code", "contact_email", "commission_rate", "status", "user", "created_at")
+    list_display = (
+        "name",
+        "code",
+        "contact_email",
+        "contact_phone",
+        "candidate_discount_percent",
+        "commission_rate",
+        "status",
+        "user",
+        "created_at",
+    )
     list_filter = ("status",)
-    search_fields = ("name", "code", "contact_email", "user__email")
+    search_fields = ("name", "code", "contact_email", "contact_phone", "user__email")
     readonly_fields = ("created_at",)
 
 

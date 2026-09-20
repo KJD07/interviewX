@@ -8,6 +8,7 @@ from .models import CommissionLedger, EnterpriseLead, ReferralAttribution, Refer
 from .referrals import (
     COMMISSION_PAYOUT_DAYS,
     get_active_partner,
+    get_partner_for_user,
     normalize_partner_code,
     register_partner,
     sync_partner_commission_payouts,
@@ -110,9 +111,16 @@ class PartnerReferralCaptureView(APIView):
 
     def post(self, request):
         code = normalize_partner_code(str(request.data.get("code", "")))
-        if not code or get_active_partner(code) is None:
+        partner = get_active_partner(code) if code else None
+        if partner is None:
             return Response({"detail": "Invalid or inactive referral code."}, status=404)
-        return Response({"code": code}, status=200)
+        return Response(
+            {
+                "code": code,
+                "discount_percent": int(partner.candidate_discount_percent or 0),
+            },
+            status=200,
+        )
 
 
 class EnterpriseLeadCreateView(APIView):
@@ -158,8 +166,9 @@ class PartnerRegisterView(APIView):
         try:
             partner, created = register_partner(
                 request.user,
-                name=data["name"],
+                name=data.get("name") or "",
                 contact_email=request.user.email,
+                contact_phone=data["contact_phone"],
                 preferred_code=data.get("preferred_code") or "",
                 payout_notes=data.get("payout_notes") or "",
             )
@@ -171,21 +180,29 @@ class PartnerRegisterView(APIView):
             )
             return Response({"detail": str(exc)}, status=status_code)
 
-        return Response(
-            {
-                "created": created,
-                "partner": {
-                    "name": partner.name,
-                    "code": partner.code,
-                    "commission_rate": str(partner.commission_rate),
-                    "payout_days": COMMISSION_PAYOUT_DAYS,
-                },
-                "detail": (
+        pending = partner.status == ReferralPartner.Status.PENDING
+        payload = {
+            "created": created,
+            "status": partner.status,
+            "detail": (
+                "Thanks — your partner access request is with our team. We'll email you once it's approved."
+                if pending
+                else (
                     "You're enrolled in the partner program."
                     if created
                     else "You're already enrolled — here's your partner dashboard."
-                ),
-            },
+                )
+            ),
+        }
+        if not pending:
+            payload["partner"] = {
+                "name": partner.name,
+                "code": partner.code,
+                "commission_rate": str(partner.commission_rate),
+                "payout_days": COMMISSION_PAYOUT_DAYS,
+            }
+        return Response(
+            payload,
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
         )
 
@@ -196,11 +213,18 @@ class PartnerDashboardView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        partner = (
-            ReferralPartner.objects.filter(user=request.user, status=ReferralPartner.Status.ACTIVE)
-            .first()
-        )
+        partner = get_partner_for_user(request.user)
         if partner is None:
             return Response({"detail": "Not a referral partner."}, status=404)
+        if partner.status == ReferralPartner.Status.PENDING:
+            return Response(
+                {
+                    "detail": "Your partner access request is pending admin approval.",
+                    "status": partner.status,
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if partner.status != ReferralPartner.Status.ACTIVE:
+            return Response({"detail": "Partner account is not active."}, status=404)
 
         return Response(_partner_dashboard_payload(partner))
