@@ -11,8 +11,9 @@ class Organization(models.Model):
     exists anywhere in this stack yet, mirroring how SponsorshipCampaign is
     admin-only (see apps.subscriptions.models.SponsorshipCampaign).
 
-    candidate_quota/candidates_used is a simple running total for the life of
-    the contract (not a rolling monthly cycle like consumer plans) — kept
+    candidate_quota/candidates_used track unique candidate emails the org may
+    invite (one seat per email for the life of the contract). Additional
+    interview rounds for the same email do not consume another seat — kept
     deliberately simple for a handful of early pilot customers onboarded by
     an admin; revisit if this needs self-serve renewal later.
     """
@@ -21,9 +22,12 @@ class Organization(models.Model):
     contact_email = models.EmailField()
     candidate_quota = models.PositiveIntegerField(
         default=50,
-        help_text="Total proctored interviews this org's contract covers.",
+        help_text="Total unique candidate emails this org's contract covers.",
     )
-    candidates_used = models.PositiveIntegerField(default=0)
+    candidates_used = models.PositiveIntegerField(
+        default=0,
+        help_text="Distinct candidate emails that have been invited at least once.",
+    )
     contract_ends = models.DateTimeField(
         help_text="Org access is disabled once this passes, unless extended."
     )

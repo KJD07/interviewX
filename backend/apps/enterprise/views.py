@@ -47,10 +47,37 @@ class UploadQuestionsForm(forms.Form):
     file = forms.FileField()
 
 
+def _normalize_candidate_email(email: str) -> str:
+    return email.strip().lower()
+
+
+def _existing_candidate_emails(organization) -> set[str]:
+    return {
+        _normalize_candidate_email(email)
+        for email in OrgCandidateInvite.objects.filter(organization=organization).values_list(
+            "candidate_email", flat=True
+        )
+    }
+
+
+def _new_candidate_seat_count(organization, emails) -> int:
+    """How many of `emails` are not already invited under this org (case-insensitive)."""
+    existing = _existing_candidate_emails(organization)
+    seen: set[str] = set()
+    new_seats = 0
+    for raw in emails:
+        normalized = _normalize_candidate_email(raw)
+        if not normalized or normalized in seen or normalized in existing:
+            continue
+        seen.add(normalized)
+        new_seats += 1
+    return new_seats
+
+
 def _reserve_candidate_quota(organization, count=1):
-    """Atomically check the org still has room for `count` new invites and
-    bump candidates_used by that many. Returns the refreshed Organization row
-    or None when quota would be exceeded."""
+    """Atomically check the org still has room for `count` new candidate seats
+    and bump candidates_used by that many. Returns the refreshed Organization
+    row or None when quota would be exceeded."""
     if count <= 0:
         return organization
     with transaction.atomic():
@@ -220,7 +247,9 @@ class OrgCandidateInviteListCreateView(APIView):
             data=request.data, context={"organization": organization}
         )
         serializer.is_valid(raise_exception=True)
-        if not _reserve_candidate_quota(organization, 1):
+        candidate_email = serializer.validated_data["candidate_email"]
+        new_seats = _new_candidate_seat_count(organization, [candidate_email])
+        if not _reserve_candidate_quota(organization, new_seats):
             return Response(
                 {"detail": "This organization has used all of its candidate quota."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -299,7 +328,10 @@ class OrgCandidateInviteBulkCreateView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if not _reserve_candidate_quota(organization, len(validated)):
+        new_seats = _new_candidate_seat_count(
+            organization, [s.validated_data["candidate_email"] for s in validated]
+        )
+        if not _reserve_candidate_quota(organization, new_seats):
             return Response(
                 {"detail": "This organization does not have enough candidate quota for this batch."},
                 status=status.HTTP_403_FORBIDDEN,

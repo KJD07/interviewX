@@ -56,7 +56,7 @@ const FEATURES = [
 
 const STEPS = [
   { n: "01", title: "Upload the bank", body: "Map roles and rounds the way your hiring process already works." },
-  { n: "02", title: "Invite candidates", body: "One email, one expiring link, one seat against your monthly quota." },
+  { n: "02", title: "Invite candidates", body: "One seat per candidate email — send as many round invites as you need for each person." },
   { n: "03", title: "They sit the round", body: "Same pressure as a panel. Voice or text. You do not have to be in the room." },
   { n: "04", title: "Read the report", body: "Scores, transcript and gaps — enough to decide who to bring onsite." },
 ];

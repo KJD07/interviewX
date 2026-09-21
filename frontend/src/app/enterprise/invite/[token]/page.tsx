@@ -14,7 +14,7 @@ import { INTERVIEW_INSTRUCTIONS } from "@/components/InterviewInstructionsModal"
 //
 // Camera/mic access is probed here, BEFORE organizations.invites.start() is
 // ever called — start() is what creates the InterviewSession, marks the
-// invite STARTED, and consumes the org's candidate_quota, so a permission
+// invite STARTED, so a permission
 // failure must happen before that call, not after. This keeps a denied/
 // unavailable camera from burning the invite: the link stays PENDING and
 // usable again later (different device/browser) if access can't be granted
