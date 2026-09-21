@@ -6,6 +6,11 @@ from rest_framework.views import APIView
 
 from apps.subscriptions.plans import effective_plan
 from core.question_sourcing import QuestionSourcingError, source_questions_for_round
+from core.read_cache import (
+    get_cached_company_list,
+    invalidate_company_catalog_cache,
+    set_cached_company_list,
+)
 
 from .models import Company, InterviewQuestion, Role, Round
 
@@ -52,6 +57,10 @@ class CompanyListView(APIView):
         if changed_fields:
             request.user.save(update_fields=changed_fields)
         plan = effective_plan(request.user)
+        cached = get_cached_company_list(kind, plan)
+        if cached is not None:
+            return Response(cached)
+
         if kind == Company.Kind.SKILL:
             # Skills are all-or-nothing: not entitled -> nothing shown.
             if not Company(kind=Company.Kind.SKILL).is_accessible_by(plan):
@@ -59,7 +68,9 @@ class CompanyListView(APIView):
         elif plan == "free":
             companies = companies.filter(is_free=True)
         serializer = CompanyListSerializer(companies, many=True)
-        return Response(serializer.data)
+        payload = serializer.data
+        set_cached_company_list(kind, plan, payload)
+        return Response(payload)
 
 
 class CompanyDetailView(APIView):
@@ -223,6 +234,7 @@ class GenerateRoundQuestionsView(APIView):
                 for q in sourced
             ]
         )
+        invalidate_company_catalog_cache()
 
         serializer = RoundSerializer(round_obj)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
