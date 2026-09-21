@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "apps.enterprise",
     "apps.support",
     "channels",
+    "django_rq",
 ]
 
 MIDDLEWARE = [
@@ -294,3 +295,23 @@ FRONTEND_URL = os.environ.get("FRONTEND_URL") or CORS_ALLOWED_ORIGINS[0]
 # frontend uses this same ID to render the Google button; the backend uses
 # it to verify that ID tokens were actually issued for this app.
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
+
+# --- Background jobs (interview scoring — issue #60) ---
+# When REDIS_URL or REDIS_HOST is set, POST .../end/ enqueues grading on the
+# ``default`` RQ queue. Run: python manage.py rqworker default
+# Set INTERVIEW_SCORING_SYNC=true to grade inline (tests / no Redis).
+REDIS_URL = os.environ.get("REDIS_URL", "")
+REDIS_HOST = os.environ.get("REDIS_HOST", "")
+REDIS_PORT = int(os.environ.get("REDIS_PORT", "6379"))
+if not REDIS_URL and REDIS_HOST:
+    REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/0"
+
+# django_rq requires RQ_QUEUES whenever the app is installed. The worker
+# only runs when REDIS_HOST/REDIS_URL is set in compose; scoring falls back
+# to inline when REDIS_URL is empty or INTERVIEW_SCORING_SYNC is true.
+RQ_QUEUES = {
+    "default": {
+        "URL": REDIS_URL or "redis://127.0.0.1:6379/0",
+        "DEFAULT_TIMEOUT": 600,
+    }
+}

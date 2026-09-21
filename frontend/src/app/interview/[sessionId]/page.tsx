@@ -499,7 +499,7 @@ export default function InterviewPage() {
           }
         }
         // If session already ended, redirect to results
-        if (s.status === "completed") {
+        if (s.status === "completed" || s.status === "scoring") {
           router.replace(`/interview/${sessionId}/results`);
         }
       })

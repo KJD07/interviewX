@@ -8,6 +8,7 @@ from apps.companies.models import Round
 class InterviewSession(models.Model):
     class Status(models.TextChoices):
         IN_PROGRESS = "in_progress", "In Progress"
+        SCORING = "scoring", "Scoring"
         COMPLETED = "completed", "Completed"
         ABANDONED = "abandoned", "Abandoned"
 
@@ -42,6 +43,8 @@ class InterviewSession(models.Model):
     ended_at = models.DateTimeField(null=True, blank=True)
     # Set when the interview is auto-ended because the time limit was hit.
     time_expired = models.BooleanField(default=False)
+    # Populated when background scoring fails; user can retry POST .../end/.
+    scoring_error = models.TextField(blank=True, default="")
 
     class Meta:
         ordering = ["-started_at"]

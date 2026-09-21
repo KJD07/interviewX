@@ -127,3 +127,54 @@ class ChatWorkspaceTests(TestCase):
         )
         self.session.refresh_from_db()
         self.assertNotIn("evil", self.session.transcript[1]["workspace"])
+
+
+class EndInterviewScoringTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="enduser", email="end@example.com", password="pw12345!"
+        )
+        company = Company.objects.create(name="Acme", tone_style="formal_strict")
+        role = Role.objects.create(company=company, title="SDE")
+        self.round = Round.objects.create(role=role, title="Screen")
+        self.session = InterviewSession.objects.create(
+            user=self.user,
+            round=self.round,
+            transcript=[
+                {"role": "ai", "text": "Hello", "ts": "x"},
+                {"role": "user", "text": "I would use a hash map for lookups.", "ts": "y"},
+            ],
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(self.user)
+
+    @patch("apps.interviews.views.chat_completion")
+    def test_end_returns_completed_session_with_scores(self, mock_llm):
+        mock_llm.return_value = (
+            '{"communication": 6, "technical": 6, "problem_solving": 6, '
+            '"overall": 6, "feedback": "Good effort."}'
+        )
+        res = self.client.post(f"/api/interviews/{self.session.pk}/end/")
+        self.assertIn(res.status_code, (200, 202))
+        self.session.refresh_from_db()
+        self.assertEqual(self.session.status, InterviewSession.Status.COMPLETED)
+        self.assertEqual(self.session.scores.get("overall"), 6)
+
+    @patch("apps.interviews.scoring.enqueue_session_scoring")
+    def test_end_enqueues_when_not_inline(self, mock_enqueue):
+        import os
+
+        prev_sync = os.environ.get("INTERVIEW_SCORING_SYNC")
+        try:
+            os.environ.pop("INTERVIEW_SCORING_SYNC", None)
+            with self.settings(REDIS_URL="redis://redis:6379/0"):
+                res = self.client.post(f"/api/interviews/{self.session.pk}/end/")
+            self.assertEqual(res.status_code, 202)
+            mock_enqueue.assert_called_once()
+            self.session.refresh_from_db()
+            self.assertEqual(self.session.status, InterviewSession.Status.SCORING)
+        finally:
+            if prev_sync is not None:
+                os.environ["INTERVIEW_SCORING_SYNC"] = prev_sync
+            else:
+                os.environ.setdefault("INTERVIEW_SCORING_SYNC", "true")

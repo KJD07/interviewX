@@ -580,10 +580,12 @@ class ChatView(APIView):
         # lock above.
         if cutoff_reason is not None:
             code, detail = cutoff_reason
-            result = _score_and_complete_session(session, time_expired=True)
-            if isinstance(result, Response):
-                return result
-            serializer = InterviewSessionSerializer(result)
+            from .scoring import begin_session_scoring
+
+            scored = begin_session_scoring(
+                session, time_expired=(code == "time_expired")
+            )
+            serializer = InterviewSessionSerializer(scored)
             return Response(
                 {"detail": detail, "code": code, "session": serializer.data},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -790,8 +792,17 @@ def _score_and_complete_session(session: InterviewSession, *, time_expired: bool
     session.status = InterviewSession.Status.COMPLETED
     session.ended_at = datetime.now(timezone.utc)
     session.time_expired = time_expired
+    session.scoring_error = ""
     session.save(
-        update_fields=["scores", "feedback", "insights", "status", "ended_at", "time_expired"]
+        update_fields=[
+            "scores",
+            "feedback",
+            "insights",
+            "status",
+            "ended_at",
+            "time_expired",
+            "scoring_error",
+        ]
     )
 
     # Local import to avoid a module-level circular import (apps.enterprise
@@ -813,13 +824,16 @@ class EndInterviewView(APIView):
     """
     POST /api/interviews/<session_id>/end/
 
-    Calls OpenRouter for scoring/feedback, saves results, marks session completed.
-    Returns full session with scores and feedback.
+    Enqueues OpenRouter scoring in a background worker (or runs inline when
+    INTERVIEW_SCORING_SYNC is set). Returns 202 while status is ``scoring``;
+    poll GET /api/interviews/<id>/ until ``completed``.
     """
 
     permission_classes = [IsAuthenticated]
 
     def post(self, request, session_id):
+        from .scoring import begin_session_scoring, enqueue_session_scoring
+
         try:
             session = InterviewSession.objects.get(
                 pk=session_id, user=request.user
@@ -830,17 +844,26 @@ class EndInterviewView(APIView):
             )
 
         if session.status == InterviewSession.Status.COMPLETED:
+            serializer = InterviewSessionSerializer(session)
+            return Response(serializer.data)
+
+        if session.status == InterviewSession.Status.SCORING:
+            if session.scoring_error:
+                session.scoring_error = ""
+                session.save(update_fields=["scoring_error"])
+                enqueue_session_scoring(session.pk, time_expired=session.time_expired)
+            serializer = InterviewSessionSerializer(session)
+            return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
+
+        if session.status != InterviewSession.Status.IN_PROGRESS:
             return Response(
-                {"detail": "Session already completed."},
+                {"detail": "Session cannot be ended."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        result = _score_and_complete_session(session)
-        if isinstance(result, Response):
-            return result
-
-        serializer = InterviewSessionSerializer(result)
-        return Response(serializer.data)
+        session = begin_session_scoring(session)
+        serializer = InterviewSessionSerializer(session)
+        return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
 
 class ProgressView(APIView):
     """
