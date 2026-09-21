@@ -43,6 +43,14 @@ class CompanyListView(APIView):
 
     def get(self, request):
         kind = request.query_params.get("kind", Company.Kind.COMPANY)
+        changed_fields = request.user.sync_subscription_state()
+        if changed_fields:
+            request.user.save(update_fields=changed_fields)
+        plan = effective_plan(request.user)
+        cached = get_cached_company_list(kind, plan)
+        if cached is not None:
+            return Response(cached)
+
         # organization__isnull=True is a hard safety net, independent of kind:
         # an org's private question bank (kind="enterprise") must never appear
         # here even if a caller passes ?kind=enterprise directly.
@@ -53,14 +61,6 @@ class CompanyListView(APIView):
                 distinct=True,
             )
         )
-        changed_fields = request.user.sync_subscription_state()
-        if changed_fields:
-            request.user.save(update_fields=changed_fields)
-        plan = effective_plan(request.user)
-        cached = get_cached_company_list(kind, plan)
-        if cached is not None:
-            return Response(cached)
-
         if kind == Company.Kind.SKILL:
             # Skills are all-or-nothing: not entitled -> nothing shown.
             if not Company(kind=Company.Kind.SKILL).is_accessible_by(plan):
