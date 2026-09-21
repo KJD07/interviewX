@@ -323,7 +323,7 @@ REDIS_CACHE_URL = os.environ.get("REDIS_CACHE_URL", "")
 if not REDIS_CACHE_URL and REDIS_URL:
     _cache_base = REDIS_URL.rstrip("/")
     REDIS_CACHE_URL = (
-        f"{_cache_base[:-2]}1" if _cache_base.endswith("/0") else f"{_cache_base}/1"
+        f"{_cache_base[:-1]}1" if _cache_base.endswith("/0") else f"{_cache_base}/1"
     )
 elif not REDIS_CACHE_URL and REDIS_HOST:
     REDIS_CACHE_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/1"
