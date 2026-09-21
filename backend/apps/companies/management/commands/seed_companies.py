@@ -40,6 +40,7 @@ from django.db import transaction
 
 from apps.companies.models import Company, InterviewQuestion, Role, Round
 from core.question_sourcing import QuestionSourcingError, source_questions_for_round
+from core.read_cache import invalidate_company_catalog_cache
 
 # ---------------------------------------------------------------------------
 # Edit this list to add more real companies / roles / rounds.
@@ -436,3 +437,4 @@ class Command(BaseCommand):
                 f"\nDone. Rounds sourced: {total_rounds_sourced}, questions created: {total_questions_created}."
             )
         )
+        invalidate_company_catalog_cache()

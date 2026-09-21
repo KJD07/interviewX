@@ -315,3 +315,33 @@ RQ_QUEUES = {
         "DEFAULT_TIMEOUT": 600,
     }
 }
+
+# --- Django cache (issue #61 — hot read paths) ---
+# Uses Redis DB 1 when REDIS_* is set (RQ worker uses DB 0). Override with
+# REDIS_CACHE_URL for a dedicated cache instance. LocMem when Redis is unset.
+REDIS_CACHE_URL = os.environ.get("REDIS_CACHE_URL", "")
+if not REDIS_CACHE_URL and REDIS_URL:
+    _cache_base = REDIS_URL.rstrip("/")
+    REDIS_CACHE_URL = (
+        f"{_cache_base[:-1]}1" if _cache_base.endswith("/0") else f"{_cache_base}/1"
+    )
+elif not REDIS_CACHE_URL and REDIS_HOST:
+    REDIS_CACHE_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/1"
+
+if REDIS_CACHE_URL:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": REDIS_CACHE_URL,
+        }
+    }
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "evalulabs-read-cache",
+        }
+    }
+
+CACHE_COMPANY_LIST_TTL = int(os.environ.get("CACHE_COMPANY_LIST_TTL", "300"))
+CACHE_ENTERPRISE_DASHBOARD_TTL = int(os.environ.get("CACHE_ENTERPRISE_DASHBOARD_TTL", "30"))

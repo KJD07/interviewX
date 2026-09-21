@@ -25,6 +25,11 @@ from apps.interviews.views import (
     _now_iso,
 )
 from core.openrouter_client import build_interview_system_prompt, chat_completion, extract_workspace_action
+from core.read_cache import (
+    get_cached_enterprise_dashboard_aggregates,
+    invalidate_enterprise_dashboard_cache,
+    set_cached_enterprise_dashboard_aggregates,
+)
 
 from .dashboard import invite_dashboard_counts, invite_series, recent_activity
 from .emails import send_candidate_invite_email
@@ -117,16 +122,22 @@ class OrgDashboardView(APIView):
         organization = membership.organization
         company = get_or_create_org_company(organization)
         roles = Role.objects.filter(company=company).prefetch_related("rounds__questions")
-        invite_counts = invite_dashboard_counts(organization)
+
+        aggregates = get_cached_enterprise_dashboard_aggregates(organization.pk)
+        if aggregates is None:
+            aggregates = {
+                "invite_counts": invite_dashboard_counts(organization),
+                "invite_series": invite_series(organization),
+                "recent_activity": recent_activity(organization),
+            }
+            set_cached_enterprise_dashboard_aggregates(organization.pk, aggregates)
 
         return Response(
             {
                 "organization": OrganizationSerializer(organization).data,
                 "role": membership.role,
                 "question_bank": OrgRoleSerializer(roles, many=True).data,
-                "invite_counts": invite_counts,
-                "invite_series": invite_series(organization),
-                "recent_activity": recent_activity(organization),
+                **aggregates,
             }
         )
 
@@ -256,6 +267,7 @@ class OrgCandidateInviteListCreateView(APIView):
             )
         invite = serializer.save(organization=organization)
         send_candidate_invite_email(invite)
+        invalidate_enterprise_dashboard_cache(organization.pk)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -343,6 +355,7 @@ class OrgCandidateInviteBulkCreateView(APIView):
             send_candidate_invite_email(invite)
             created.append(serializer.data)
 
+        invalidate_enterprise_dashboard_cache(organization.pk)
         return Response(
             {"created": created, "created_count": len(created), "errors": errors},
             status=status.HTTP_201_CREATED,
@@ -428,6 +441,7 @@ class OrgInviteStartView(APIView):
             invite.status = OrgCandidateInvite.Status.STARTED
             invite.save(update_fields=["session", "status"])
 
+        invalidate_enterprise_dashboard_cache(organization.pk)
         serializer = InterviewSessionSerializer(session)
         return Response(
             {

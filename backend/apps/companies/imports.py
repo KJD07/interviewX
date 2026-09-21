@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 
 from django.db import transaction
 
+from core.read_cache import invalidate_company_catalog_cache
 from core.spreadsheet import SpreadsheetError, clean as _clean, read_rows, require_columns
 
 from .models import Company, InterviewQuestion, Role, Round
@@ -149,4 +150,5 @@ def import_spreadsheet(uploaded_file) -> ImportResult:
             )
             result.questions_created += 1
 
+    invalidate_company_catalog_cache()
     return result

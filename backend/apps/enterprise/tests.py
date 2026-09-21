@@ -2,12 +2,15 @@ from datetime import timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.companies.models import Company, Role, Round
 from apps.interviews.models import InterviewSession
+
+from core.read_cache import enterprise_dashboard_aggregates_key
 
 from .models import Organization, OrganizationMember, OrgCandidateInvite
 
@@ -16,6 +19,7 @@ User = get_user_model()
 
 class OrgDashboardActivityTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.user = User.objects.create_user(
             username="recruiter",
             email="recruiter@acme.test",
@@ -50,6 +54,30 @@ class OrgDashboardActivityTests(TestCase):
         )
         defaults.update(kwargs)
         return OrgCandidateInvite.objects.create(**defaults)
+
+    def test_dashboard_aggregates_cached_until_invite_mutation(self):
+        self._invite("cached@acme.test")
+        res1 = self.client.get("/api/enterprise/dashboard/")
+        self.assertEqual(res1.status_code, 200)
+        self.assertIsNotNone(cache.get(enterprise_dashboard_aggregates_key(self.org.pk)))
+
+        with patch("apps.enterprise.views.invite_dashboard_counts") as counts_fn:
+            res2 = self.client.get("/api/enterprise/dashboard/")
+            self.assertEqual(res2.status_code, 200)
+            counts_fn.assert_not_called()
+
+        expires = (timezone.now() + timedelta(days=7)).isoformat()
+        with patch("apps.enterprise.emails.send_mail"):
+            self.client.post(
+                "/api/enterprise/invites/",
+                {
+                    "round": self.round.pk,
+                    "candidate_email": "newcache@acme.test",
+                    "expires_at": expires,
+                },
+                format="json",
+            )
+        self.assertIsNone(cache.get(enterprise_dashboard_aggregates_key(self.org.pk)))
 
     def test_invite_series_is_twelve_weeks_and_counts_this_week(self):
         self._invite("one@acme.test")
