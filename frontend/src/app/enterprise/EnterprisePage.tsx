@@ -667,7 +667,7 @@ function InvitesTable({ invites, liveCameraEnabled }: { invites: OrgCandidateInv
     : "1.4fr 1.4fr 100px 80px 90px";
 
   return (
-    <Card title="Candidates" subtitle={`${invites.length} invite(s) sent`}>
+    <Card title="Candidates" subtitle={`${invites.length} round invite(s) sent`}>
       {invites.length === 0 ? (
         <p className="text-sm" style={{ color: "var(--ink-faint)" }}>No candidates invited yet.</p>
       ) : (

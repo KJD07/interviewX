@@ -193,6 +193,80 @@ class OrgDashboardActivityTests(TestCase):
         self.org.refresh_from_db()
         self.assertEqual(self.org.candidates_used, 2)
 
+    def test_second_round_for_same_email_does_not_consume_quota(self):
+        expires = (timezone.now() + timedelta(days=7)).isoformat()
+        with patch("apps.enterprise.emails.send_mail"):
+            first = self.client.post(
+                "/api/enterprise/invites/",
+                {
+                    "round": self.round.pk,
+                    "candidate_email": "candidate@local.test",
+                    "expires_at": expires,
+                },
+                format="json",
+            )
+            self.assertEqual(first.status_code, 201)
+            self.org.refresh_from_db()
+            self.assertEqual(self.org.candidates_used, 1)
+
+            second = self.client.post(
+                "/api/enterprise/invites/",
+                {
+                    "round": self.round.pk,
+                    "candidate_email": "Candidate@local.test",
+                    "expires_at": expires,
+                },
+                format="json",
+            )
+        self.assertEqual(second.status_code, 201)
+        self.org.refresh_from_db()
+        self.assertEqual(self.org.candidates_used, 1)
+        self.assertEqual(
+            OrgCandidateInvite.objects.filter(
+                organization=self.org, candidate_email__iexact="candidate@local.test"
+            ).count(),
+            2,
+        )
+
+    def test_additional_round_allowed_when_quota_full_for_existing_email(self):
+        self.org.candidate_quota = 1
+        self.org.save(update_fields=["candidate_quota"])
+        expires = (timezone.now() + timedelta(days=7)).isoformat()
+        with patch("apps.enterprise.emails.send_mail"):
+            first = self.client.post(
+                "/api/enterprise/invites/",
+                {
+                    "round": self.round.pk,
+                    "candidate_email": "only@acme.test",
+                    "expires_at": expires,
+                },
+                format="json",
+            )
+            self.assertEqual(first.status_code, 201)
+            self.org.refresh_from_db()
+            self.assertEqual(self.org.candidates_used, 1)
+
+            second_round = self.client.post(
+                "/api/enterprise/invites/",
+                {
+                    "round": self.round.pk,
+                    "candidate_email": "only@acme.test",
+                    "expires_at": expires,
+                },
+                format="json",
+            )
+            blocked = self.client.post(
+                "/api/enterprise/invites/",
+                {
+                    "round": self.round.pk,
+                    "candidate_email": "new@acme.test",
+                    "expires_at": expires,
+                },
+                format="json",
+            )
+        self.assertEqual(second_round.status_code, 201)
+        self.assertEqual(blocked.status_code, 403)
+
     def test_question_bank_template_download(self):
         res = self.client.get("/api/enterprise/question-bank/template/")
         self.assertEqual(res.status_code, 200)
