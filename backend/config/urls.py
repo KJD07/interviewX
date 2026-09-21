@@ -27,6 +27,7 @@ urlpatterns = [
     path("api/subscriptions/", include("apps.subscriptions.urls")),
     path("api/reviews/", include("apps.reviews.urls")),
     path("api/enterprise/", include("apps.enterprise.urls")),
+    path("api/support/", include("apps.support.urls")),
 ]
 
 # Local-disk MEDIA fallback (see MEDIA_ROOT in settings.py) only needs

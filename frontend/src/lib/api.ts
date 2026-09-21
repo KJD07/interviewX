@@ -971,6 +971,28 @@ export interface Review {
   created_at: string;
 }
 
+// ── Site help chatbot ───────────────────────────────────────────────────────
+
+export interface SupportChatMessagePayload {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export const supportChat = {
+  send: (messages: SupportChatMessagePayload[]) =>
+    request<{ reply: string }>(
+      "/api/support/chat/",
+      {
+        method: "POST",
+        body: JSON.stringify({ messages }),
+      },
+      true,
+      false
+    ),
+};
+
+// ── Review endpoints ────────────────────────────────────────────────────────
+
 export const reviews = {
   promptStatus: () =>
     request<{ show: boolean; completed_count: number }>("/api/reviews/prompt-status/"),
