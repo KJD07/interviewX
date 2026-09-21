@@ -15,6 +15,7 @@ import { Skeleton, SkeletonStatCard, SkeletonTable } from "@/components/Skeleton
 
 const STATUS_MAP = {
   in_progress: { label: "In progress", bg: "rgba(180,115,30,0.14)", color: "#7A5A12", dot: "var(--warn)", pulse: true },
+  scoring: { label: "Scoring", bg: "rgba(99,102,241,0.12)", color: "#4F46A8", dot: "var(--accent)", pulse: true },
   completed: { label: "Completed", bg: "var(--success-bg)", color: "#2F6B48", dot: "var(--success)", pulse: false },
   abandoned: { label: "Abandoned", bg: "var(--surface-2)", color: "var(--ink-dim)", dot: "var(--ink-faint)", pulse: false },
 } as const;
