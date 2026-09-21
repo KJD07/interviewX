@@ -42,6 +42,7 @@ class InterviewSessionSerializer(serializers.ModelSerializer):
             "started_at",
             "ended_at",
             "time_expired",
+            "scoring_error",
             "is_proctored",
             "live_camera_enabled",
         ]

@@ -99,31 +99,51 @@ export default function ResultsPage() {
   const [eligibleForRealReport, setEligibleForRealReport] = useState(false);
 
   useEffect(() => {
-    interviews.detail(sessionId)
-      .then((s) => {
-        setSession(s);
-        // If still in progress, redirect to chat
-        if (s.status === "in_progress") {
-          router.replace(`/interview/${sessionId}`);
-          return;
+    let cancelled = false;
+    let pollTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const applySession = (s: InterviewSession) => {
+      if (cancelled) return;
+      setSession(s);
+      if (s.status === "in_progress") {
+        router.replace(`/interview/${sessionId}`);
+        return;
+      }
+      if (s.status === "scoring") {
+        setLoading(true);
+        pollTimer = setTimeout(() => {
+          interviews.detail(sessionId).then(applySession).catch(() => {
+            if (!cancelled) setError("Could not load results.");
+          });
+        }, 2000);
+        return;
+      }
+      setLoading(false);
+      if (s.status === "completed" && plan.hasInsights) {
+        const seenKey = `ix_rr_seen_${sessionId}`;
+        if (!localStorage.getItem(seenKey)) {
+          setEligibleForRealReport(true);
         }
-        // Paid-plan users get a one-time, skippable form asking about any
-        // real interview they recently gave — feeds real interview data
-        // back into EvaluLabs. Only shown once per session, and only if
-        // the review card isn't taking this slot instead (see
-        // handleReviewResolved below).
-        if (s.status === "completed" && plan.hasInsights) {
-          const seenKey = `ix_rr_seen_${sessionId}`;
-          if (!localStorage.getItem(seenKey)) {
-            setEligibleForRealReport(true);
-          }
-        }
-      })
+      }
+      if (s.scoring_error) {
+        setError(s.scoring_error);
+      }
+    };
+
+    interviews
+      .detail(sessionId)
+      .then(applySession)
       .catch((err) => {
+        if (cancelled) return;
         if (err instanceof ApiError) setError(err.detail);
         else setError("Could not load results.");
-      })
-      .finally(() => setLoading(false));
+        setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+      if (pollTimer) clearTimeout(pollTimer);
+    };
   }, [sessionId, router, plan.hasInsights]);
 
   // Called by ReviewCard once it knows whether it will render itself.
@@ -141,7 +161,7 @@ export default function ResultsPage() {
     setShowRealReportModal(false);
   };
 
-  if (loading) {
+  if (loading || session?.status === "scoring") {
     return (
       <ProtectedRoute>
         <div
@@ -149,7 +169,9 @@ export default function ResultsPage() {
           style={{ background: "var(--page)" }}
         >
           <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
-            Loading results…
+            {session?.status === "scoring"
+              ? "Generating your scores and feedback…"
+              : "Loading results…"}
           </p>
         </div>
       </ProtectedRoute>

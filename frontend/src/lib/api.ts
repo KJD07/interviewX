@@ -165,7 +165,8 @@ export interface InterviewSession {
   round: number;
   company_name?: string;
   role_title?: string;
-  status: "in_progress" | "completed" | "abandoned";
+  status: "in_progress" | "scoring" | "completed" | "abandoned";
+  scoring_error?: string;
   transcript: { role: "user" | "ai"; text: string; ts: string; workspace?: WorkspacePayload }[];
   scores: {
     communication?: number;
@@ -617,10 +618,28 @@ export const interviews = {
       }
     ),
 
-  end: (session_id: number) =>
-    request<InterviewSession>(`/api/interviews/${session_id}/end/`, {
+  end: async (session_id: number) => {
+    const access = tokens.getAccess();
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (access) headers["Authorization"] = `Bearer ${access}`;
+    const res = await fetch(`${API_URL}/api/interviews/${session_id}/end/`, {
       method: "POST",
-    }),
+      headers,
+    });
+    let body: unknown;
+    try {
+      body = await res.json();
+    } catch {
+      body = undefined;
+    }
+    if (res.status === 202 || res.ok) {
+      return body as InterviewSession;
+    }
+    const detail = extractDetail(body) || `Request failed (${res.status})`;
+    const code =
+      body && typeof body === "object" ? (body as { code?: string }).code : undefined;
+    throw new ApiError(res.status, detail, code, body);
+  },
 
   // Enterprise-only: reports a flagged proctoring moment (and optionally a
   // short clip) for an org-invite session. The backend 404s this for any

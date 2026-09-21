@@ -10,3 +10,7 @@ DATABASES = {
 }
 
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
+
+import os
+
+os.environ.setdefault("INTERVIEW_SCORING_SYNC", "true")
