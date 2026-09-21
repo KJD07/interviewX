@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import ReferralTracker from "@/components/ReferralTracker";
+import SupportChatGate from "@/components/SupportChatGate";
 import StructuredData from "@/components/StructuredData";
 import {
   BRAND_DESCRIPTION,
@@ -86,7 +87,11 @@ export default function RootLayout({
         <StructuredData
           schema={[organizationSchema(), websiteSchema(), softwareApplicationSchema()]}
         />
-        <AuthProvider><ReferralTracker />{children}</AuthProvider>
+        <AuthProvider>
+          <ReferralTracker />
+          {children}
+          <SupportChatGate />
+        </AuthProvider>
       </body>
     </html>
   );

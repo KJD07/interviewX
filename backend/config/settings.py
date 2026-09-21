@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     "apps.subscriptions",
     "apps.reviews",
     "apps.enterprise",
+    "apps.support",
     "channels",
 ]
 
@@ -191,6 +192,8 @@ REST_FRAMEWORK = {
         # verify-OTP, resend-OTP, login, google-auth) to block brute-force /
         # credential-stuffing / OTP-spam attacks.
         "auth": "10/min",
+        # Public site help chatbot (LLM-backed).
+        "support_chat": "30/min",
     },
 }
 
