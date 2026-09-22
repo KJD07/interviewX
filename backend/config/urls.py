@@ -10,6 +10,8 @@ from django.http import JsonResponse
 from django.urls import include, path
 from rest_framework_simplejwt.views import TokenRefreshView
 
+from apps.accounts.product_analytics_api import ProductAnalyticsView
+
 
 def health_check(request):
     return JsonResponse({"status": "ok", "phase": 8})
@@ -21,6 +23,7 @@ urlpatterns = [
     path("api/auth/", include("apps.accounts.urls")),
     path("api/admin/", include("apps.accounts.admin_urls")),
     path("api/analytics/referral/", include("apps.accounts.insights_urls")),
+    path("api/analytics/product/", ProductAnalyticsView.as_view()),
     path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
     path("api/companies/", include("apps.companies.urls")),
     path("api/interviews/", include("apps.interviews.urls")),
