@@ -14,6 +14,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.posthog_client import capture_event
 from core.payu import (
     generate_txnid,
     paise_to_amount_str,
@@ -48,6 +49,8 @@ def _frontend_redirect(path: str, **query) -> HttpResponseRedirect:
 
 
 def _settle_order(order_id, payment_id, payment_hash=""):
+    capture_props = None
+    user_id = None
     with transaction.atomic():
         order = (
             PaymentOrder.objects.select_for_update()
@@ -65,6 +68,7 @@ def _settle_order(order_id, payment_id, payment_hash=""):
         order.save(update_fields=["payu_payment_id", "payu_hash", "status", "paid_at"])
 
         user = order.user
+        user_id = user.id
         if order.topup_pack:
             type(user).objects.filter(pk=user.pk).update(
                 bonus_interviews=F("bonus_interviews") + order.topup_credits
@@ -76,6 +80,16 @@ def _settle_order(order_id, payment_id, payment_hash=""):
                 interviews_this_month=0,
                 current_cycle_start=now,
             )
+
+        capture_props = {
+            "amount_paise": order.amount,
+            "plan": order.plan or order.topup_pack or "topup",
+            "topup_pack": order.topup_pack or "",
+            "product_area": "practice",
+        }
+
+    if user_id and capture_props:
+        capture_event(user_id, "subscription_purchased", capture_props)
 
 
 def _reconcile_stuck_orders(user):

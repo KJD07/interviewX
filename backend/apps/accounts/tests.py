@@ -549,3 +549,34 @@ class AdminInsightsTests(TestCase):
         self.assertEqual(by_month[last_label], 2)
         self.assertEqual(resp.data["referrals"]["linkedin"], 2)
         self.assertEqual(resp.data["referrals"]["reddit"], 1)
+
+
+class ProductAnalyticsAccessTests(TestCase):
+    def setUp(self):
+        self.viewer = User.objects.create_user(
+            username="analyst",
+            email="analyst@example.com",
+            password="testpass123",
+        )
+        self.viewer.can_view_analytics = True
+        self.viewer.save(update_fields=["can_view_analytics"])
+        self.other = User.objects.create_user(
+            username="regular",
+            email="regular@example.com",
+            password="testpass123",
+        )
+        self.client = APIClient()
+
+    def test_requires_can_view_analytics_flag(self):
+        self.client.force_authenticate(self.other)
+        resp = self.client.get("/api/analytics/product/?period=week")
+        self.assertEqual(resp.status_code, 403)
+
+    def test_returns_aggregates_for_authorized_user(self):
+        self.client.force_authenticate(self.viewer)
+        resp = self.client.get("/api/analytics/product/?period=week")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.data["period"], "week")
+        self.assertIn("revenue", resp.data)
+        self.assertIn("users", resp.data)
+        self.assertIn("features", resp.data)

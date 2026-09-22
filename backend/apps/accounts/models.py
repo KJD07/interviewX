@@ -45,6 +45,14 @@ class User(AbstractUser):
     sponsorship_cycle_start = models.DateTimeField(null=True, blank=True)
     sponsorship_interviews_used = models.IntegerField(default=0)
 
+    can_view_analytics = models.BooleanField(
+        default=False,
+        help_text=(
+            "Allows access to the in-app product analytics dashboard at "
+            "/analytics (PostHog-backed). Grant explicitly; not tied to is_staff."
+        ),
+    )
+
     def sync_subscription_state(self):
         """Lazily downgrade lapsed subscriptions, roll the monthly interview
         counter over every 30 days, and attach/expire/roll any institutional
