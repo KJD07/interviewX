@@ -168,6 +168,9 @@ section is a catch-up, not a phase-by-phase log like the ones above.
   `public/llms.txt`. The schema carries an explicit `alternateName` and the
   FAQ disambiguates EvaluLabs from `evalulab.com`, an unrelated Montreal
   cosmetics lab that currently owns the "evalulabs" SERP.
+- **SEO/GEO/AEO execution playbook:** `docs/SEO_GEO_AEO_PLAN.md` (phased plan
+  for ongoing search and answer-engine work — update the decision log there
+  when implementing).
 
 ## Next
 Open GitHub issues:
