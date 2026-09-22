@@ -9,7 +9,7 @@ backend + Postgres, with an LLM (OpenRouter, `openai/gpt-4o-mini`) acting as
 the interviewer and grader. See `PROJECT_MASTER_SPEC.md` for the original
 frozen spec and `STATE.md` for what's actually built vs. planned — **STATE.md
 is the authoritative log of current progress and known issues**, not the
-spec. Ongoing work is tracked as GitHub issues on this repo.
+spec. For SEO, GEO, and AEO work, follow `docs/SEO_GEO_AEO_PLAN.md`. Ongoing work is tracked as GitHub issues on this repo.
 
 ## Commands
 
