@@ -15,6 +15,7 @@ import { isPaidPlan } from "@/lib/plans";
 import PaginationControls from "@/components/PaginationControls";
 import { useSearchAndPaginate } from "@/hooks/useSearchAndPaginate";
 import { SkeletonStatCard } from "@/components/Skeleton";
+import { trackEvent } from "@/lib/posthog";
 
 // ── Small SVG line chart (no chart library — keeps bundle light) ───────────────
 
@@ -145,6 +146,7 @@ export default function ProgressPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    trackEvent("progress_viewed");
     interviews
       .progress()
       .then(setData)

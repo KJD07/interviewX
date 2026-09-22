@@ -14,6 +14,7 @@ import { subscriptions, ApiError, partnerReferrals } from "@/lib/api";
 import { PARTNER_REF_KEY } from "@/components/ReferralTracker";
 import { submitPayUCheckout } from "@/lib/payuCheckout";
 import { useCurrency, formatPrice } from "@/lib/currency";
+import { trackEvent } from "@/lib/posthog";
 
 // One-line positioning note per tier — display copy only, so it lives here
 // rather than in lib/plans.ts (which mirrors the backend plan table).
@@ -106,6 +107,10 @@ export default function Pricing() {
   const currency = useCurrency();
 
   const currentPlan = (user?.subscription_plan as PlanId) || "free";
+
+  useEffect(() => {
+    trackEvent("pricing_viewed");
+  }, []);
 
   const discountedPrice = (rupees: number) =>
     couponDiscount > 0 ? Math.max(rupees * (1 - couponDiscount / 100), 0) : rupees;
