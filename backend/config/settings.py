@@ -345,3 +345,11 @@ else:
 
 CACHE_COMPANY_LIST_TTL = int(os.environ.get("CACHE_COMPANY_LIST_TTL", "300"))
 CACHE_ENTERPRISE_DASHBOARD_TTL = int(os.environ.get("CACHE_ENTERPRISE_DASHBOARD_TTL", "30"))
+CACHE_PRODUCT_ANALYTICS_TTL = int(os.environ.get("CACHE_PRODUCT_ANALYTICS_TTL", "60"))
+
+# --- PostHog (optional product analytics) ---
+# Project API key is used for server capture + matches NEXT_PUBLIC_POSTHOG_KEY on the frontend.
+POSTHOG_HOST = os.environ.get("POSTHOG_HOST", "https://us.i.posthog.com").rstrip("/")
+POSTHOG_PROJECT_API_KEY = os.environ.get("POSTHOG_PROJECT_API_KEY", "")
+POSTHOG_PERSONAL_API_KEY = os.environ.get("POSTHOG_PERSONAL_API_KEY", "")
+POSTHOG_PROJECT_ID = os.environ.get("POSTHOG_PROJECT_ID", "")

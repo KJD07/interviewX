@@ -1039,6 +1039,8 @@ export default function InterviewPage() {
     window.speechSynthesis?.cancel();
     try {
       await interviews.end(sessionId);
+      const { trackEvent } = await import("@/lib/posthog");
+      trackEvent("interview_completed", { session_id: sessionId });
       router.push(`/interview/${sessionId}/results`);
     } catch (err) {
       setShowEndModal(false);
@@ -1063,6 +1065,8 @@ export default function InterviewPage() {
 
       try {
         await interviews.end(sessionId);
+        const { trackEvent } = await import("@/lib/posthog");
+        trackEvent("interview_completed", { session_id: sessionId, auto: true });
       } catch {
         /* best-effort — the session may already be over server-side */
       } finally {

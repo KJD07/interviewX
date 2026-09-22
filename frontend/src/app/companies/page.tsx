@@ -215,6 +215,8 @@ export default function CompaniesPage() {
     setStartError("");
     try {
       const res = await interviews.start(roundId);
+      const { trackEvent } = await import("@/lib/posthog");
+      trackEvent("interview_started", { round_id: roundId });
       router.push(`/interview/${res.session_id}`);
     } catch (err) {
       if (err instanceof ApiError) setStartError(err.detail);

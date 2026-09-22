@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import ReferralTracker from "@/components/ReferralTracker";
+import PostHogProvider from "@/components/PostHogProvider";
 import SupportChatGate from "@/components/SupportChatGate";
 import StructuredData from "@/components/StructuredData";
 import {
@@ -88,9 +89,11 @@ export default function RootLayout({
           schema={[organizationSchema(), websiteSchema(), softwareApplicationSchema()]}
         />
         <AuthProvider>
-          <ReferralTracker />
-          {children}
-          <SupportChatGate />
+          <PostHogProvider>
+            <ReferralTracker />
+            {children}
+            <SupportChatGate />
+          </PostHogProvider>
         </AuthProvider>
       </body>
     </html>

@@ -46,6 +46,7 @@ export interface User {
   is_email_verified?: boolean;
   is_staff?: boolean;
   is_partner?: boolean;
+  can_view_analytics?: boolean;
   auth_provider?: "email" | "google";
 }
 
@@ -135,6 +136,43 @@ export interface AdminInsights {
   companies: number;
   revenue: Record<"day" | "week" | "month" | "quarter" | "year", number>;
   revenue_daily: { day: string; amount: number }[];
+}
+
+export type AnalyticsPeriod = "day" | "week" | "month" | "quarter";
+export type AnalyticsProduct = "all" | "practice" | "enterprise";
+
+export interface ProductAnalytics {
+  period: AnalyticsPeriod;
+  product: AnalyticsProduct;
+  window_days: number;
+  sources: {
+    revenue: string;
+    users: string;
+    features: string;
+    acquisition: string;
+  };
+  revenue: {
+    total_paise: number;
+    by_plan: Record<string, number>;
+    daily: { day: string; amount: number }[];
+  };
+  users: {
+    new: number;
+    active: number;
+    retained: number;
+  };
+  acquisition: Record<string, number>;
+  plans: Record<string, number>;
+  features: Record<string, number>;
+  practice: {
+    interviews_started: number;
+    interviews_completed: number;
+  };
+  enterprise: {
+    invites_sent: number;
+    interviews_started: number;
+    interviews_completed: number;
+  };
 }
 
 export interface RegisterResponse {
@@ -454,6 +492,13 @@ export const auth = {
       { method: "POST", body: JSON.stringify({ email, code, new_password, new_password2 }) },
       true,
       false
+    ),
+};
+
+export const productAnalyticsApi = {
+  dashboard: (period: AnalyticsPeriod, product: AnalyticsProduct = "all") =>
+    request<ProductAnalytics>(
+      `/api/analytics/product/?period=${period}&product=${product}`,
     ),
 };
 

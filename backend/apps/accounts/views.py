@@ -59,6 +59,7 @@ def _token_response(user) -> dict:
             "auth_provider": user.auth_provider,
             "is_staff": user.is_staff,
             "is_partner": _is_partner(user),
+            "can_view_analytics": user.can_view_analytics,
         },
     }
 
@@ -450,5 +451,6 @@ class MeView(APIView):
                 "auth_provider": user.auth_provider,
                 "is_staff": user.is_staff,
                 "is_partner": _is_partner(user),
+                "can_view_analytics": user.can_view_analytics,
             }
         )

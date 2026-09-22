@@ -10,6 +10,7 @@ import Link from "next/link";
 import { organizations, ApiError } from "@/lib/api";
 import type { OrgDashboard, OrgCandidateInvite, OrgRound, OrgRole, OrgActivityItem, OrgInviteWeek } from "@/lib/api";
 import EnterprisePricingCard from "@/components/EnterprisePricingCard";
+import { trackEvent } from "@/lib/posthog";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
@@ -435,6 +436,7 @@ function InviteForm({ dashboard, onInvited }: { dashboard: OrgDashboard; onInvit
     try {
       const expiresAt = new Date(Date.now() + expiresInDays * 86400000).toISOString();
       await organizations.invites.create(Number(roundId), email, expiresAt);
+      trackEvent("enterprise_invite_sent", { count: 1 });
       setEmail("");
       notifyEnterpriseQuotaChanged();
       onInvited();
@@ -454,6 +456,7 @@ function InviteForm({ dashboard, onInvited }: { dashboard: OrgDashboard; onInvit
     try {
       const expiresAt = new Date(Date.now() + expiresInDays * 86400000).toISOString();
       const result = await organizations.invites.createBulk(Number(roundId), emails, expiresAt);
+      trackEvent("enterprise_invite_sent", { count: result.created_count });
       setBulkEmails("");
       setBulkSummary(`Sent ${result.created_count} invite(s).`);
       notifyEnterpriseQuotaChanged();
@@ -908,6 +911,9 @@ function EnterprisePageContent({ view = "overview" }: { view?: "overview" | "can
       .then(([d, inv]) => {
         setDashboard(d);
         setInvites(inv);
+        trackEvent("enterprise_dashboard_viewed", {
+          organization_id: d.organization.id,
+        });
       })
       .catch((err) => {
         if (err instanceof ApiError && err.status === 404) {

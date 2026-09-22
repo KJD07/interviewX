@@ -34,5 +34,17 @@ class UserAdmin(BaseUserAdmin):
         "is_email_verified",
         "auth_provider",
         "is_staff",
+        "can_view_analytics",
     )
-    list_filter = BaseUserAdmin.list_filter + ("subscription_plan", "is_email_verified", "auth_provider")  # type: ignore[operator]
+    list_filter = BaseUserAdmin.list_filter + (  # type: ignore[operator]
+        "subscription_plan",
+        "is_email_verified",
+        "auth_provider",
+        "can_view_analytics",
+    )
+    fieldsets = fieldsets + (
+        (
+            "Product analytics",
+            {"fields": ("can_view_analytics",)},
+        ),
+    )
