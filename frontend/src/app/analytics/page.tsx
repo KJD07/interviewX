@@ -242,9 +242,20 @@ function AnalyticsDashboard() {
 }
 
 function AnalyticsGate() {
-  const { user, loading } = useAuth();
+  const { user, loading, refreshUser } = useAuth();
+  const [synced, setSynced] = useState(false);
 
-  if (loading) return null;
+  useEffect(() => {
+    void refreshUser().finally(() => setSynced(true));
+  }, [refreshUser]);
+
+  if (loading || !synced) {
+    return (
+      <main className="min-h-screen p-6 sm:p-10" style={{ background: "var(--page)" }}>
+        <p className="text-sm" style={{ color: "var(--ink-faint)" }}>Loading…</p>
+      </main>
+    );
+  }
   if (!user?.can_view_analytics) {
     return (
       <main className="min-h-screen flex items-center justify-center px-4" style={{ background: "var(--page)" }}>

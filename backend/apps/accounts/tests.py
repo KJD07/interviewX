@@ -572,6 +572,11 @@ class ProductAnalyticsAccessTests(TestCase):
         resp = self.client.get("/api/analytics/product/?period=week")
         self.assertEqual(resp.status_code, 403)
 
+    def test_legacy_referral_prefix_still_works(self):
+        self.client.force_authenticate(self.viewer)
+        resp = self.client.get("/api/analytics/referral/product/?period=week")
+        self.assertEqual(resp.status_code, 200)
+
     def test_returns_aggregates_for_authorized_user(self):
         self.client.force_authenticate(self.viewer)
         resp = self.client.get("/api/analytics/product/?period=week")
