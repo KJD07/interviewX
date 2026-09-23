@@ -13,7 +13,7 @@ import { PLANS, PAID_PLAN_IDS, type PlanId } from "@/lib/plans";
 import { subscriptions, ApiError, partnerReferrals } from "@/lib/api";
 import { PARTNER_REF_KEY } from "@/components/ReferralTracker";
 import { submitPayUCheckout } from "@/lib/payuCheckout";
-import { useCurrency, formatPrice } from "@/lib/currency";
+import { useCurrency, formatPrice, applyPartnerDiscountRupees } from "@/lib/currency";
 import { trackEvent } from "@/lib/posthog";
 
 // One-line positioning note per tier — display copy only, so it lives here
@@ -112,8 +112,7 @@ export default function Pricing() {
     trackEvent("pricing_viewed");
   }, []);
 
-  const discountedPrice = (rupees: number) =>
-    couponDiscount > 0 ? Math.max(rupees * (1 - couponDiscount / 100), 0) : rupees;
+  const discountedPrice = (rupees: number) => applyPartnerDiscountRupees(rupees, couponDiscount);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
