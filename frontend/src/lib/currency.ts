@@ -32,10 +32,29 @@ export function detectCurrency(): DisplayCurrency {
   }
 }
 
+/**
+ * Partner discount on list price — mirrors backend `partner_discount_amount_paise`
+ * so displayed prices match PayU checkout (integer paise, half-up rounding).
+ */
+export function applyPartnerDiscountRupees(listPriceRupees: number, discountPercent: number): number {
+  if (discountPercent <= 0) return listPriceRupees;
+  const listPaise = Math.round(listPriceRupees * 100);
+  const pct = Math.min(Math.floor(discountPercent), 100);
+  const discountPaise = Math.round((listPaise * pct) / 100);
+  return Math.max(listPaise - discountPaise, 0) / 100;
+}
+
 /** Formats an INR-denominated price for the given display currency. */
 export function formatPrice(priceRupees: number, currency: DisplayCurrency): string {
   if (priceRupees === 0) return currency === "INR" ? "₹0" : "$0";
-  if (currency === "INR") return `₹${priceRupees}`;
+  if (currency === "INR") {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(priceRupees);
+  }
   const usd = priceRupees / INR_PER_USD;
   return new Intl.NumberFormat("en-US", {
     style: "currency",
