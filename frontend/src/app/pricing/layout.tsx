@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
-  title: "Pricing — Free AI Mock Interviews & Paid Plans",
+  title: "Pricing — Practice Plans and Enterprise Hiring",
   description:
-    "Start free with monthly AI mock interviews. Paid plans add detailed insights, topic-level breakdowns and higher interview limits. Top-up packs roll over and never expire.",
+    "Start free with monthly AI mock interviews. Paid plans add detailed insights and higher limits. Hiring teams use EvaluLabs Enterprise for invites, custom banks, and proctoring.",
   path: "/pricing",
   keywords: ["AI mock interview pricing", "free mock interview", "interview prep plans"],
 });

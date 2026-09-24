@@ -23,6 +23,9 @@ const HIRE_SECTIONS = [
   { href: "/enterprise#product", title: "Features", sub: "Bank, invites, scores" },
   { href: "/enterprise#how-it-works", title: "How it works", sub: "Four steps, one decision" },
   { href: "/enterprise#pricing", title: "Pricing", sub: "Per-seat and unlimited" },
+  { href: "/solutions/ai-technical-interviews", title: "Technical interviews", sub: "Practice and screening" },
+  { href: "/solutions/ai-coding-interviews", title: "Coding interviews", sub: "Editor, graded by the AI" },
+  { href: "/solutions/interview-proctoring", title: "Proctoring", sub: "Camera checks on invites" },
   { href: "/enterprise#faq", title: "FAQ", sub: "Hiring questions, answered" },
 ];
 

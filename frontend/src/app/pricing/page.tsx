@@ -404,6 +404,34 @@ export default function Pricing() {
           </div>
         </div>
 
+        <div className="mt-16 max-w-[640px]">
+          <h2 className="font-display text-[28px] font-bold leading-[1.05] tracking-[-0.03em] text-[var(--ink)] sm:text-[32px]">
+            Hiring teams use Enterprise
+          </h2>
+          <p className="mt-3 text-[15px] leading-relaxed text-[var(--ink-dim)]">
+            The plans on this page are for individual practice. Organizations that want to invite
+            candidates, upload a question bank, and review scored reports use{" "}
+            <Link href="/enterprise" className="underline underline-offset-4 hover:opacity-70">
+              EvaluLabs Enterprise
+            </Link>
+            . Seat and unlimited prices are listed there. Enterprise invites can include{" "}
+            <Link
+              href="/solutions/interview-proctoring"
+              className="underline underline-offset-4 hover:opacity-70"
+            >
+              camera proctoring
+            </Link>
+            . Coding rounds work the same way as in{" "}
+            <Link
+              href="/solutions/ai-coding-interviews"
+              className="underline underline-offset-4 hover:opacity-70"
+            >
+              practice
+            </Link>
+            .
+          </p>
+        </div>
+
         <div className="mt-20 grid grid-cols-1 gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-[52px]">
           <div>
             <div className="font-label mb-3.5">FAQ</div>

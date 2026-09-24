@@ -1,26 +1,38 @@
 import type { Metadata } from "next";
 import StructuredData from "@/components/StructuredData";
-import { faqSchema, pageMetadata } from "@/lib/seo";
+import { enterpriseSoftwareSchema, faqSchema, pageMetadata, webPageSchema } from "@/lib/seo";
 import { ENTERPRISE_FAQS } from "./faqs";
 
+const DESCRIPTION =
+  "Screen candidates with structured AI interviews: upload your question bank, invite applicants, review rubric scores, and optionally proctor the camera. Colleges can sponsor prep for an email domain the same way.";
+
 export const metadata: Metadata = pageMetadata({
-  title: "Enterprise — Hire with Structured AI Interviews",
-  description:
-    "EvaluLabs Enterprise gives hiring teams a dashboard to invite candidates, run structured AI interviews from your own question bank, and review scored reports in one place. Colleges can sponsor prep for an entire batch the same way.",
+  title: "AI Candidate Screening and Enterprise Interviews",
+  description: DESCRIPTION,
   path: "/enterprise",
   keywords: [
     "AI hiring interviews",
-    "candidate screening platform",
+    "AI candidate screening",
     "enterprise interview software",
+    "interview proctoring",
     "campus placement preparation",
-    "college interview prep platform",
   ],
 });
 
 export default function EnterpriseHomeLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <StructuredData schema={faqSchema(ENTERPRISE_FAQS, { path: "/enterprise" })} />
+      <StructuredData
+        schema={[
+          webPageSchema({
+            name: "EvaluLabs Enterprise",
+            description: DESCRIPTION,
+            path: "/enterprise",
+          }),
+          enterpriseSoftwareSchema(),
+          faqSchema(ENTERPRISE_FAQS, { path: "/enterprise" }),
+        ]}
+      />
       {children}
     </>
   );

@@ -12,9 +12,12 @@ export const TWITTER_HANDLE = "@evaluLabs";
 export const TWITTER_URL = "https://x.com/evaluLabs";
 export const LINKEDIN_URL = "https://www.linkedin.com/company/evalulabs/";
 
-/** Brand-defining sentence. Reused by metadata, JSON-LD and llms.txt. */
+/**
+ * Brand-defining sentence. Reused by metadata, JSON-LD and llms.txt.
+ * Covers both audiences: candidate practice and enterprise screening.
+ */
 export const BRAND_DESCRIPTION =
-  "EvaluLabs is an AI mock interview platform where you practice with real interview questions verified by employees at the companies you're targeting, then get scored on communication, technical depth and problem solving.";
+  "EvaluLabs is an AI interview and candidate assessment platform. Candidates practise with verified question banks, voice, and coding rounds. Hiring teams screen with invites, scored reports, and optional camera proctoring.";
 
 const OG_IMAGE = `${SITE_URL}/og.png`;
 
@@ -134,7 +137,7 @@ export function softwareApplicationSchema() {
     "@id": `${SITE_URL}/#software`,
     name: SITE_NAME,
     applicationCategory: "BusinessApplication",
-    applicationSubCategory: "Interview Preparation",
+    applicationSubCategory: "Interview Preparation and Candidate Assessment",
     operatingSystem: "Web",
     url: SITE_URL,
     description: BRAND_DESCRIPTION,
@@ -143,8 +146,11 @@ export function softwareApplicationSchema() {
       "AI mock interviews with a company-specific interviewer persona",
       "Interview questions verified by current employees and recent candidates",
       "Voice mode with real-time transcription",
+      "In-session coding and system-design workspaces graded by the AI interviewer",
       "Scoring across communication, technical depth and problem solving",
       "Progress tracking across companies and roles",
+      "Enterprise candidate invites and custom question banks",
+      "Camera proctoring on enterprise interviews",
     ],
     offers: {
       "@type": "Offer",
@@ -173,6 +179,68 @@ export function faqSchema(
       name: f.question,
       acceptedAnswer: { "@type": "Answer", text: f.answer },
     })),
+  };
+}
+
+export function webPageSchema({
+  name,
+  description,
+  path,
+}: {
+  name: string;
+  description: string;
+  path: string;
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": `${canonicalUrl(path)}#webpage`,
+    url: canonicalUrl(path),
+    name,
+    description,
+    isPartOf: { "@id": `${SITE_URL}/#website` },
+    about: { "@id": `${SITE_URL}/#organization` },
+    inLanguage: "en",
+  };
+}
+
+/** Enterprise product. Prices match the INR amounts shown on /enterprise (SSR default). */
+export function enterpriseSoftwareSchema() {
+  return {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "@id": `${SITE_URL}/enterprise#software`,
+    name: "EvaluLabs Enterprise",
+    applicationCategory: "BusinessApplication",
+    applicationSubCategory: "Candidate Screening",
+    operatingSystem: "Web",
+    url: `${SITE_URL}/enterprise`,
+    description:
+      "Hiring workspace for structured AI interviews: custom question banks, candidate invites, rubric-scored reports, and optional camera proctoring.",
+    publisher: { "@id": `${SITE_URL}/#organization` },
+    featureList: [
+      "Custom question bank upload",
+      "Candidate invite links",
+      "Rubric scores for communication, technical depth, problem solving, and overall",
+      "Camera proctoring with violation clips",
+      "Live camera viewing for the organization",
+    ],
+    offers: [
+      {
+        "@type": "Offer",
+        price: "199",
+        priceCurrency: "INR",
+        description: "Per seat per month",
+        url: `${SITE_URL}/enterprise#pricing`,
+      },
+      {
+        "@type": "Offer",
+        price: "19999",
+        priceCurrency: "INR",
+        description: "Unlimited seats per month",
+        url: `${SITE_URL}/enterprise#pricing`,
+      },
+    ],
   };
 }
 

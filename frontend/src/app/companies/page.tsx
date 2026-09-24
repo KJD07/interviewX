@@ -267,7 +267,7 @@ export default function CompaniesPage() {
   const companySearch = useSearchAndPaginate(sortedCompanyList, (c) => c.name);
 
   return (
-    <ProtectedRoute>
+    <ProtectedRoute redirect={false}>
       <AppShell>
       <div className="min-h-screen" style={{ background: "var(--page)" }}>
 

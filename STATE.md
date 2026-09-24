@@ -171,6 +171,16 @@ section is a catch-up, not a phase-by-phase log like the ones above.
 - **SEO/GEO/AEO execution playbook:** `docs/SEO_GEO_AEO_PLAN.md` (phased plan
   for ongoing search and answer-engine work — update the decision log there
   when implementing).
+- SEO/GEO/AEO pass against that playbook (2026-09-24). Robots now disallows
+  enterprise workspace routes and `/analytics`, and names the major AI search
+  crawlers with the same allow/disallow policy. Sitemap drops `/login` and adds
+  `/solutions/ai-technical-interviews`, `/solutions/ai-coding-interviews`, and
+  `/solutions/interview-proctoring`. `/companies` and `/skills` keep a public
+  server intro (catalog names and CTAs only) and no longer redirect logged-out
+  visitors to login; the picker still requires an account. Homepage metadata
+  and FAQ JSON-LD live on the server page. Brand copy, `llms.txt`, and
+  `llms-full.txt` cover practice and enterprise screening, coding, and
+  proctoring without claiming a hidden test runner or gaze/low-light checks.
 
 ## Next
 Open GitHub issues:

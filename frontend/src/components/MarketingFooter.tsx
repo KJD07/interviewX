@@ -29,6 +29,18 @@ export default function MarketingFooter() {
             <Link href="/companies" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">
               Companies
             </Link>
+            <Link href="/skills" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">
+              Skills
+            </Link>
+            <Link href="/solutions/ai-technical-interviews" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">
+              Technical interviews
+            </Link>
+            <Link href="/solutions/ai-coding-interviews" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">
+              Coding interviews
+            </Link>
+            <Link href="/solutions/interview-proctoring" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">
+              Proctoring
+            </Link>
             <Link href="/enterprise" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">
               Enterprise
             </Link>

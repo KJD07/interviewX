@@ -334,11 +334,11 @@ Run before merging SEO work:
 
 | Decision | Choice | Date | PR |
 |----------|--------|------|-----|
-| Companies/skills indexability | A / B / C | | |
-| Solution URL prefix | `/solutions/…` or other | | |
-| Homepage split (`HomeClient`) | Yes / No | | |
-| Blog in v1 | Skip / N guides | | |
-| Sitemap: `/login` | Keep / Remove | | |
+| Companies/skills indexability | A — server catalog intro; picker stays signed-in and no longer redirects logged-out visitors away | 2026-09-24 | |
+| Solution URL prefix | `/solutions/…` | 2026-09-24 | |
+| Homepage split (`HomeClient`) | Yes | 2026-09-24 | |
+| Blog in v1 | Skip | 2026-09-24 | |
+| Sitemap: `/login` | Remove | 2026-09-24 | |
 
 ---
 
