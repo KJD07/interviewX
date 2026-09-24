@@ -1,0 +1,79 @@
+# EvaluLabs — full capability notes
+
+Canonical site: https://www.evalulabs.com
+
+EvaluLabs is an AI interview and candidate assessment platform operated as a
+web app. It is not Evalulab (evalulab.com), a cosmetics testing lab in Montreal.
+
+## Candidate practice
+
+1. The candidate picks a company and role, or a skill, then a round.
+2. POST start creates an interview session. Duration is randomized between 45
+   and 60 minutes. The interviewer system prompt uses the company's tone when
+   one of formal_strict, casual_friendly, or aggressive is set.
+3. Each turn is appended to the session transcript and sent to the model.
+4. Voice mode transcribes speech and keeps the same conversation.
+5. Coding questions open Monaco (textarea fallback) for JavaScript, TypeScript,
+   Python, Java, C++, or Go. System-design questions open a written workspace.
+   Submit and debounced in-progress check-ins are sent to the interviewer.
+   Code is not executed against hidden tests.
+6. Ending the session grades the transcript: communication, technical depth,
+   problem solving, overall, on 0-10. The rubric is strict; empty answers score
+   at the bottom of the scale. Paid plans request an additional insights pass
+   (topic breakdown and improvement areas). Free sessions do not.
+
+Public question banks are filled by contributors who verify with a company
+email or an offer letter. A separate admin pipeline can research
+candidate-reported questions; that is not the same as inventing questions in
+the live interviewer.
+
+## Enterprise screening
+
+Organizations get a workspace to upload questions (csv, xlsx, json), invite
+candidates, and read score reports. Colleges can attach a granted plan to an
+email domain for a set number of interviews per cycle, without changing the
+student's own subscription fields.
+
+Proctoring is limited to enterprise invites that enable it:
+
+- Camera permission is required. Denied access, or a disconnect past the grace
+  period, blocks the interview.
+- Reported checks: no face, multiple faces (face-api, streak confirmation),
+  phone in frame (COCO-SSD), tab/window visibility, paste, devtools-dock size
+  heuristic (logged as suspicious activity).
+- Short clips around 15 seconds, a violation cap that can auto-end the session,
+  and org live camera viewing.
+- Not reported as violations: gaze-away, low light.
+
+Published enterprise prices (INR, which is what checkout charges): 199 per
+seat per month, 19999 per month unlimited. Display currency on the site may
+convert those amounts for readers outside India.
+
+## Do not infer
+
+- No claim of a pass rate, placement rate, or number of candidates assessed.
+- No automated test-suite grading.
+- No gaze or low-light proctoring.
+- Practice catalog pages (/companies, /skills) describe the banks; opening a
+  round requires an account.
+
+## Indexable URLs
+
+- https://www.evalulabs.com/
+- https://www.evalulabs.com/solutions/ai-technical-interviews
+- https://www.evalulabs.com/solutions/ai-coding-interviews
+- https://www.evalulabs.com/solutions/interview-proctoring
+- https://www.evalulabs.com/companies
+- https://www.evalulabs.com/skills
+- https://www.evalulabs.com/enterprise
+- https://www.evalulabs.com/pricing
+- https://www.evalulabs.com/about
+- https://www.evalulabs.com/register
+- https://www.evalulabs.com/contact
+- https://www.evalulabs.com/terms
+- https://www.evalulabs.com/privacy
+- https://www.evalulabs.com/refund
+- https://www.evalulabs.com/cancellation
+
+Private app routes (dashboard, interview room, enterprise workspace, analytics)
+are noindex and disallowed in robots.txt.

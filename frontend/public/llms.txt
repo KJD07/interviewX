@@ -1,41 +1,68 @@
 # EvaluLabs
 
-> EvaluLabs (https://www.evalulabs.com) is an AI mock interview platform. You
-> pick a company and role, an AI interviewer runs a full-length session using
-> questions real candidates were actually asked there, and you get scored on
-> communication, technical depth and problem solving with written feedback.
+> EvaluLabs (https://www.evalulabs.com) is an AI interview and candidate
+> assessment platform. Candidates practise mock interviews against verified
+> company and skill question banks. Hiring teams screen applicants with their
+> own banks, invite links, rubric scores, and optional camera proctoring.
 
 Not to be confused with Evalulab (evalulab.com), an unrelated clinical testing
 company for cosmetics based in Montreal.
 
-## What makes it different
+## Who it is for
+
+- Candidates preparing for company or skill interviews.
+- Hiring teams running structured first-round screening.
+- Colleges sponsoring a plan for an email domain.
+
+## Practice interviews
 
 - Questions are contributed by verified sources: people who work at the company
   or interviewed there recently, confirmed via company email or offer letter.
-  Nothing in the bank is scraped or model-invented.
-- The AI interviewer adopts each company's interviewing tone, so pacing and
-  follow-up pressure match the real panel.
+  Nothing in the public bank is scraped or model-invented.
+- The AI interviewer adopts each company's interviewing tone (formal, casual,
+  or aggressive) when that tone is configured.
 - Voice mode: answer out loud with real-time transcription.
+- Coding and system-design questions open an in-session editor (JavaScript,
+  TypeScript, Python, Java, C++, Go) or a written system-design workspace.
+  Submissions and in-progress check-ins go to the AI interviewer. There is no
+  hidden unit-test runner.
 - Scoring uses an anchored 0-10 rubric across communication, technical depth,
-  problem solving and overall readiness. Vague or blank answers score low by
-  design, so the score is trackable over time.
-- A progress dashboard tracks readiness across companies and roles.
+  problem solving, and overall. Vague or blank answers score low by design.
+  Paid plans also get topic-level insights.
+- A progress view tracks scores across companies and roles.
+
+## Enterprise hiring
+
+- Upload a question bank (.csv, .xlsx, or .json). Interviews use that bank.
+- Invite candidates with links. Review communication, technical depth, problem
+  solving, and overall scores in the dashboard.
+- Camera proctoring on enterprise invites: camera required; no-face and
+  multiple-face checks; phone in frame; tab or window changes; paste detection
+  and a devtools-dock heuristic logged as suspicious activity; short violation
+  clips (about 15 seconds); a violation cap that can end the session; live
+  camera viewing for the organization.
+- Gaze-away and low-light checks are not active violation types.
+- Pricing shown on the enterprise page: ₹199 per seat per month, or ₹19,999
+  per month for unlimited seats (INR is the charged currency).
 
 ## Plans
 
 - Free: a monthly allowance of AI mock interviews with scoring and feedback. No
   card required.
 - Paid tiers: detailed insights, topic-level breakdowns, higher monthly limits.
-- Top-up packs: extra interviews that roll over and do not expire on renewal.
-- Institutional sponsorships: colleges and companies can grant a full plan to
+- Top-up packs: extra interviews that roll over and do not reset on renewal.
+- Institutional sponsorships: colleges and companies can grant a plan to
   everyone on their email domain, with a per-cycle interview limit they set.
 
 ## Pages
 
-- [Home](https://www.evalulabs.com/): product overview and FAQ.
-- [Companies](https://www.evalulabs.com/companies): browse companies and roles to practise against.
-- [Skills](https://www.evalulabs.com/skills): practise by topic — system design, data structures, behavioural and more.
-- [Pricing](https://www.evalulabs.com/pricing): plan tiers, limits and top-up packs.
-- [About](https://www.evalulabs.com/about): how the interview loop and question sourcing work.
-- [Enterprise](https://www.evalulabs.com/enterprise): college and company sponsorships.
+- [Home](https://www.evalulabs.com/): what EvaluLabs is, and FAQ.
+- [AI technical interviews](https://www.evalulabs.com/solutions/ai-technical-interviews): session loop for practice and screening.
+- [AI coding interviews](https://www.evalulabs.com/solutions/ai-coding-interviews): editor, languages, and how grading works.
+- [Interview proctoring](https://www.evalulabs.com/solutions/interview-proctoring): enterprise camera checks.
+- [Companies](https://www.evalulabs.com/companies): company catalog for practice. The interactive picker requires an account; the page explains what is inside.
+- [Skills](https://www.evalulabs.com/skills): skill catalog for practice. Same account requirement for the picker.
+- [Pricing](https://www.evalulabs.com/pricing): candidate plan tiers, limits, and top-up packs.
+- [About](https://www.evalulabs.com/about): question verification and how candidates are evaluated.
+- [Enterprise](https://www.evalulabs.com/enterprise): hiring workspace, pricing, and FAQ.
 - [Contact](https://www.evalulabs.com/contact): support and sponsorship enquiries.

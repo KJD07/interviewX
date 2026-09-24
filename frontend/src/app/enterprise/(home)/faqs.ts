@@ -1,5 +1,10 @@
 export const ENTERPRISE_FAQS = [
   {
+    question: "How does AI candidate screening work?",
+    answer:
+      "A hiring team uploads its own question bank, sends invite links, and each candidate sits an AI interview. When the session ends, EvaluLabs scores the transcript on communication, technical depth, problem solving, and overall. Reviewers read those reports in the enterprise dashboard instead of staffing a panel for every first round. Invites can also require camera proctoring.",
+  },
+  {
     question: "What is EvaluLabs Enterprise?",
     answer:
       "A hiring workspace. You upload your own question bank, invite candidates to structured AI interviews, and review scored reports from one dashboard — without scheduling a panel for every first round.",
