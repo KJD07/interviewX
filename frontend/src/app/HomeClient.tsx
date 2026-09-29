@@ -1,6 +1,5 @@
 "use client";
 
-import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -69,7 +68,7 @@ const LIVE_SCORES = [
   { label: "Confidence", width: "82%", value: "8.2" },
 ];
 
-export default function Home({ aeo }: { aeo?: ReactNode }) {
+export default function Home() {
   const { user } = useAuth();
   const router = useRouter();
 
@@ -286,8 +285,6 @@ export default function Home({ aeo }: { aeo?: ReactNode }) {
         </div>
       </section>
 
-      {aeo}
-
       <FaqSection />
 
       <section className="mx-auto max-w-[1180px] px-6 pb-4 sm:px-8">
@@ -324,7 +321,7 @@ export default function Home({ aeo }: { aeo?: ReactNode }) {
       </section>
 
       <footer className="mx-auto max-w-[1180px] px-6 pb-12 pt-16 sm:px-8">
-        <div className="grid grid-cols-2 gap-10 border-t border-[var(--border-mid)] pt-[26px] sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-10 border-t border-[var(--border-mid)] pt-[26px] sm:grid-cols-2 lg:grid-cols-5">
           <div className="col-span-2 lg:col-span-1">
             <div className="font-display mb-4 flex items-center gap-2.5 text-lg font-bold tracking-[-0.025em] text-[var(--ink)]">
               <Image src={icon} alt="EvaluLabs" width={26} height={26} className="rounded-md" />
@@ -341,10 +338,16 @@ export default function Home({ aeo }: { aeo?: ReactNode }) {
               <Link href="/pricing" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">Pricing</Link>
               <Link href="/companies" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">Companies</Link>
               <Link href="/skills" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">Skills</Link>
-              <Link href="/solutions/ai-technical-interviews" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">Technical interviews</Link>
-              <Link href="/solutions/ai-coding-interviews" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">Coding interviews</Link>
-              <Link href="/solutions/interview-proctoring" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">Proctoring</Link>
               <Link href="/enterprise" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">Enterprise</Link>
+            </div>
+          </div>
+          <div>
+            <p className="font-label mb-4">Blogs</p>
+            <div className="flex flex-col gap-2.5 text-sm">
+              <Link href="/blogs/what-is-an-ai-interview-platform" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">What is an AI interview platform?</Link>
+              <Link href="/blogs/ai-technical-interview" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">Technical interviews</Link>
+              <Link href="/blogs/ai-coding-interview" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">Coding interviews</Link>
+              <Link href="/blogs/interview-proctoring" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">Proctoring</Link>
             </div>
           </div>
           <div>

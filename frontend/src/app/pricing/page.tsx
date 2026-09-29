@@ -416,14 +416,14 @@ export default function Pricing() {
             </Link>
             . Seat and unlimited prices are listed there. Enterprise invites can include{" "}
             <Link
-              href="/solutions/interview-proctoring"
+              href="/blogs/interview-proctoring"
               className="underline underline-offset-4 hover:opacity-70"
             >
               camera proctoring
             </Link>
             . Coding rounds work the same way as in{" "}
             <Link
-              href="/solutions/ai-coding-interviews"
+              href="/blogs/ai-coding-interview"
               className="underline underline-offset-4 hover:opacity-70"
             >
               practice

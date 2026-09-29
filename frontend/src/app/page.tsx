@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import StructuredData from "@/components/StructuredData";
-import HomeAeo from "@/components/HomeAeo";
-import { HOME_AEO, HOME_FAQS } from "./home-faqs";
+import { HOME_FAQS } from "./home-faqs";
 import HomeClient from "./HomeClient";
 import { faqSchema, pageMetadata } from "@/lib/seo";
 
@@ -29,19 +28,8 @@ export const metadata: Metadata = {
 export default function Page() {
   return (
     <>
-      <StructuredData
-        schema={faqSchema(
-          [
-            ...HOME_AEO.map(({ question, answer, detail }) => ({
-              question,
-              answer: `${answer} ${detail}`,
-            })),
-            ...HOME_FAQS,
-          ],
-          { path: "/" },
-        )}
-      />
-      <HomeClient aeo={<HomeAeo />} />
+      <StructuredData schema={faqSchema(HOME_FAQS, { path: "/" })} />
+      <HomeClient />
     </>
   );
 }

@@ -174,8 +174,8 @@ section is a catch-up, not a phase-by-phase log like the ones above.
 - SEO/GEO/AEO pass against that playbook (2026-09-24). Robots now disallows
   enterprise workspace routes and `/analytics`, and names the major AI search
   crawlers with the same allow/disallow policy. Sitemap drops `/login` and adds
-  `/solutions/ai-technical-interviews`, `/solutions/ai-coding-interviews`, and
-  `/solutions/interview-proctoring`. `/companies` and `/skills` keep a public
+  `/blogs/ai-technical-interview`, `/blogs/ai-coding-interview`, and
+  `/blogs/interview-proctoring`. `/companies` and `/skills` keep a public
   server intro (catalog names and CTAs only) and no longer redirect logged-out
   visitors to login; the picker still requires an account. Homepage metadata
   and FAQ JSON-LD live on the server page. Brand copy, `llms.txt`, and

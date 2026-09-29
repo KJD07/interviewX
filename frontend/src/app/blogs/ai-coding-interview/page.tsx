@@ -4,18 +4,17 @@ import { DESCRIPTION, FAQS, SECTIONS, TITLE } from "./content";
 export default function Page() {
   return (
     <SolutionArticle
-      kicker="Solutions"
+      kicker="Blogs"
       title={TITLE}
       lead={DESCRIPTION}
       sections={SECTIONS}
       faqs={FAQS}
       related={[
-        { href: "/solutions/ai-coding-interviews", label: "AI coding interviews" },
-        { href: "/solutions/interview-proctoring", label: "Interview proctoring" },
+        { href: "/blogs/ai-technical-interview", label: "AI technical interviews" },
+        { href: "/skills", label: "Practise by skill" },
         { href: "/enterprise", label: "Enterprise hiring" },
         { href: "/register", label: "Create a practice account" },
-        { href: "/pricing", label: "Practice plan pricing" },
-        { href: "/about", label: "How questions are verified" },
+        { href: "/about", label: "How EvaluLabs evaluates candidates" },
       ]}
     />
   );

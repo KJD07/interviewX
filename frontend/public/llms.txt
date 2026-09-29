@@ -56,10 +56,11 @@ company for cosmetics based in Montreal.
 
 ## Pages
 
-- [Home](https://www.evalulabs.com/): what EvaluLabs is, and FAQ.
-- [AI technical interviews](https://www.evalulabs.com/solutions/ai-technical-interviews): session loop for practice and screening.
-- [AI coding interviews](https://www.evalulabs.com/solutions/ai-coding-interviews): editor, languages, and how grading works.
-- [Interview proctoring](https://www.evalulabs.com/solutions/interview-proctoring): enterprise camera checks.
+- [Home](https://www.evalulabs.com/): product overview and FAQ, including what EvaluLabs is.
+- [What is an AI interview platform?](https://www.evalulabs.com/blogs/what-is-an-ai-interview-platform): AI interviewer, who EvaluLabs is for, and how a session is scored.
+- [AI technical interviews](https://www.evalulabs.com/blogs/ai-technical-interview): session loop for practice and screening.
+- [AI coding interviews](https://www.evalulabs.com/blogs/ai-coding-interview): editor, languages, and how grading works.
+- [Interview proctoring](https://www.evalulabs.com/blogs/interview-proctoring): enterprise camera checks.
 - [Companies](https://www.evalulabs.com/companies): company catalog for practice. The interactive picker requires an account; the page explains what is inside.
 - [Skills](https://www.evalulabs.com/skills): skill catalog for practice. Same account requirement for the picker.
 - [Pricing](https://www.evalulabs.com/pricing): candidate plan tiers, limits, and top-up packs.

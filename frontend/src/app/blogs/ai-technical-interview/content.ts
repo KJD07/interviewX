@@ -1,4 +1,4 @@
-export const PATH = "/solutions/ai-technical-interviews";
+export const PATH = "/blogs/ai-technical-interview";
 
 export const TITLE = "AI Technical Interviews";
 

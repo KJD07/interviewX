@@ -29,7 +29,7 @@ export default function SolutionArticle({
             Home
           </Link>
           <span aria-hidden> / </span>
-          <span>Solutions</span>
+          <span>Blogs</span>
           <span aria-hidden> / </span>
           <span className="text-[var(--ink-dim)]">{title}</span>
         </p>
@@ -72,7 +72,9 @@ export default function SolutionArticle({
           </ul>
         </section>
       </article>
-      <FaqAccordion items={faqs} heading="Questions about this page." idPrefix="solution-faq" />
+      {faqs.length > 0 && (
+        <FaqAccordion items={faqs} heading="Questions about this page." idPrefix="solution-faq" />
+      )}
       <MarketingFooter />
     </div>
   );

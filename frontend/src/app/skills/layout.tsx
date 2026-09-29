@@ -51,7 +51,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               Create a free account
             </Link>
             <Link
-              href="/solutions/ai-coding-interviews"
+              href="/blogs/ai-coding-interview"
               className="rounded-full border border-[var(--border-mid)] px-5 py-3 text-sm font-semibold text-[var(--ink)]"
             >
               How coding interviews work

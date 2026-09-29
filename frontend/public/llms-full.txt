@@ -60,9 +60,10 @@ convert those amounts for readers outside India.
 ## Indexable URLs
 
 - https://www.evalulabs.com/
-- https://www.evalulabs.com/solutions/ai-technical-interviews
-- https://www.evalulabs.com/solutions/ai-coding-interviews
-- https://www.evalulabs.com/solutions/interview-proctoring
+- https://www.evalulabs.com/blogs/what-is-an-ai-interview-platform
+- https://www.evalulabs.com/blogs/ai-technical-interview
+- https://www.evalulabs.com/blogs/ai-coding-interview
+- https://www.evalulabs.com/blogs/interview-proctoring
 - https://www.evalulabs.com/companies
 - https://www.evalulabs.com/skills
 - https://www.evalulabs.com/enterprise

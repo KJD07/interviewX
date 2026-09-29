@@ -1,4 +1,4 @@
-export const PATH = "/solutions/interview-proctoring";
+export const PATH = "/blogs/interview-proctoring";
 
 export const TITLE = "Interview Proctoring";
 
