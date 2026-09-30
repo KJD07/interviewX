@@ -11,6 +11,7 @@ import {
   SUPPORT_EMAIL,
   TRADE_NAME,
 } from "@/lib/legal";
+import { EVALUATION_FAQ } from "./evaluation";
 
 const VALUES = [
   { title: "Sourced, not scraped", body: "Every question comes from someone who actually sat in that interview - a current employee or a recently interviewed candidate. Nothing is pulled off generic forums." },
@@ -150,6 +151,22 @@ export default function About() {
             </ScrollReveal>
           ))}
         </div>
+      </section>
+
+      <section className="mx-auto max-w-[800px] px-6 pt-[88px] sm:px-8">
+        <ScrollReveal>
+          <div className="font-label mb-3.5">Scoring</div>
+          <h2 className="font-display text-[32px] font-bold leading-[1.04] tracking-[-0.032em] text-[var(--ink)] sm:text-[40px]">
+            {EVALUATION_FAQ.question}
+          </h2>
+          <p className="mt-4 text-[15px] leading-[1.65] text-[var(--ink-dim)]">{EVALUATION_FAQ.answer}</p>
+          <p className="mt-4 text-[15px] leading-[1.65] text-[var(--ink-dim)]">
+            Coding and system-design answers are part of that transcript. The interviewer reads what
+            was submitted in the editor; there is no separate test-runner score. Enterprise invites
+            can add camera proctoring on top of the rubric. The proctoring flags are integrity
+            signals, not a fifth score.
+          </p>
+        </ScrollReveal>
       </section>
 
       <section className="mx-auto max-w-[1180px] px-6 pt-[88px] sm:px-8">

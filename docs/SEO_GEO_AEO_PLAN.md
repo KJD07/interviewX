@@ -147,9 +147,9 @@ In `companies/layout.tsx` and `skills/layout.tsx`:
 
 | Route | Purpose |
 |-------|---------|
-| `/solutions/ai-technical-interviews` | Practice + enterprise screening; session loop (start → chat → end). |
-| `/solutions/ai-coding-interviews` | Editor, languages, AI grading; honest scope (no test runner unless built). |
-| `/solutions/interview-proctoring` | Enterprise proctoring only; feature list from Phase 0. |
+| `/blogs/ai-technical-interview` | Practice + enterprise screening; session loop (start → chat → end). |
+| `/blogs/ai-coding-interview` | Editor, languages, AI grading; honest scope (no test runner unless built). |
+| `/blogs/interview-proctoring` | Enterprise proctoring only; feature list from Phase 0. |
 
 Each page:
 
@@ -334,11 +334,11 @@ Run before merging SEO work:
 
 | Decision | Choice | Date | PR |
 |----------|--------|------|-----|
-| Companies/skills indexability | A / B / C | | |
-| Solution URL prefix | `/solutions/…` or other | | |
-| Homepage split (`HomeClient`) | Yes / No | | |
-| Blog in v1 | Skip / N guides | | |
-| Sitemap: `/login` | Keep / Remove | | |
+| Companies/skills indexability | A — server catalog intro; picker stays signed-in and no longer redirects logged-out visitors away | 2026-09-24 | |
+| Solution URL prefix | `/blogs/…` (singular slugs) | 2026-09-30 | |
+| Homepage split (`HomeClient`) | Yes | 2026-09-24 | |
+| Blog in v1 | Skip | 2026-09-24 | |
+| Sitemap: `/login` | Remove | 2026-09-24 | |
 
 ---
 

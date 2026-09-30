@@ -7,7 +7,7 @@ import { OPERATOR_LEGAL_NAME } from "@/lib/legal";
 export default function MarketingFooter() {
   return (
     <footer className="mx-auto max-w-[1180px] px-4 pb-12 pt-8 sm:px-8">
-      <div className="grid grid-cols-2 gap-10 border-t border-[var(--border-mid)] pt-[26px] sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-10 border-t border-[var(--border-mid)] pt-[26px] sm:grid-cols-2 lg:grid-cols-5">
         <div className="col-span-2 lg:col-span-1">
           <div className="font-display mb-4 flex items-center gap-2.5 text-lg font-bold tracking-[-0.025em] text-[var(--ink)]">
             <Image src={icon} alt="EvaluLabs" width={26} height={26} className="rounded-md" />
@@ -29,11 +29,31 @@ export default function MarketingFooter() {
             <Link href="/companies" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">
               Companies
             </Link>
+            <Link href="/skills" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">
+              Skills
+            </Link>
             <Link href="/enterprise" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">
               Enterprise
             </Link>
             <Link href="/partner" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">
               Partnership Program
+            </Link>
+          </div>
+        </div>
+        <div>
+          <p className="font-label mb-4">Blogs</p>
+          <div className="flex flex-col gap-2.5 text-sm">
+            <Link href="/blogs/what-is-an-ai-interview-platform" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">
+              What is an AI interview platform?
+            </Link>
+            <Link href="/blogs/ai-technical-interview" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">
+              Technical interviews
+            </Link>
+            <Link href="/blogs/ai-coding-interview" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">
+              Coding interviews
+            </Link>
+            <Link href="/blogs/interview-proctoring" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">
+              Proctoring
             </Link>
           </div>
         </div>

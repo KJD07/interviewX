@@ -6,6 +6,9 @@ const nextConfig = {
       { source: "/career", destination: "/", permanent: true },
       { source: "/careers", destination: "/", permanent: true },
       { source: "/enterprise/partner", destination: "/partner", permanent: true },
+      { source: "/solutions/ai-technical-interviews", destination: "/blogs/ai-technical-interview", permanent: true },
+      { source: "/solutions/ai-coding-interviews", destination: "/blogs/ai-coding-interview", permanent: true },
+      { source: "/solutions/interview-proctoring", destination: "/blogs/interview-proctoring", permanent: true },
     ];
   },
   onDemandEntries: {

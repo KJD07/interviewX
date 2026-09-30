@@ -18,4 +18,6 @@ boto3==1.35.36
 channels==4.1.0
 daphne==4.1.2
 django-rq==2.10.2
+# django-rq 2.10 imports rq.Connection, which rq 2.0 removed.
+rq>=1.16,<2
 redis==5.0.8

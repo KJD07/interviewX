@@ -218,7 +218,7 @@ export default function SkillsPage() {
   const limitReached = monthlyLimit !== null && monthlyUsed >= monthlyLimit;
 
   return (
-    <ProtectedRoute>
+    <ProtectedRoute redirect={false}>
       <AppShell>
         <div className="min-h-screen" style={{ background: "var(--page)" }}>
           <main className="max-w-[1080px] mx-auto px-[44px] pt-9 pb-[60px] fade-up">
