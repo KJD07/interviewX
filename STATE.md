@@ -222,3 +222,9 @@ Still not started from the original spec:
 - Local dev needs real Razorpay test-mode keys in `.env` to complete a
   payment or top-up purchase — without them it fails with a clean
   "Authentication failed" error. Expected, not a bug.
+
+## Candidate portal: free platform, live jobs, practice (apps/careers)
+- `PLATFORM_FREE` (default true) makes `effective_plan()` return the `max` tier for free-plan users; AI interviews stay capped at `PLATFORM_FREE_MONTHLY_LIMIT` (default 5) because they are the only LLM-cost item. Set `PLATFORM_FREE=false` to restore the old tiers.
+- `/jobs`: free keyless feeds (Remotive, Arbeitnow) refreshed lazily every `JOB_REFRESH_HOURS` (5) by the first request after expiry (no cron). Per-job ATS check = local skill-graph keyword matching (`careers/skillgraph.py`, `ats.py`) — no LLM, zero cost. 15 checks/day free; any paid plan (Pro ₹199) unlimited. Resume is pasted as text (no file parsing yet).
+- `/practice`: type an answer to an approved `InterviewQuestion` that has an `ideal_answer`, get a 0–10 score from local term-coverage scoring (`careers/practice.py`) — no LLM. Quality is keyword-based; an LLM grader could be added later at a cost.
+- Known limits: feed content depends on third-party free APIs; job descriptions with no recognisable skills return 422.

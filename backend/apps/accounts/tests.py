@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -10,6 +10,7 @@ from rest_framework.test import APIClient
 User = get_user_model()
 
 
+@override_settings(PLATFORM_FREE=False)  # asserts legacy free-tier behaviour
 class SubscriptionCycleTests(TestCase):
     """Covers the bug where interviews_this_month never reset and lapsed
     paid subscriptions never downgraded (nothing ever called

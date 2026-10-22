@@ -230,6 +230,8 @@ export default function Sidebar({ enterprise = false, partner = false, mobileOpe
         ...(hasSkills(user?.subscription_plan)
           ? [{ href: "/skills", label: "Skills", icon: SparkleIcon }]
           : []),
+        { href: "/practice", label: "Practice", icon: QuestionsIcon },
+        { href: "/jobs", label: "Live jobs", icon: BuildingIcon },
         { href: "/progress", label: "Progress", icon: TrendIcon },
         ...(user?.is_partner ? [{ href: "/partner", label: "Partner", icon: HandshakeIcon }] : []),
       ];
