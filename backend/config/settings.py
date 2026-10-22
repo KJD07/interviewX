@@ -247,6 +247,9 @@ OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 # --- Free candidate portal ---
 # Every candidate gets the Max tier (features and monthly interview limit).
 PLATFORM_FREE = os.environ.get("PLATFORM_FREE", "true").lower() in ("1", "true", "yes")
+# Optional TypeSafe Jev second opinion on ATS checks (off when key is empty).
+TYPESAFE_API_KEY = os.environ.get("TYPESAFE_API_KEY", "")
+TYPESAFE_MODEL = os.environ.get("TYPESAFE_MODEL", "jev-latest")
 # Live-jobs feed refresh interval (lazy, request-driven; no cron worker).
 JOB_REFRESH_HOURS = int(os.environ.get("JOB_REFRESH_HOURS", "5"))
 

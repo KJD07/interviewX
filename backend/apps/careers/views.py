@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 from apps.companies.models import InterviewQuestion
 from apps.subscriptions.plans import ats_daily_limit, effective_plan
 
-from . import feeds
+from . import feeds, jev
 from .ats import MAX_TEXT_CHARS, ats_check
 from .resume_parser import ResumeParseError, extract_text
 from .models import Job, JobFeedState, ResumeCheck
@@ -75,6 +75,14 @@ class ResumeCheckView(APIView):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "careers_ats"
 
+    @staticmethod
+    def _limit_response(limit, used):
+        return Response(
+            {"detail": f"Daily limit of {limit} resume checks reached. Upgrade to Pro (₹199/month) for unlimited checks.",
+             "code": "ats_daily_limit", "ats_quota": {"limit": limit, "used": used}},
+            status=status.HTTP_429_TOO_MANY_REQUESTS,
+        )
+
     def post(self, request, job_id):
         upload = request.FILES.get("resume_file")
         if upload:
@@ -92,6 +100,22 @@ class ResumeCheckView(APIView):
         if not job:
             return Response({"detail": "Job not found."}, status=status.HTTP_404_NOT_FOUND)
 
+        result = ats_check(resume, job.title, job.description, job.tags)
+        if result["ats_score"] is None:
+            return Response({"detail": "This posting lists no recognisable skills to check against."},
+                            status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+        # Cheap un-locked pre-check so over-quota users never trigger a paid Jev call.
+        limit, used = _quota(request.user)
+        if limit is not None and used >= limit:
+            return self._limit_response(limit, used)
+
+        ai = jev.assess(resume, job.title, job.description, result["missing_keywords"])
+        if ai:
+            result = ats_check(resume, job.title, job.description, job.tags, extra_have=ai["confirmed"])
+            result["ai_fit"] = ai["fit"]
+        result["ai_assisted"] = bool(ai)
+
         # Serialise per user so parallel requests can't slip past the daily cap.
         from django.db import transaction
         from django.contrib.auth import get_user_model
@@ -99,15 +123,7 @@ class ResumeCheckView(APIView):
             user = get_user_model().objects.select_for_update().get(pk=request.user.pk)
             limit, used = _quota(user)
             if limit is not None and used >= limit:
-                return Response(
-                    {"detail": f"Daily limit of {limit} resume checks reached. Upgrade to Pro (₹199/month) for unlimited checks.",
-                     "code": "ats_daily_limit", "ats_quota": {"limit": limit, "used": used}},
-                    status=status.HTTP_429_TOO_MANY_REQUESTS,
-                )
-            result = ats_check(resume, job.title, job.description, job.tags)
-            if result["ats_score"] is None:
-                return Response({"detail": "This posting lists no recognisable skills to check against."},
-                                status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+                return self._limit_response(limit, used)
             ResumeCheck.objects.create(
                 user=user, job=job, ats_score=result["ats_score"],
                 matched_keywords=result["matched_keywords"], missing_keywords=result["missing_keywords"],

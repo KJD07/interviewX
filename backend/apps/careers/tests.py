@@ -196,3 +196,61 @@ class ResumeUploadTests(TestCase):
         self.assertEqual(self._post("cv.exe", b"MZ" + b"x" * 500).status_code, 400)
         self.assertEqual(self._post("cv.pdf", b"not a pdf at all").status_code, 400)
         self.assertEqual(ResumeCheck.objects.count(), 0)
+
+
+def _jev_response(fit_score, nouls):
+    answers = {"fit": {"type": "score", "score": fit_score}}
+    answers.update({f"s{i}": {"type": "noul", "noul": p} for i, p in enumerate(nouls)})
+    resp = mock.Mock()
+    resp.json.return_value = {"answers": answers}
+    resp.raise_for_status.return_value = None
+    return resp
+
+
+class JevTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="j", email="j@ex.com", password="pw12345!")
+        self.c = APIClient()
+        self.c.force_authenticate(self.user)
+        self.job = make_job()  # needs python django postgresql docker aws
+        self.url = f"/api/careers/jobs/{self.job.id}/resume-check/"
+
+    @override_settings(TYPESAFE_API_KEY="")
+    def test_disabled_without_key_makes_no_call(self):
+        with mock.patch("apps.careers.jev.httpx.post") as post:
+            r = self.c.post(self.url, {"resume_text": RESUME}, format="json")
+        post.assert_not_called()
+        self.assertFalse(r.data["ai_assisted"])
+        self.assertNotIn("ai_fit", r.data)
+
+    @override_settings(TYPESAFE_API_KEY="k")
+    def test_jev_confirms_missing_skill_and_adds_fit(self):
+        with override_settings(TYPESAFE_API_KEY=""):
+            baseline = self.c.post(self.url, {"resume_text": RESUME}, format="json").data
+        missing = baseline["missing_keywords"]  # order matches the Noul questions Jev is asked
+        nouls = [0.95 if m == "docker" else 0.1 for m in missing]
+        with mock.patch("apps.careers.jev.httpx.post", return_value=_jev_response(3.0, nouls)) as post:
+            r = self.c.post(self.url, {"resume_text": RESUME}, format="json")
+        self.assertTrue(r.data["ai_assisted"])
+        self.assertEqual(r.data["ai_fit"], 75)
+        self.assertIn("docker", r.data["matched_keywords"])
+        self.assertNotIn("docker", r.data["missing_keywords"])
+        self.assertGreater(r.data["ats_score"], baseline["ats_score"])
+        self.assertEqual(post.call_args.kwargs["headers"]["Authorization"], "Bearer k")
+
+    @override_settings(TYPESAFE_API_KEY="k")
+    def test_jev_failure_falls_back_to_keyword_result(self):
+        with mock.patch("apps.careers.jev.httpx.post", side_effect=RuntimeError("boom")):
+            r = self.c.post(self.url, {"resume_text": RESUME}, format="json")
+        self.assertEqual(r.status_code, 200)
+        self.assertFalse(r.data["ai_assisted"])
+        self.assertIn("docker", r.data["missing_keywords"])
+
+    @override_settings(TYPESAFE_API_KEY="k")
+    def test_over_quota_user_never_triggers_jev(self):
+        for _ in range(15):
+            ResumeCheck.objects.create(user=self.user, job=self.job, ats_score=1)
+        with mock.patch("apps.careers.jev.httpx.post") as post:
+            r = self.c.post(self.url, {"resume_text": RESUME}, format="json")
+        self.assertEqual(r.status_code, 429)
+        post.assert_not_called()

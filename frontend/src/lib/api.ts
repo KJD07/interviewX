@@ -1101,6 +1101,8 @@ export interface ResumeCheckResult {
   ats_score: number;
   matched_keywords: string[];
   missing_keywords: string[];
+  ai_assisted: boolean;
+  ai_fit?: number; // 0-100, present only when the Jev second opinion ran
   ats_quota: AtsQuota;
 }
 

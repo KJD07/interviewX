@@ -83,6 +83,11 @@ function CheckPanel({ job, onQuota }: { job: Job; onQuota: (q: AtsQuota) => void
           <p className="text-2xl font-semibold" style={{ color: "var(--ink)" }}>
             ATS score: {result.ats_score}/100
           </p>
+          {result.ai_fit !== undefined && (
+            <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
+              AI fit assessment: {result.ai_fit}/100
+            </p>
+          )}
           {result.missing_keywords.length > 0 && (
             <div>
               <p className="text-xs mb-1" style={{ color: "var(--ink-dim)" }}>Missing keywords</p>
