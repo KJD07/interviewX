@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.companies",
     "apps.interviews",
+    "apps.careers",
     "apps.subscriptions",
     "apps.reviews",
     "apps.enterprise",
@@ -189,6 +190,8 @@ REST_FRAMEWORK = {
         # Global fallbacks for any endpoint that doesn't set its own scope.
         "anon": "60/min",
         "user": "120/min",
+        "careers_ats": "30/min",
+        "careers_practice": "30/min",
         # Tighter scope applied explicitly to auth endpoints (register,
         # verify-OTP, resend-OTP, login, google-auth) to block brute-force /
         # credential-stuffing / OTP-spam attacks.
@@ -240,6 +243,15 @@ if not DEBUG:
 
 # --- OpenRouter (used starting Phase 4) ---
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+
+# --- Free candidate portal ---
+# Every candidate gets the Max tier (features and monthly interview limit).
+PLATFORM_FREE = os.environ.get("PLATFORM_FREE", "true").lower() in ("1", "true", "yes")
+# Optional TypeSafe Jev second opinion on ATS checks (off when key is empty).
+TYPESAFE_API_KEY = os.environ.get("TYPESAFE_API_KEY", "")
+TYPESAFE_MODEL = os.environ.get("TYPESAFE_MODEL", "jev-latest")
+# Live-jobs feed refresh interval (lazy, request-driven; no cron worker).
+JOB_REFRESH_HOURS = int(os.environ.get("JOB_REFRESH_HOURS", "5"))
 
 # --- PayU (subscriptions) ---
 PAYU_MERCHANT_KEY = os.environ.get("PAYU_MERCHANT_KEY", "")

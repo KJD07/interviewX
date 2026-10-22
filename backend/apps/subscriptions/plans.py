@@ -3,6 +3,11 @@ Single source of truth for EvaluLabs subscription plans.
 Used by both the interviews app (limit checks) and subscriptions app (payments).
 """
 
+from django.conf import settings
+
+# Tier every candidate gets while PLATFORM_FREE is on.
+FREE_PLATFORM_TIER = "max"
+
 # None = unlimited
 PLANS = {
     "free": {
@@ -104,10 +109,32 @@ def has_skills(plan: str) -> bool:
 def effective_plan(user) -> str:
     if user.sponsorship_campaign_id:
         return user.sponsorship_campaign.granted_plan
+    # Candidate portal is free: with PLATFORM_FREE every candidate gets the
+    # Max tier's features and limits, whatever their stored plan.
+    if settings.PLATFORM_FREE:
+        return FREE_PLATFORM_TIER
     return user.subscription_plan
 
 
 def effective_monthly_limit(user):
     if user.sponsorship_campaign_id:
         return user.sponsorship_campaign.interview_limit
+    if settings.PLATFORM_FREE:
+        return monthly_limit_for(FREE_PLATFORM_TIER)
     return monthly_limit_for(user.subscription_plan)
+
+
+# ---------------------------------------------------------------------------
+# Resume-vs-job ATS checks (Live Jobs)
+# ---------------------------------------------------------------------------
+# Checks are local keyword matching (zero marginal cost), so the cap exists
+# for fairness / abuse control and as the upsell: Pro (₹199/mo) and above
+# are unlimited, everyone else gets ATS_FREE_DAILY_LIMIT per day.
+ATS_FREE_DAILY_LIMIT = 15
+
+
+def ats_daily_limit(user):
+    """None = unlimited."""
+    if user.subscription_plan in PAID_PLANS or user.sponsorship_campaign_id:
+        return None
+    return ATS_FREE_DAILY_LIMIT

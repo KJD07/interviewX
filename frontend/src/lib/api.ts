@@ -1069,3 +1069,82 @@ export const reviews = {
 };
 
 export { API_URL };
+// ── Careers: live jobs, ATS resume check, practice ─────────────────────────────
+
+export interface AtsQuota {
+  limit: number | null; // null = unlimited
+  used: number;
+}
+
+export interface Job {
+  id: number;
+  title: string;
+  company: string;
+  location: string;
+  url: string;
+  tags: string[];
+  posted_at: string;
+  source: string;
+  description?: string;
+}
+
+export interface JobListResponse {
+  results: Job[];
+  count: number;
+  page: number;
+  page_size: number;
+  last_refreshed_at: string | null;
+  ats_quota: AtsQuota;
+}
+
+export interface ResumeCheckResult {
+  ats_score: number;
+  matched_keywords: string[];
+  missing_keywords: string[];
+  ai_assisted: boolean;
+  ai_fit?: number; // 0-100, present only when the Jev second opinion ran
+  ats_quota: AtsQuota;
+}
+
+export interface PracticeQuestion {
+  id: number;
+  question_text: string;
+  question_type: string;
+  company: string;
+  role: string;
+}
+
+export interface PracticeResult {
+  score: number;
+  covered: string[];
+  missing: string[];
+  ideal_answer: string;
+}
+
+export const careers = {
+  jobs: (q = "", page = 1) =>
+    request<JobListResponse>(`/api/careers/jobs/?page=${page}${q ? `&q=${encodeURIComponent(q)}` : ""}`),
+  // Multipart upload bypasses request() (fixed JSON Content-Type) — same as
+  // organizations.uploadQuestions. Sends either a file or pasted text.
+  checkResume: async (jobId: number, resume: { file?: File | null; text?: string }): Promise<ResumeCheckResult> => {
+    const access = tokens.getAccess();
+    const form = new FormData();
+    if (resume.file) form.append("resume_file", resume.file);
+    else form.append("resume_text", resume.text ?? "");
+    const res = await fetch(`${API_URL}/api/careers/jobs/${jobId}/resume-check/`, {
+      method: "POST",
+      headers: access ? { Authorization: `Bearer ${access}` } : {},
+      body: form,
+    });
+    const body = await res.json().catch(() => undefined);
+    if (!res.ok) throw new ApiError(res.status, extractDetail(body) || `Request failed (${res.status})`, (body as any)?.code, body);
+    return body;
+  },
+  practiceQuestions: (type = "") =>
+    request<PracticeQuestion[]>(`/api/careers/practice/questions/${type ? `?type=${type}` : ""}`),
+  validateAnswer: (questionId: number, answer: string) =>
+    request<PracticeResult>("/api/careers/practice/validate/", {
+      method: "POST",
+      body: JSON.stringify({ question_id: questionId, answer }),
+    }),
+};
