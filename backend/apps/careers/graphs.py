@@ -14,9 +14,9 @@ from django.utils import timezone
 from apps.subscriptions.plans import ats_daily_limit
 from core.graph import END, Graph
 
-from . import jev
+from . import feeds, jev
 from .ats import MAX_TEXT_CHARS, ats_check
-from .models import Job, ResumeCheck
+from .models import CandidateProfile, Job, ResumeCheck
 from .resume_parser import ResumeParseError, extract_text
 
 MIN_RESUME_CHARS = 100
@@ -60,6 +60,9 @@ def _parse_resume(state):
             return _reply({"detail": str(exc)}, 400)
     else:
         resume = (state.get("resume_text") or "").strip()
+        if not resume:  # nothing sent -> the resume saved on the candidate's profile
+            resume = (CandidateProfile.objects.filter(user=state["user"])
+                      .values_list("resume_text", flat=True).first() or "")
     resume = resume[:MAX_TEXT_CHARS]
     if len(resume) < MIN_RESUME_CHARS:
         return _reply({"detail": "Upload your resume or paste its full text (at least 100 characters)."}, 400)
@@ -70,7 +73,7 @@ def _load_job(state):
     job = Job.objects.filter(pk=state["job_id"]).first()
     if not job:
         return _reply({"detail": "Job not found."}, 404)
-    return {"job": job}
+    return {"job": feeds.ensure_description(job)}
 
 
 def _ats_keyword_score(state):

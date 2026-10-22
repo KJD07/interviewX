@@ -1078,6 +1078,10 @@ export interface AtsQuota {
   used: number;
 }
 
+export type WorkMode = "remote" | "hybrid" | "onsite";
+export type JobLevel = "entry" | "mid" | "senior";
+export type ApplicationStatus = "applied" | "interviewing" | "offer" | "rejected" | "withdrawn";
+
 export interface Job {
   id: number;
   title: string;
@@ -1087,7 +1091,24 @@ export interface Job {
   tags: string[];
   posted_at: string;
   source: string;
+  work_mode: WorkMode | "";
+  level: JobLevel | "";
+  skills: string[];
+  saved: boolean;
+  application_status: ApplicationStatus | null;
+  match: number | null; // 0-100 vs the candidate profile; null without a profile
   description?: string;
+}
+
+export interface JobFilters {
+  q?: string;
+  location?: string;
+  company?: string;
+  work_mode?: WorkMode[];
+  level?: JobLevel[];
+  posted?: "" | "1" | "3" | "7" | "30";
+  sort?: "recent" | "match";
+  page?: number;
 }
 
 export interface JobListResponse {
@@ -1095,8 +1116,66 @@ export interface JobListResponse {
   count: number;
   page: number;
   page_size: number;
+  sort: "recent" | "match";
   last_refreshed_at: string | null;
+  refreshing: boolean;
+  stats: { jobs: number; companies: number };
+  has_profile: boolean;
   ats_quota: AtsQuota;
+}
+
+export interface ExperienceEntry { title: string; company: string; location: string; start: string; end: string; description: string }
+export interface EducationEntry { degree: string; institution: string; start: string; end: string; grade: string }
+export interface ProjectEntry { name: string; description: string; link: string }
+
+export interface CandidateProfile {
+  full_name: string;
+  headline: string;
+  email: string;
+  phone: string;
+  location: string;
+  summary: string;
+  linkedin_url: string;
+  github_url: string;
+  portfolio_url: string;
+  total_experience_years: string | number | null;
+  skills: string[];
+  experience: ExperienceEntry[];
+  education: EducationEntry[];
+  projects: ProjectEntry[];
+  certifications: string[];
+  target_roles: string[];
+  preferred_locations: string[];
+  work_modes: WorkMode[];
+  experience_level: JobLevel | "";
+  has_resume: boolean;
+  resume_filename: string;
+  resume_uploaded_at: string | null;
+  resume_parsed_by: "" | "ai" | "rules";
+  updated_at: string;
+}
+
+export interface TrackedJob {
+  id: number;
+  job_id: number | null;
+  is_live: boolean; // false once the company closed the posting
+  title: string;
+  company: string;
+  location: string;
+  url: string;
+}
+
+export interface SavedJob extends TrackedJob {
+  saved_at: string;
+  work_mode: WorkMode | "";
+  posted_at: string | null;
+}
+
+export interface JobApplication extends TrackedJob {
+  status: ApplicationStatus;
+  notes: string;
+  applied_at: string;
+  updated_at: string;
 }
 
 export interface ResumeCheckResult {
@@ -1123,24 +1202,76 @@ export interface PracticeResult {
   ideal_answer: string;
 }
 
+// Multipart uploads bypass request() (fixed JSON Content-Type) — same as
+// organizations.uploadQuestions.
+async function postForm<T>(path: string, form: FormData): Promise<T> {
+  const access = tokens.getAccess();
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    headers: access ? { Authorization: `Bearer ${access}` } : {},
+    body: form,
+  });
+  const body = await res.json().catch(() => undefined);
+  if (!res.ok) throw new ApiError(res.status, extractDetail(body) || `Request failed (${res.status})`, (body as any)?.code, body);
+  return body;
+}
+
+function jobQuery(f: JobFilters): string {
+  const p = new URLSearchParams();
+  p.set("page", String(f.page ?? 1));
+  if (f.q) p.set("q", f.q);
+  if (f.location) p.set("location", f.location);
+  if (f.company) p.set("company", f.company);
+  if (f.work_mode?.length) p.set("work_mode", f.work_mode.join(","));
+  if (f.level?.length) p.set("level", f.level.join(","));
+  if (f.posted) p.set("posted", f.posted);
+  if (f.sort) p.set("sort", f.sort);
+  return p.toString();
+}
+
 export const careers = {
-  jobs: (q = "", page = 1) =>
-    request<JobListResponse>(`/api/careers/jobs/?page=${page}${q ? `&q=${encodeURIComponent(q)}` : ""}`),
-  // Multipart upload bypasses request() (fixed JSON Content-Type) — same as
-  // organizations.uploadQuestions. Sends either a file or pasted text.
-  checkResume: async (jobId: number, resume: { file?: File | null; text?: string }): Promise<ResumeCheckResult> => {
+  jobs: (filters: JobFilters = {}) => request<JobListResponse>(`/api/careers/jobs/?${jobQuery(filters)}`),
+  job: (jobId: number) => request<Job>(`/api/careers/jobs/${jobId}/`),
+  saveJob: (jobId: number) => request<{ saved: boolean }>(`/api/careers/jobs/${jobId}/save/`, { method: "POST" }),
+  unsaveJob: (jobId: number) => request<{ saved: boolean }>(`/api/careers/jobs/${jobId}/save/`, { method: "DELETE" }),
+  savedJobs: () => request<SavedJob[]>("/api/careers/saved/"),
+  removeSaved: (savedId: number) => request<void>(`/api/careers/saved/?id=${savedId}`, { method: "DELETE" }),
+  applications: () => request<JobApplication[]>("/api/careers/applications/"),
+  markApplied: (jobId: number) =>
+    request<JobApplication>("/api/careers/applications/", { method: "POST", body: JSON.stringify({ job_id: jobId }) }),
+  addApplication: (a: { title: string; company: string; location?: string; url?: string; status?: ApplicationStatus; notes?: string }) =>
+    request<JobApplication>("/api/careers/applications/", { method: "POST", body: JSON.stringify(a) }),
+  updateApplication: (id: number, patch: { status?: ApplicationStatus; notes?: string }) =>
+    request<JobApplication>(`/api/careers/applications/${id}/`, { method: "PATCH", body: JSON.stringify(patch) }),
+  deleteApplication: (id: number) => request<void>(`/api/careers/applications/${id}/`, { method: "DELETE" }),
+  profile: () => request<CandidateProfile>("/api/careers/profile/"),
+  updateProfile: (patch: Partial<CandidateProfile>) =>
+    request<CandidateProfile>("/api/careers/profile/", { method: "PATCH", body: JSON.stringify(patch) }),
+  uploadResume: (file: File) => {
+    const form = new FormData();
+    form.append("resume_file", file);
+    return postForm<CandidateProfile>("/api/careers/profile/resume/", form);
+  },
+  deleteResume: () => request<void>("/api/careers/profile/resume/", { method: "DELETE" }),
+  downloadResume: async (filename: string) => {
     const access = tokens.getAccess();
+    const res = await fetch(`${API_URL}/api/careers/profile/resume/`, {
+      headers: access ? { Authorization: `Bearer ${access}` } : {},
+    });
+    if (!res.ok) throw new ApiError(res.status, "Could not download your resume.");
+    const href = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a");
+    a.href = href;
+    a.download = filename || "resume";
+    a.click();
+    URL.revokeObjectURL(href);
+  },
+  // Sends a file, pasted text, or neither — then the profile's saved resume is used.
+  checkResume: (jobId: number, resume: { file?: File | null; text?: string }) => {
     const form = new FormData();
     if (resume.file) form.append("resume_file", resume.file);
-    else form.append("resume_text", resume.text ?? "");
-    const res = await fetch(`${API_URL}/api/careers/jobs/${jobId}/resume-check/`, {
-      method: "POST",
-      headers: access ? { Authorization: `Bearer ${access}` } : {},
-      body: form,
-    });
-    const body = await res.json().catch(() => undefined);
-    if (!res.ok) throw new ApiError(res.status, extractDetail(body) || `Request failed (${res.status})`, (body as any)?.code, body);
-    return body;
+    else if (resume.text) form.append("resume_text", resume.text);
+    return postForm<ResumeCheckResult>(`/api/careers/jobs/${jobId}/resume-check/`, form);
   },
   practiceQuestions: (type = "") =>
     request<PracticeQuestion[]>(`/api/careers/practice/questions/${type ? `?type=${type}` : ""}`),

@@ -235,7 +235,8 @@ export default function Sidebar({ enterprise = false, partner = false, mobileOpe
         { href: "/practice", label: "Practice", icon: QuestionsIcon },
         { href: "/jobs", label: "Live jobs", icon: BuildingIcon },
         { href: "/progress", label: "Progress", icon: TrendIcon },
-        ...(user?.is_partner ? [{ href: "/partner", label: "Partner", icon: HandshakeIcon }] : []),
+        // Partner is a separate (referral) portal, never part of the candidate nav.
+        { href: "/profile", label: "Profile", icon: UserIcon },
       ];
 
   const handleLogout = () => {
