@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.interviews.models import InterviewSession
-from apps.subscriptions.plans import PAID_PLANS
+from apps.subscriptions.plans import PAID_PLANS, effective_plan
 
 from .models import Review
 from .serializers import ReviewSerializer
@@ -24,7 +24,7 @@ class ReviewCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        if request.user.subscription_plan not in PAID_PLANS:
+        if effective_plan(request.user) not in PAID_PLANS:
             return Response(
                 {"detail": "Reviews are available to paid plans only."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -39,7 +39,7 @@ class ReviewCreateView(APIView):
         serializer = ReviewSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         try:
-            serializer.save(user=request.user, plan_at_time=request.user.subscription_plan)
+            serializer.save(user=request.user, plan_at_time=effective_plan(request.user))
         except IntegrityError:
             # Lost a race against a concurrent duplicate submission from the
             # same user — the exists() check above can't fully prevent this
@@ -66,7 +66,7 @@ class ReviewPromptStatusView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        if request.user.subscription_plan not in PAID_PLANS:
+        if effective_plan(request.user) not in PAID_PLANS:
             return Response({"show": False, "completed_count": 0})
 
         if Review.objects.filter(user=request.user).exists():

@@ -254,3 +254,51 @@ class JevTests(TestCase):
             r = self.c.post(self.url, {"resume_text": RESUME}, format="json")
         self.assertEqual(r.status_code, 429)
         post.assert_not_called()
+
+
+class ATSGraphPathTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="g", email="g@ex.com", password="pw12345!")
+        self.job = make_job()
+
+    def _run(self, **kw):
+        from core.graph import path
+        from .graphs import run_ats_check
+        kw.setdefault("resume_text", RESUME)
+        code, body, trace = run_ats_check(self.user, kw.pop("job_id", self.job.id), **kw)
+        return code, body, path(trace)
+
+    @override_settings(TYPESAFE_API_KEY="")
+    def test_jev_off_skips_jev_node(self):
+        code, _, p = self._run()
+        self.assertEqual((code, p), (200, ["parse_resume", "load_job", "keyword_score", "quota_precheck", "save"]))
+
+    @override_settings(TYPESAFE_API_KEY="k")
+    def test_jev_on_rescores(self):
+        with mock.patch("apps.careers.jev.httpx.post", return_value=_jev_response(4.0, [0.9] * 10)):
+            code, body, p = self._run()
+        self.assertEqual(p[-3:], ["jev_assess", "rescore", "save"])
+        self.assertEqual(body["missing_keywords"], [])
+
+    @override_settings(TYPESAFE_API_KEY="k")
+    def test_jev_failure_goes_straight_to_save(self):
+        with mock.patch("apps.careers.jev.httpx.post", side_effect=RuntimeError):
+            code, body, p = self._run()
+        self.assertEqual(p[-2:], ["jev_assess", "save"])
+        self.assertFalse(body["ai_assisted"])
+
+    def test_early_exits(self):
+        self.assertEqual(self._run(resume_text="short")[::2], (400, ["parse_resume"]))
+        self.assertEqual(self._run(job_id=99999)[0], 404)
+        nothing = make_job(title="Role", description="Be nice")
+        self.assertEqual(self._run(job_id=nothing.id)[0], 422)
+
+    @override_settings(TYPESAFE_API_KEY="k")
+    def test_over_quota_ends_before_jev(self):
+        for _ in range(15):
+            ResumeCheck.objects.create(user=self.user, job=self.job, ats_score=1)
+        with mock.patch("apps.careers.jev.httpx.post") as post:
+            code, body, p = self._run()
+        self.assertEqual((code, p[-1]), (429, "quota_precheck"))
+        self.assertIn("ATS Unlimited", body["detail"])
+        post.assert_not_called()

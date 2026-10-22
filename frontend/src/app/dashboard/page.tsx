@@ -7,7 +7,7 @@ import AppShell from "@/components/AppShell";
 import TopupModal from "@/components/TopupModal";
 import { interviews, ApiError } from "@/lib/api";
 import type { InterviewSession } from "@/lib/api";
-import { planOf, isPaidPlan } from "@/lib/plans";
+import { planOf, isPaidPlan, isPlatformFree, ATS_UNLIMITED_LABEL } from "@/lib/plans";
 import PaginationControls from "@/components/PaginationControls";
 import RealInterviewReportsCard from "@/components/RealInterviewReportsCard";
 import { useSearchAndPaginate } from "@/hooks/useSearchAndPaginate";
@@ -96,6 +96,7 @@ export default function DashboardPage() {
 
   const plan = planOf(user?.subscription_plan);
   const isPro = isPaidPlan(user?.subscription_plan);
+  const platformFree = isPlatformFree(user);
   const hasInsights = plan.hasInsights;
   const monthlyUsed = user?.interviews_this_month ?? 0;
   const monthlyLimit = user?.monthly_limit ?? plan.monthlyLimit; // null = unlimited
@@ -177,7 +178,7 @@ export default function DashboardPage() {
                 className="text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider"
                 style={{ background: "var(--surface)", color: "var(--ink-dim)" }}
               >
-                {plan.label}
+                {platformFree ? (user?.ats_unlimited ? ATS_UNLIMITED_LABEL : "Free") : plan.label}
               </span>
               <span className="text-sm" style={{ color: "var(--ink-dim)" }}>
                 {user?.username}
@@ -211,7 +212,9 @@ export default function DashboardPage() {
                 className="w-full sm:w-auto px-[18px] py-3 rounded-full text-sm font-semibold transition-colors hover:bg-[var(--surface)]"
                 style={{ background: "transparent", color: "var(--ink)", border: "1px solid var(--border-mid)" }}
               >
-                {isPro ? "Manage subscription" : "Upgrade"}
+                {platformFree
+                  ? user?.ats_unlimited ? "Manage ATS Unlimited" : "Unlimited ATS"
+                  : isPro ? "Manage subscription" : "Upgrade"}
               </button>
               <button
                 onClick={() => router.push("/companies")}

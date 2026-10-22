@@ -17,6 +17,8 @@ PLANS = {
         "has_insights": False,
     },
     "pro": {
+        # While PLATFORM_FREE is on this ₹199 tier is sold only as unlimited
+        # ATS resume checks — see plan_label().
         "label": "Pro",
         "amount_paise": 19900,  # ₹199
         "monthly_limit": 15,
@@ -73,6 +75,12 @@ def topup_credits_for(pack: str):
     return TOPUP_PACKS[pack]["credits"]
 
 
+def plan_label(plan: str) -> str:
+    if plan == "pro" and settings.PLATFORM_FREE:
+        return "ATS Unlimited"
+    return PLANS.get(plan, PLANS["free"])["label"]
+
+
 def monthly_limit_for(plan: str):
     return PLANS.get(plan, PLANS["free"])["monthly_limit"]
 
@@ -124,6 +132,16 @@ def effective_monthly_limit(user):
     return monthly_limit_for(user.subscription_plan)
 
 
+def plan_limit_message(user, limit) -> str:
+    """403 detail when a non-sponsored user hits their monthly interview cap."""
+    label = plan_label(effective_plan(user))
+    if settings.PLATFORM_FREE:
+        return (f"You've used all {limit} free interviews this month. "
+                f"Your limit resets 30 days after your cycle started.")
+    return (f"You've reached your {label} plan limit ({limit} interviews/month). "
+            f"Upgrade your plan or buy a top-up pack to keep going.")
+
+
 # ---------------------------------------------------------------------------
 # Resume-vs-job ATS checks (Live Jobs)
 # ---------------------------------------------------------------------------
@@ -133,8 +151,22 @@ def effective_monthly_limit(user):
 ATS_FREE_DAILY_LIMIT = 15
 
 
+def has_unlimited_ats(user) -> bool:
+    # Deliberately the *stored* plan: PLATFORM_FREE lifts everyone's effective
+    # plan to Max, but unlimited ATS is the one thing still sold (₹199 "pro").
+    return user.subscription_plan in PAID_PLANS or bool(user.sponsorship_campaign_id)
+
+
 def ats_daily_limit(user):
     """None = unlimited."""
-    if user.subscription_plan in PAID_PLANS or user.sponsorship_campaign_id:
-        return None
-    return ATS_FREE_DAILY_LIMIT
+    return None if has_unlimited_ats(user) else ATS_FREE_DAILY_LIMIT
+
+
+def purchasable_plans() -> set:
+    """Plans that can be bought right now. With PLATFORM_FREE only the ₹199
+    ATS Unlimited ("pro") tier is sold, and top-up packs are not sold."""
+    return {"pro"} if settings.PLATFORM_FREE else set(PAID_PLANS)
+
+
+def topups_purchasable() -> bool:
+    return not settings.PLATFORM_FREE

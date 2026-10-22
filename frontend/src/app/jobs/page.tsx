@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AppShell from "@/components/AppShell";
+import Link from "next/link";
 import { careers, ApiError } from "@/lib/api";
 import type { AtsQuota, Job, ResumeCheckResult } from "@/lib/api";
 
@@ -30,17 +31,20 @@ function CheckPanel({ job, onQuota }: { job: Job; onQuota: (q: AtsQuota) => void
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [limitHit, setLimitHit] = useState(false);
   const [result, setResult] = useState<ResumeCheckResult | null>(null);
 
   const run = async () => {
     setBusy(true);
     setError("");
+    setLimitHit(false);
     try {
       const r = await careers.checkResume(job.id, { file, text: resume });
       setResult(r);
       onQuota(r.ats_quota);
     } catch (e) {
       setError(e instanceof ApiError ? e.detail : "Something went wrong.");
+      setLimitHit(e instanceof ApiError && e.code === "ats_daily_limit");
     } finally {
       setBusy(false);
     }
@@ -77,7 +81,17 @@ function CheckPanel({ job, onQuota }: { job: Job; onQuota: (q: AtsQuota) => void
       >
         {busy ? "Checking…" : "Check ATS score"}
       </button>
-      {error && <p className="text-sm" style={{ color: "#b33a3a" }}>{error}</p>}
+      {error && (
+        <p className="text-sm" style={{ color: "#b33a3a" }}>
+          {error}
+          {limitHit && (
+            <>
+              {" "}
+              <Link href="/pricing" className="underline font-medium">See ATS Unlimited →</Link>
+            </>
+          )}
+        </p>
+      )}
       {result && (
         <div className="space-y-2">
           <p className="text-2xl font-semibold" style={{ color: "var(--ink)" }}>
@@ -152,7 +166,12 @@ export default function JobsPage() {
             {refreshed && ` · last updated ${timeAgo(refreshed)}`}.
             {quota && (quota.limit === null
               ? " Unlimited ATS checks."
-              : ` ${Math.max(0, quota.limit - quota.used)} of ${quota.limit} free ATS checks left today · Pro (₹199/mo) is unlimited.`)}
+              : (
+                <>
+                  {` ${Math.max(0, quota.limit - quota.used)} of ${quota.limit} free ATS checks left today · `}
+                  <Link href="/pricing" className="underline">ATS Unlimited (₹199/mo)</Link> removes the cap.
+                </>
+              ))}
           </p>
 
           <form

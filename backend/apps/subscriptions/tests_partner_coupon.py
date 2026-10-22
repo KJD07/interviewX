@@ -61,3 +61,37 @@ class PartnerCouponOrderTests(TestCase):
             format="json",
         )
         self.assertEqual(res.status_code, 400)
+
+
+@override_settings(
+    PAYU_MERCHANT_KEY="test-key",
+    PAYU_MERCHANT_SALT="test-salt",
+    BACKEND_URL="http://localhost:8000",
+    FRONTEND_URL="http://localhost:3000",
+)
+class PlatformFreePurchaseTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="b2", email="b2@test.com", password="pw12345!")
+        self.client = APIClient()
+        self.client.force_authenticate(self.user)
+
+    def _order(self, plan):
+        return self.client.post("/api/subscriptions/create-order/", {"plan": plan}, format="json")
+
+    @override_settings(PLATFORM_FREE=True)
+    def test_only_ats_unlimited_is_sold(self):
+        res = self._order("pro")
+        self.assertEqual(res.status_code, 201)
+        self.assertIn("ATS Unlimited", res.json()["productinfo"])
+        for plan in ("premium", "max"):
+            self.assertEqual(self._order(plan).status_code, 400)
+        res = self.client.post("/api/subscriptions/topup/create-order/", {"pack": "spark"}, format="json")
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(PaymentOrder.objects.count(), 1)
+
+    @override_settings(PLATFORM_FREE=False)
+    def test_all_plans_and_topups_sold_when_not_free(self):
+        for plan in ("pro", "premium", "max"):
+            self.assertEqual(self._order(plan).status_code, 201)
+        res = self.client.post("/api/subscriptions/topup/create-order/", {"pack": "spark"}, format="json")
+        self.assertEqual(res.status_code, 201)

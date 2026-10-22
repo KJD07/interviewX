@@ -9,7 +9,15 @@ import { useAuth } from "@/context/AuthContext";
 import MarketingNav from "@/components/MarketingNav";
 import MarketingFooter from "@/components/MarketingFooter";
 import { ScrollReveal } from "@/components/ScrollReveal";
-import { PLANS, PAID_PLAN_IDS, type PlanId } from "@/lib/plans";
+import {
+  PLANS,
+  PAID_PLAN_IDS,
+  ATS_UNLIMITED_FEATURES,
+  ATS_UNLIMITED_LABEL,
+  FREE_PLATFORM_FEATURES,
+  isPlatformFree,
+  type PlanId,
+} from "@/lib/plans";
 import { subscriptions, ApiError, partnerReferrals } from "@/lib/api";
 import { PARTNER_REF_KEY } from "@/components/ReferralTracker";
 import { submitPayUCheckout } from "@/lib/payuCheckout";
@@ -51,6 +59,98 @@ const FAQS: { q: string; a: ReactNode }[] = [
     ),
   },
 ];
+
+// Shown instead of FAQS while the platform is free (only ATS Unlimited is sold).
+const FREE_FAQS: { q: string; a: ReactNode }[] = [
+  {
+    q: "Is it really free?",
+    a: "Yes. Every company, role and skill, AI insights, typed practice and live jobs are free for every candidate. Mock interviews are capped per month only to keep the AI interviewer fast for everyone.",
+  },
+  {
+    q: "What does ATS Unlimited add?",
+    a: "Unlimited resume-vs-job ATS checks on live jobs. Free accounts get 15 checks a day, which resets daily.",
+  },
+  FAQS[3],
+];
+
+function FreePlatformTiers({
+  user,
+  loading,
+  isCurrent,
+  freePrice,
+  price,
+  listPrice,
+  onBuy,
+  onStart,
+}: {
+  user: boolean;
+  loading: boolean;
+  isCurrent: boolean;
+  freePrice: string;
+  price: string;
+  listPrice: string | null;
+  onBuy: () => void;
+  onStart: () => void;
+}) {
+  return (
+    <div className="grid max-w-[820px] grid-cols-1 gap-3 sm:grid-cols-2 sm:items-stretch">
+      <ScrollReveal>
+        <div className="card-hover flex h-full flex-col rounded-[20px] bg-[var(--ink)] p-6 text-[var(--page)] shadow-[0_26px_54px_-26px_rgba(12,12,11,0.55)]">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--lime)]">Free</span>
+            <span className="rounded-[5px] bg-[var(--lime)] px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.12em] text-[var(--ink)]">
+              Everything
+            </span>
+          </div>
+          <div className="font-display text-[42px] font-bold leading-none tracking-[-0.04em]">{freePrice}</div>
+          <div className="mb-[22px] mt-1 text-xs text-[var(--ink-faint)]">/ forever</div>
+          <ul className="mb-[26px] flex-1 space-y-2.5">
+            {FREE_PLATFORM_FEATURES.map((f) => (
+              <li key={f} className="grid grid-cols-[16px_1fr] gap-2 text-sm leading-[1.4] text-[#D6D4CC]">
+                <span className="text-[var(--lime)]">✓</span>
+                {f}
+              </li>
+            ))}
+          </ul>
+          <button
+            onClick={onStart}
+            className="mt-auto w-full rounded-full bg-[var(--lime)] py-3.5 text-sm font-bold text-[var(--ink)] transition-colors hover:brightness-95"
+          >
+            {user ? "Go to dashboard" : "Start free"}
+          </button>
+        </div>
+      </ScrollReveal>
+      <ScrollReveal delay={0.08}>
+        <div className="card-hover flex h-full flex-col rounded-[20px] border border-[var(--border)] bg-[var(--surface)] p-6">
+          <div className="mb-4 flex items-baseline justify-between gap-3">
+            <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--ink-faint)]">
+              {ATS_UNLIMITED_LABEL}
+            </span>
+            <span className="text-xs text-[var(--ink-faint)]">Job-hunting mode</span>
+          </div>
+          <div className="font-display text-[42px] font-bold leading-none tracking-[-0.04em] text-[var(--ink)]">{price}</div>
+          {listPrice && <div className="text-xs text-[var(--ink-faint)] line-through">{listPrice}</div>}
+          <div className="mb-[22px] mt-1 text-xs text-[var(--ink-faint)]">/ month</div>
+          <ul className="mb-[26px] flex-1 space-y-2.5">
+            {ATS_UNLIMITED_FEATURES.map((f) => (
+              <li key={f} className="grid grid-cols-[16px_1fr] gap-2 text-sm leading-[1.4] text-[var(--ink-dim)]">
+                <span className="text-[var(--olive)]">✓</span>
+                {f}
+              </li>
+            ))}
+          </ul>
+          <button
+            onClick={onBuy}
+            disabled={loading || isCurrent}
+            className="mt-auto w-full rounded-full border border-[var(--border-mid)] py-3.5 text-sm font-semibold text-[var(--ink)] transition-colors hover:border-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--page)] disabled:opacity-50"
+          >
+            {isCurrent ? "Active" : loading ? "Redirecting to PayU…" : `Get ${ATS_UNLIMITED_LABEL}`}
+          </button>
+        </div>
+      </ScrollReveal>
+    </div>
+  );
+}
 
 function FaqItem({ q, a, defaultOpen = false }: { q: string; a: ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -107,6 +207,7 @@ export default function Pricing() {
   const currency = useCurrency();
 
   const currentPlan = (user?.subscription_plan as PlanId) || "free";
+  const platformFree = isPlatformFree(user);
 
   useEffect(() => {
     trackEvent("pricing_viewed");
@@ -195,8 +296,17 @@ export default function Pricing() {
           transition={{ duration: 0.6, delay: 0.1 }}
           className="mt-[18px] max-w-[470px] text-[17px] leading-[1.55] text-[var(--ink-dim)]"
         >
-          Start free with {PLANS.free.monthlyLimit} interviews a month. Upgrade any time for more
-          sessions, full history and topic-level insight.
+          {platformFree ? (
+            <>
+              Everything is free for candidates. The only paid add-on is unlimited ATS resume
+              checks while you&apos;re job hunting.
+            </>
+          ) : (
+            <>
+              Start free with {PLANS.free.monthlyLimit} interviews a month. Upgrade any time for more
+              sessions, full history and topic-level insight.
+            </>
+          )}
         </motion.p>
       </section>
 
@@ -235,6 +345,19 @@ export default function Pricing() {
             Prices shown in USD for reference — checkout is billed in INR at the current exchange rate.
           </p>
         )}
+        {platformFree ? (
+          <FreePlatformTiers
+            user={!!user}
+            loading={loadingPlan !== null}
+            isCurrent={!!user?.ats_unlimited}
+            freePrice={formatPrice(0, currency)}
+            price={formatPrice(discountedPrice(PLANS.pro.priceRupees), currency)}
+            listPrice={couponDiscount > 0 ? formatPrice(PLANS.pro.priceRupees, currency) : null}
+            onBuy={() => handleUpgrade("pro")}
+            onStart={() => router.push(user ? "/dashboard" : "/register")}
+          />
+        ) : (
+        <>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:items-stretch">
           <ScrollReveal>
             <div className="card-hover flex h-full flex-col rounded-[20px] border border-[var(--border)] bg-[var(--surface)] p-6">
@@ -403,6 +526,8 @@ export default function Pricing() {
             </div>
           </div>
         </div>
+        </>
+        )}
 
         <div className="mt-16 max-w-[640px]">
           <h2 className="font-display text-[28px] font-bold leading-[1.05] tracking-[-0.03em] text-[var(--ink)] sm:text-[32px]">
@@ -440,7 +565,7 @@ export default function Pricing() {
             </h2>
           </div>
           <div>
-            {FAQS.map((faq, i) => (
+            {(platformFree ? FREE_FAQS : FAQS).map((faq, i) => (
               <FaqItem key={faq.q} q={faq.q} a={faq.a} defaultOpen={i === 0} />
             ))}
           </div>

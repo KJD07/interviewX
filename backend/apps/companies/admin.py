@@ -6,7 +6,7 @@ from django.shortcuts import redirect, render
 from django.urls import path
 from django.utils import timezone
 
-from apps.subscriptions.plans import PAID_PLANS
+from apps.subscriptions.plans import PAID_PLANS, effective_plan
 from core.question_sourcing import QuestionSourcingError, source_questions_for_round
 
 from .imports import REQUIRED_COLUMNS, SpreadsheetImportError, import_spreadsheet
@@ -206,7 +206,7 @@ class InterviewQuestionAdmin(admin.ModelAdmin):
                 user = report.user
                 user.sync_subscription_state()
                 user.save()
-                if user.subscription_plan not in PAID_PLANS:
+                if effective_plan(user) not in PAID_PLANS:
                     skipped_plan += 1
                     continue
                 type(user).objects.filter(pk=user.pk).update(

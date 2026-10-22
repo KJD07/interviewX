@@ -51,17 +51,21 @@ def assess(resume: str, job_title: str, job_description: str, missing: list[str]
         }
     state = f"JOB POSTING\nTitle: {job_title}\n{job_description[:JOB_CHARS]}\n\nRESUME\n{resume[:RESUME_CHARS]}"
     try:
-        resp = httpx.post(
-            URL,
-            headers={"Authorization": f"Bearer {settings.TYPESAFE_API_KEY}"},
-            json={"state": state, "model": settings.TYPESAFE_MODEL, "questions": questions},
-            timeout=TIMEOUT,
-        )
-        resp.raise_for_status()
-        answers = resp.json()["answers"]
+        answers = _ask(state, questions)
         fit = round(100 * float(answers["fit"]["score"]) / (len(FIT_LEVELS) - 1))
         confirmed = [s for i, s in enumerate(skills) if float(answers[f"s{i}"]["noul"]) >= CONFIRM_THRESHOLD]
     except Exception as exc:  # network, auth, shape — never break the ATS check
         logger.warning("Jev assessment failed: %s", type(exc).__name__)
         return None
     return {"fit": max(0, min(100, fit)), "confirmed": confirmed}
+
+
+def _ask(state: str, questions: dict) -> dict:
+    resp = httpx.post(
+        URL,
+        headers={"Authorization": f"Bearer {settings.TYPESAFE_API_KEY}"},
+        json={"state": state, "model": settings.TYPESAFE_MODEL, "questions": questions},
+        timeout=TIMEOUT,
+    )
+    resp.raise_for_status()
+    return resp.json()["answers"]

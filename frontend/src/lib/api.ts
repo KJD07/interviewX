@@ -48,6 +48,8 @@ export interface User {
   is_partner?: boolean;
   can_view_analytics?: boolean;
   auth_provider?: "email" | "google";
+  platform_free?: boolean;
+  ats_unlimited?: boolean;
 }
 
 export interface AuthResponse {

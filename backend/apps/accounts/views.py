@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.subscriptions.plans import effective_monthly_limit, effective_plan
+from apps.subscriptions.plans import effective_monthly_limit, effective_plan, has_unlimited_ats
 
 from .emails import send_otp_email, send_password_reset_email
 from .models import EmailOTP, PasswordResetOTP
@@ -60,6 +60,8 @@ def _token_response(user) -> dict:
             "is_staff": user.is_staff,
             "is_partner": _is_partner(user),
             "can_view_analytics": user.can_view_analytics,
+            "platform_free": settings.PLATFORM_FREE,
+            "ats_unlimited": has_unlimited_ats(user),
         },
     }
 
@@ -452,5 +454,7 @@ class MeView(APIView):
                 "is_staff": user.is_staff,
                 "is_partner": _is_partner(user),
                 "can_view_analytics": user.can_view_analytics,
+                "platform_free": settings.PLATFORM_FREE,
+                "ats_unlimited": has_unlimited_ats(user),
             }
         )

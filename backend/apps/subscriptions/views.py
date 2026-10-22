@@ -30,7 +30,15 @@ from apps.enterprise.referrals import (
 )
 
 from .models import PaymentOrder
-from .plans import PAID_PLANS, TOPUP_PACKS, amount_for, topup_amount_for, topup_credits_for
+from .plans import (
+    TOPUP_PACKS,
+    amount_for,
+    plan_label,
+    purchasable_plans,
+    topup_amount_for,
+    topup_credits_for,
+    topups_purchasable,
+)
 
 
 _STUCK_ORDER_AGE = timedelta(minutes=5)
@@ -165,9 +173,10 @@ class CreateOrderView(APIView):
 
     def post(self, request):
         plan = request.data.get("plan", "")
-        if plan not in PAID_PLANS:
+        allowed = purchasable_plans()
+        if plan not in allowed:
             return Response(
-                {"detail": f"Invalid plan. Choose one of: {', '.join(PAID_PLANS)}."},
+                {"detail": f"Invalid plan. Choose one of: {', '.join(sorted(allowed))}."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -188,11 +197,10 @@ class CreateOrderView(APIView):
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
-        plan_label = PAID_PLANS[plan]["label"]
         payload = _build_payu_payload(
             request.user,
             amount_paise,
-            f"EvaluLabs {plan_label} Plan — 1 Month",
+            f"EvaluLabs {plan_label(plan)} Plan — 1 Month",
         )
 
         PaymentOrder.objects.create(
@@ -226,6 +234,12 @@ class CreateTopupOrderView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        if not topups_purchasable():
+            return Response(
+                {"detail": "Top-up packs aren't sold while interviews are free for everyone."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         pack = request.data.get("pack", "")
         if pack not in TOPUP_PACKS:
             return Response(

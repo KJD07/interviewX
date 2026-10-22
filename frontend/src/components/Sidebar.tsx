@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { organizations } from "@/lib/api";
-import { planOf, hasSkills } from "@/lib/plans";
+import { planOf, hasSkills, isPlatformFree, ATS_UNLIMITED_LABEL } from "@/lib/plans";
 import icon from "@/app/icon.png";
 
 // Nav glyphs — one 20x20 grid, solid fills with knocked-out counters, all
@@ -99,6 +99,7 @@ function NavGlyph({ Icon, active }: { Icon: () => JSX.Element; active: boolean }
 // Sidebar plan card: tier, "manage" link, and the monthly interview meter.
 function PlanCard({
   planLabel,
+  linkLabel = "manage",
   enterprise,
   partner,
   used,
@@ -106,6 +107,7 @@ function PlanCard({
   bonus,
 }: {
   planLabel: string;
+  linkLabel?: string;
   enterprise: boolean;
   partner?: boolean;
   used: number;
@@ -125,7 +127,7 @@ function PlanCard({
             className="font-mono text-[10px] underline transition-opacity hover:opacity-70"
             style={{ color: "var(--lime)" }}
           >
-            manage
+            {linkLabel}
           </Link>
         )}
       </div>
@@ -242,7 +244,12 @@ export default function Sidebar({ enterprise = false, partner = false, mobileOpe
   };
 
   const initial = (user?.username || "?").charAt(0).toUpperCase();
-  const planLabel = partner ? "Partner" : enterprise ? "Enterprise" : plan.label;
+  // Free platform: everyone is effectively on Max, so show what they actually
+  // hold — Free, or the one paid add-on (ATS Unlimited).
+  const platformFree = isPlatformFree(user);
+  const tierLabel = platformFree ? (user?.ats_unlimited ? ATS_UNLIMITED_LABEL : "Free") : plan.label;
+  const planLabel = partner ? "Partner" : enterprise ? "Enterprise" : tierLabel;
+  const planLinkLabel = platformFree && !user?.ats_unlimited ? "unlimited ats" : "manage";
   const used = enterprise ? (orgQuota?.used ?? 0) : (user?.interviews_this_month ?? 0);
   const limit = enterprise ? (orgQuota?.total ?? null) : (user?.monthly_limit ?? plan.monthlyLimit);
   const bonus = enterprise || partner ? 0 : bonusInterviews;
@@ -292,7 +299,7 @@ export default function Sidebar({ enterprise = false, partner = false, mobileOpe
       </div>
 
       <div className="space-y-3 shrink-0">
-        <PlanCard planLabel={planLabel} enterprise={enterprise} partner={partner} used={used} limit={limit} bonus={bonus} />
+        <PlanCard planLabel={planLabel} linkLabel={planLinkLabel} enterprise={enterprise} partner={partner} used={used} limit={limit} bonus={bonus} />
 
         <div className="flex items-center justify-between px-1 py-1">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -365,7 +372,7 @@ export default function Sidebar({ enterprise = false, partner = false, mobileOpe
 
               <div className="mt-auto pt-4 border-t shrink-0" style={{ borderColor: 'var(--border)' }}>
                 <div className="space-y-3">
-                  <PlanCard planLabel={planLabel} enterprise={enterprise} partner={partner} used={used} limit={limit} bonus={bonus} />
+                  <PlanCard planLabel={planLabel} linkLabel={planLinkLabel} enterprise={enterprise} partner={partner} used={used} limit={limit} bonus={bonus} />
 
                   <div className="flex items-center justify-between px-1 py-1">
                     <div className="flex items-center gap-2.5 min-w-0">
