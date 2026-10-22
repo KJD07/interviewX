@@ -66,6 +66,39 @@ export const PLANS: Record<PlanId, PlanInfo> = {
 
 export const PAID_PLAN_IDS: PlanId[] = ["pro", "premium", "max"];
 
+// ── Free platform ────────────────────────────────────────────────────────────
+// Mirrors backend settings.PLATFORM_FREE: every candidate gets the Max tier
+// for free and the only thing sold is ₹199/mo "ATS Unlimited" (the `pro`
+// plan, relabelled — see plan_label() in plans.py). Logged-in pages should
+// prefer `user.platform_free` from /me; this env default covers logged-out
+// pages like /pricing.
+export const PLATFORM_FREE_DEFAULT = process.env.NEXT_PUBLIC_PLATFORM_FREE !== "false";
+
+export function isPlatformFree(user?: { platform_free?: boolean } | null): boolean {
+  return user?.platform_free ?? PLATFORM_FREE_DEFAULT;
+}
+
+export const ATS_UNLIMITED_LABEL = "ATS Unlimited";
+export const ATS_FREE_DAILY_LIMIT = 15;
+
+export const FREE_PLATFORM_FEATURES = [
+  "All companies, roles & skills",
+  `${PLANS.max.monthlyLimit} AI mock interviews / month`,
+  "Full dashboard, history & AI topic insights",
+  "Typed practice with instant scoring",
+  "Live jobs, refreshed every 5 hours",
+  `${ATS_FREE_DAILY_LIMIT} ATS resume checks / day`,
+];
+
+export const ATS_UNLIMITED_FEATURES = [
+  "Everything in Free",
+  "Unlimited ATS resume checks against live jobs",
+];
+
+export function planLabel(plan: PlanId, platformFree: boolean): string {
+  return plan === "pro" && platformFree ? ATS_UNLIMITED_LABEL : PLANS[plan].label;
+}
+
 export function planOf(subscriptionPlan: string | undefined | null): PlanInfo {
   return PLANS[(subscriptionPlan as PlanId) || "free"] ?? PLANS.free;
 }

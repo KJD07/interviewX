@@ -20,5 +20,6 @@ daphne==4.1.2
 django-rq==2.10.2
 # django-rq 2.10 imports rq.Connection, which rq 2.0 removed.
 rq>=1.16,<2
-redis==5.0.8pypdf==5.1.0
+redis==5.0.8
+pypdf==5.1.0
 python-docx==1.1.2

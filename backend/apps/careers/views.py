@@ -1,5 +1,4 @@
 from django.db.models import Q
-from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -7,22 +6,13 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from apps.companies.models import InterviewQuestion
-from apps.subscriptions.plans import ats_daily_limit, effective_plan
+from apps.subscriptions.plans import effective_plan
 
-from . import feeds, jev
-from .ats import MAX_TEXT_CHARS, ats_check
-from .resume_parser import ResumeParseError, extract_text
-from .models import Job, JobFeedState, ResumeCheck
-from .practice import score_answer
+from . import feeds
+from .graphs import quota, run_ats_check, run_practice
+from .models import Job, JobFeedState
 
 PAGE_SIZE = 20
-
-
-def _quota(user):
-    """(limit|None, used_today)"""
-    today = timezone.localdate()
-    used = ResumeCheck.objects.filter(user=user, created_at__date=today).count()
-    return ats_daily_limit(user), used
 
 
 def _job_dict(job, with_description=False):
@@ -51,7 +41,7 @@ class JobListView(APIView):
         total = qs.count()
         jobs = qs[(page - 1) * PAGE_SIZE : page * PAGE_SIZE]
         state = JobFeedState.objects.filter(pk=1).first()
-        limit, used = _quota(request.user)
+        limit, used = quota(request.user)
         return Response({
             "results": [_job_dict(j) for j in jobs],
             "count": total, "page": page, "page_size": PAGE_SIZE,
@@ -75,61 +65,14 @@ class ResumeCheckView(APIView):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "careers_ats"
 
-    @staticmethod
-    def _limit_response(limit, used):
-        return Response(
-            {"detail": f"Daily limit of {limit} resume checks reached. Upgrade to Pro (₹199/month) for unlimited checks.",
-             "code": "ats_daily_limit", "ats_quota": {"limit": limit, "used": used}},
-            status=status.HTTP_429_TOO_MANY_REQUESTS,
-        )
-
     def post(self, request, job_id):
         upload = request.FILES.get("resume_file")
-        if upload:
-            try:
-                resume = extract_text(upload.name, upload.read())
-            except ResumeParseError as exc:
-                return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            resume = (request.data.get("resume_text") or "").strip()
-        resume = resume[:MAX_TEXT_CHARS]
-        if len(resume) < 100:
-            return Response({"detail": "Upload your resume or paste its full text (at least 100 characters)."},
-                            status=status.HTTP_400_BAD_REQUEST)
-        job = Job.objects.filter(pk=job_id).first()
-        if not job:
-            return Response({"detail": "Job not found."}, status=status.HTTP_404_NOT_FOUND)
-
-        result = ats_check(resume, job.title, job.description, job.tags)
-        if result["ats_score"] is None:
-            return Response({"detail": "This posting lists no recognisable skills to check against."},
-                            status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-
-        # Cheap un-locked pre-check so over-quota users never trigger a paid Jev call.
-        limit, used = _quota(request.user)
-        if limit is not None and used >= limit:
-            return self._limit_response(limit, used)
-
-        ai = jev.assess(resume, job.title, job.description, result["missing_keywords"])
-        if ai:
-            result = ats_check(resume, job.title, job.description, job.tags, extra_have=ai["confirmed"])
-            result["ai_fit"] = ai["fit"]
-        result["ai_assisted"] = bool(ai)
-
-        # Serialise per user so parallel requests can't slip past the daily cap.
-        from django.db import transaction
-        from django.contrib.auth import get_user_model
-        with transaction.atomic():
-            user = get_user_model().objects.select_for_update().get(pk=request.user.pk)
-            limit, used = _quota(user)
-            if limit is not None and used >= limit:
-                return self._limit_response(limit, used)
-            ResumeCheck.objects.create(
-                user=user, job=job, ats_score=result["ats_score"],
-                matched_keywords=result["matched_keywords"], missing_keywords=result["missing_keywords"],
-            )
-        result["ats_quota"] = {"limit": limit, "used": used + 1}
-        return Response(result)
+        code, body, _ = run_ats_check(
+            request.user, job_id,
+            upload=(upload.name, upload.read()) if upload else None,
+            resume_text=request.data.get("resume_text") or "",
+        )
+        return Response(body, status=code)
 
 
 class PracticeQuestionListView(APIView):
@@ -175,6 +118,6 @@ class PracticeValidateView(APIView):
         if not question or not question.round_id or \
                 not question.round.role.company.is_accessible_by(effective_plan(request.user)):
             return Response({"detail": "Question not found."}, status=status.HTTP_404_NOT_FOUND)
-        result = score_answer(answer, question.ideal_answer)
+        result, _ = run_practice(question.question_text, question.ideal_answer, answer)
         result["ideal_answer"] = question.ideal_answer
         return Response(result)

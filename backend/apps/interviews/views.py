@@ -10,7 +10,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.companies.models import Round
-from apps.subscriptions.plans import effective_monthly_limit, effective_plan, has_insights
+from apps.subscriptions.plans import (
+    effective_monthly_limit,
+    effective_plan,
+    has_insights,
+    plan_limit_message,
+)
 from core.openrouter_client import (
     build_feedback_prompt,
     build_interview_system_prompt,
@@ -325,11 +330,7 @@ class StartInterviewView(APIView):
                     f"keep going."
                 )
             else:
-                detail = (
-                    f"You've reached your {user.subscription_plan} plan limit "
-                    f"({limit} interviews/month). Upgrade your plan or buy a "
-                    f"top-up pack to keep going."
-                )
+                detail = plan_limit_message(user, limit)
             return Response(
                 {"detail": detail, "code": "plan_limit_reached"},
                 status=status.HTTP_403_FORBIDDEN,
@@ -404,11 +405,7 @@ class StartInterviewView(APIView):
                         f"personally to keep going."
                     )
                 else:
-                    detail = (
-                        f"You've reached your {locked_user.subscription_plan} plan "
-                        f"limit ({limit} interviews/month). Upgrade your plan or "
-                        f"buy a top-up pack to keep going."
-                    )
+                    detail = plan_limit_message(locked_user, limit)
                 return Response(
                     {"detail": detail, "code": "plan_limit_reached"},
                     status=status.HTTP_403_FORBIDDEN,

@@ -5,7 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { companies, interviews, ApiError } from "@/lib/api";
 import type { Company, CompanyDetail, Role, Round } from "@/lib/api";
-import { planOf, isPaidPlan } from "@/lib/plans";
+import { planOf, isPaidPlan, isPlatformFree } from "@/lib/plans";
 import AppShell from "@/components/AppShell";
 import TopupModal from "@/components/TopupModal";
 import InterviewInstructionsModal from "@/components/InterviewInstructionsModal";
@@ -253,6 +253,7 @@ export default function CompaniesPage() {
 
   const plan = planOf(user?.subscription_plan);
   const isPro = isPaidPlan(user?.subscription_plan);
+  const platformFree = isPlatformFree(user);
   const monthlyUsed = (user as any)?.interviews_this_month ?? 0;
   const monthlyLimit = plan.monthlyLimit; // null = unlimited
   const bonusInterviews = user?.bonus_interviews ?? 0;
@@ -337,11 +338,14 @@ export default function CompaniesPage() {
               }}
             >
               <p className="text-sm font-medium" style={{ color: "var(--accent)" }}>
-                {plan.label} plan limit reached
+                {platformFree ? "Monthly interview limit reached" : `${plan.label} plan limit reached`}
               </p>
               <p className="text-xs mt-1" style={{ color: "var(--ink-dim)" }}>
                 You've used {monthlyUsed}/{monthlyLimit} interviews this month.
+                {platformFree && " Your free interviews reset 30 days after your cycle started."}
               </p>
+              {/* Interviews aren't sold while the platform is free — no top-ups/upgrades. */}
+              {!platformFree && (
               <div className="flex flex-wrap gap-2.5 mt-3">
                 <button
                   onClick={() => setShowTopup(true)}
@@ -358,6 +362,7 @@ export default function CompaniesPage() {
                   Upgrade plan →
                 </button>
               </div>
+              )}
             </div>
           )}
 

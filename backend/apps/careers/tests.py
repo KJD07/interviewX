@@ -254,3 +254,114 @@ class JevTests(TestCase):
             r = self.c.post(self.url, {"resume_text": RESUME}, format="json")
         self.assertEqual(r.status_code, 429)
         post.assert_not_called()
+
+
+class ATSGraphPathTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="g", email="g@ex.com", password="pw12345!")
+        self.job = make_job()
+
+    def _run(self, **kw):
+        from core.graph import path
+        from .graphs import run_ats_check
+        kw.setdefault("resume_text", RESUME)
+        code, body, trace = run_ats_check(self.user, kw.pop("job_id", self.job.id), **kw)
+        return code, body, path(trace)
+
+    @override_settings(TYPESAFE_API_KEY="")
+    def test_jev_off_skips_jev_node(self):
+        code, _, p = self._run()
+        self.assertEqual((code, p), (200, ["parse_resume", "load_job", "keyword_score", "quota_precheck", "save"]))
+
+    @override_settings(TYPESAFE_API_KEY="k")
+    def test_jev_on_rescores(self):
+        with mock.patch("apps.careers.jev.httpx.post", return_value=_jev_response(4.0, [0.9] * 10)):
+            code, body, p = self._run()
+        self.assertEqual(p[-3:], ["jev_assess", "rescore", "save"])
+        self.assertEqual(body["missing_keywords"], [])
+
+    @override_settings(TYPESAFE_API_KEY="k")
+    def test_jev_failure_goes_straight_to_save(self):
+        with mock.patch("apps.careers.jev.httpx.post", side_effect=RuntimeError):
+            code, body, p = self._run()
+        self.assertEqual(p[-2:], ["jev_assess", "save"])
+        self.assertFalse(body["ai_assisted"])
+
+    def test_early_exits(self):
+        self.assertEqual(self._run(resume_text="short")[::2], (400, ["parse_resume"]))
+        self.assertEqual(self._run(job_id=99999)[0], 404)
+        nothing = make_job(title="Role", description="Be nice")
+        self.assertEqual(self._run(job_id=nothing.id)[0], 422)
+
+    @override_settings(TYPESAFE_API_KEY="k")
+    def test_over_quota_ends_before_jev(self):
+        for _ in range(15):
+            ResumeCheck.objects.create(user=self.user, job=self.job, ats_score=1)
+        with mock.patch("apps.careers.jev.httpx.post") as post:
+            code, body, p = self._run()
+        self.assertEqual((code, p[-1]), (429, "quota_precheck"))
+        self.assertIn("ATS Unlimited", body["detail"])
+        post.assert_not_called()
+
+
+def _grade_response(score):
+    resp = mock.Mock()
+    resp.json.return_value = {"answers": {"grade": {"type": "score", "score": score}}}
+    resp.raise_for_status.return_value = None
+    return resp
+
+
+class PracticeGraphTests(TestCase):
+    Q = "Two sum?"
+    IDEAL = PracticeScoringTests.IDEAL
+    # ~half the ideal terms and >25 words -> keyword score in the uncertain 3..8 band
+    MID = ("I would loop over the numbers and keep a hash map of what I have already visited, "
+           "checking each time whether the needed partner number is already stored there before adding it.")
+
+    def _run(self, answer):
+        from core.graph import path
+        from .graphs import run_practice
+        result, trace = run_practice(self.Q, self.IDEAL, answer)
+        return result, path(trace)
+
+    def test_mid_answer_is_uncertain(self):
+        s = score_answer(self.MID, self.IDEAL)["score"]
+        self.assertTrue(3 <= s < 8, s)
+
+    @override_settings(TYPESAFE_API_KEY="k")
+    def test_confident_answers_make_no_jev_call(self):
+        good = ("I would iterate once and store each seen value in a hash map, then look up the "
+                "complement of the current number; the lookup is constant time so overall it is linear.")
+        with mock.patch("apps.careers.jev.httpx.post") as post:
+            for ans in ("", "no idea", good):
+                result, p = self._run(ans)
+                self.assertEqual(p, ["keyword_score"])
+                self.assertFalse(result["ai_assisted"])
+        post.assert_not_called()
+
+    @override_settings(TYPESAFE_API_KEY="")
+    def test_jev_off_uses_keywords(self):
+        result, p = self._run(self.MID)
+        self.assertEqual((p, result["method"]), (["keyword_score"], "keyword"))
+
+    @override_settings(TYPESAFE_API_KEY="k")
+    def test_uncertain_answer_combined_and_clamped(self):
+        kw = score_answer(self.MID, self.IDEAL)["score"]
+        with mock.patch("apps.careers.jev.httpx.post", return_value=_grade_response(4.0)) as post:
+            result, p = self._run(self.MID)
+        self.assertEqual(p, ["keyword_score", "jev_grade", "combine"])
+        self.assertTrue(result["ai_assisted"])
+        self.assertEqual(result["method"], "keyword+jev")
+        self.assertEqual(result["score"], round(min(0.4 * kw + 6, kw + 4, 10), 1))
+        self.assertLessEqual(result["score"], kw + 4)
+        self.assertIn("CANDIDATE ANSWER", post.call_args.kwargs["json"]["state"])
+        with mock.patch("apps.careers.jev.httpx.post", return_value=_grade_response(0.0)):
+            self.assertEqual(self._run(self.MID)[0]["score"], round(0.4 * kw, 1))
+
+    @override_settings(TYPESAFE_API_KEY="k")
+    def test_jev_failure_falls_back(self):
+        kw = score_answer(self.MID, self.IDEAL)["score"]
+        with mock.patch("apps.careers.jev.httpx.post", side_effect=RuntimeError):
+            result, p = self._run(self.MID)
+        self.assertEqual(p, ["keyword_score", "jev_grade"])
+        self.assertEqual((result["score"], result["ai_assisted"]), (kw, False))
