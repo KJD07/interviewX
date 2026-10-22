@@ -11,6 +11,7 @@ from apps.subscriptions.plans import ats_daily_limit, effective_plan
 
 from . import feeds
 from .ats import MAX_TEXT_CHARS, ats_check
+from .resume_parser import ResumeParseError, extract_text
 from .models import Job, JobFeedState, ResumeCheck
 from .practice import score_answer
 
@@ -75,12 +76,18 @@ class ResumeCheckView(APIView):
     throttle_scope = "careers_ats"
 
     def post(self, request, job_id):
-        resume = (request.data.get("resume_text") or "").strip()
+        upload = request.FILES.get("resume_file")
+        if upload:
+            try:
+                resume = extract_text(upload.name, upload.read())
+            except ResumeParseError as exc:
+                return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            resume = (request.data.get("resume_text") or "").strip()
+        resume = resume[:MAX_TEXT_CHARS]
         if len(resume) < 100:
-            return Response({"detail": "Paste your full resume text (at least 100 characters)."},
+            return Response({"detail": "Upload your resume or paste its full text (at least 100 characters)."},
                             status=status.HTTP_400_BAD_REQUEST)
-        if len(resume) > MAX_TEXT_CHARS:
-            return Response({"detail": "Resume text is too long."}, status=status.HTTP_400_BAD_REQUEST)
         job = Job.objects.filter(pk=job_id).first()
         if not job:
             return Response({"detail": "Job not found."}, status=status.HTTP_404_NOT_FOUND)

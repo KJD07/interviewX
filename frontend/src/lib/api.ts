@@ -1122,11 +1122,22 @@ export interface PracticeResult {
 export const careers = {
   jobs: (q = "", page = 1) =>
     request<JobListResponse>(`/api/careers/jobs/?page=${page}${q ? `&q=${encodeURIComponent(q)}` : ""}`),
-  checkResume: (jobId: number, resumeText: string) =>
-    request<ResumeCheckResult>(`/api/careers/jobs/${jobId}/resume-check/`, {
+  // Multipart upload bypasses request() (fixed JSON Content-Type) — same as
+  // organizations.uploadQuestions. Sends either a file or pasted text.
+  checkResume: async (jobId: number, resume: { file?: File | null; text?: string }): Promise<ResumeCheckResult> => {
+    const access = tokens.getAccess();
+    const form = new FormData();
+    if (resume.file) form.append("resume_file", resume.file);
+    else form.append("resume_text", resume.text ?? "");
+    const res = await fetch(`${API_URL}/api/careers/jobs/${jobId}/resume-check/`, {
       method: "POST",
-      body: JSON.stringify({ resume_text: resumeText }),
-    }),
+      headers: access ? { Authorization: `Bearer ${access}` } : {},
+      body: form,
+    });
+    const body = await res.json().catch(() => undefined);
+    if (!res.ok) throw new ApiError(res.status, extractDetail(body) || `Request failed (${res.status})`, (body as any)?.code, body);
+    return body;
+  },
   practiceQuestions: (type = "") =>
     request<PracticeQuestion[]>(`/api/careers/practice/questions/${type ? `?type=${type}` : ""}`),
   validateAnswer: (questionId: number, answer: string) =>

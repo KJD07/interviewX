@@ -27,6 +27,7 @@ function Chip({ text, tone }: { text: string; tone: "ok" | "miss" }) {
 
 function CheckPanel({ job, onQuota }: { job: Job; onQuota: (q: AtsQuota) => void }) {
   const [resume, setResume] = useState("");
+  const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<ResumeCheckResult | null>(null);
@@ -35,7 +36,7 @@ function CheckPanel({ job, onQuota }: { job: Job; onQuota: (q: AtsQuota) => void
     setBusy(true);
     setError("");
     try {
-      const r = await careers.checkResume(job.id, resume);
+      const r = await careers.checkResume(job.id, { file, text: resume });
       setResult(r);
       onQuota(r.ats_quota);
     } catch (e) {
@@ -47,7 +48,20 @@ function CheckPanel({ job, onQuota }: { job: Job; onQuota: (q: AtsQuota) => void
 
   return (
     <div className="mt-4 space-y-3">
+      <div>
+        <label className="text-xs block mb-1" style={{ color: "var(--ink-dim)" }}>
+          Upload resume (PDF, DOCX or text, max 5 MB) — or paste it below
+        </label>
+        <input
+          type="file"
+          accept=".pdf,.docx,.txt,.md,.rtf"
+          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          className="text-sm"
+          style={{ color: "var(--ink)" }}
+        />
+      </div>
       <textarea
+        disabled={!!file}
         value={resume}
         onChange={(e) => setResume(e.target.value)}
         rows={6}
@@ -57,7 +71,7 @@ function CheckPanel({ job, onQuota }: { job: Job; onQuota: (q: AtsQuota) => void
       />
       <button
         onClick={run}
-        disabled={busy || resume.trim().length < 100}
+        disabled={busy || (!file && resume.trim().length < 100)}
         className="px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
         style={{ background: "var(--accent)", color: "#fff" }}
       >

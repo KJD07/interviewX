@@ -245,10 +245,8 @@ if not DEBUG:
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 
 # --- Free candidate portal ---
-# Unlocks every feature tier for free-plan users. AI mock interviews are the
-# only LLM-cost item, so they stay capped at PLATFORM_FREE_MONTHLY_LIMIT.
+# Every candidate gets the Max tier (features and monthly interview limit).
 PLATFORM_FREE = os.environ.get("PLATFORM_FREE", "true").lower() in ("1", "true", "yes")
-PLATFORM_FREE_MONTHLY_LIMIT = int(os.environ.get("PLATFORM_FREE_MONTHLY_LIMIT", "5"))
 # Live-jobs feed refresh interval (lazy, request-driven; no cron worker).
 JOB_REFRESH_HOURS = int(os.environ.get("JOB_REFRESH_HOURS", "5"))
 

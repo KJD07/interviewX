@@ -79,7 +79,7 @@ class FeedRefreshTests(TestCase):
         self.assertIn("boom", JobFeedState.objects.get().last_error)
 
 
-@override_settings(PLATFORM_FREE=True, PLATFORM_FREE_MONTHLY_LIMIT=5)
+@override_settings(PLATFORM_FREE=True)
 class CareersAPITests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="u", email="u@ex.com", password="pw12345!")
@@ -142,10 +142,57 @@ class CareersAPITests(TestCase):
         self.assertEqual(self.c.get("/api/careers/practice/questions/").data, [])
 
 
-@override_settings(PLATFORM_FREE=True, PLATFORM_FREE_MONTHLY_LIMIT=5)
+@override_settings(PLATFORM_FREE=True)
 class PlatformFreeTests(TestCase):
-    def test_free_user_gets_max_features_but_capped_interviews(self):
+    def test_everyone_gets_max(self):
         from apps.subscriptions.plans import effective_monthly_limit, effective_plan
-        u = User.objects.create_user(username="f", email="f@ex.com", password="pw12345!")
-        self.assertEqual(effective_plan(u), "max")
-        self.assertEqual(effective_monthly_limit(u), 5)
+        for plan in ("free", "pro"):
+            u = User.objects.create_user(username=plan, email=f"{plan}@ex.com", password="pw12345!",
+                                         subscription_plan=plan)
+            self.assertEqual(effective_plan(u), "max")
+            self.assertEqual(effective_monthly_limit(u), 50)
+
+
+class ResumeUploadTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="r", email="r@ex.com", password="pw12345!")
+        self.c = APIClient()
+        self.c.force_authenticate(self.user)
+        self.job = make_job()
+        self.url = f"/api/careers/jobs/{self.job.id}/resume-check/"
+
+    def _post(self, name, data):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        return self.c.post(self.url, {"resume_file": SimpleUploadedFile(name, data)}, format="multipart")
+
+    def test_txt_upload(self):
+        r = self._post("cv.txt", RESUME.encode())
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("docker", r.data["missing_keywords"])
+
+    def test_docx_upload(self):
+        import io, docx
+        d = docx.Document()
+        d.add_paragraph(RESUME)
+        buf = io.BytesIO()
+        d.save(buf)
+        r = self._post("cv.docx", buf.getvalue())
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("python", r.data["matched_keywords"])
+
+    def test_pdf_upload(self):
+        from pypdf import PdfWriter
+        import io
+        w = PdfWriter()
+        w.add_blank_page(200, 200)
+        buf = io.BytesIO()
+        w.write(buf)
+        r = self._post("cv.pdf", buf.getvalue())  # blank page -> no text
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("No readable text", r.data["detail"])
+
+    def test_bad_files_rejected_without_quota(self):
+        self.assertEqual(self._post("cv.doc", b"x" * 500).status_code, 400)
+        self.assertEqual(self._post("cv.exe", b"MZ" + b"x" * 500).status_code, 400)
+        self.assertEqual(self._post("cv.pdf", b"not a pdf at all").status_code, 400)
+        self.assertEqual(ResumeCheck.objects.count(), 0)
