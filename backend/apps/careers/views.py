@@ -9,8 +9,9 @@ from apps.companies.models import InterviewQuestion
 from apps.subscriptions.plans import effective_plan
 
 from . import feeds
-from .graphs import quota, run_ats_check, run_practice
+from .graphs import quota, run_ats_check
 from .models import Job, JobFeedState
+from .practice import score_answer
 
 PAGE_SIZE = 20
 
@@ -118,6 +119,6 @@ class PracticeValidateView(APIView):
         if not question or not question.round_id or \
                 not question.round.role.company.is_accessible_by(effective_plan(request.user)):
             return Response({"detail": "Question not found."}, status=status.HTTP_404_NOT_FOUND)
-        result, _ = run_practice(question.question_text, question.ideal_answer, answer)
+        result = score_answer(answer, question.ideal_answer)
         result["ideal_answer"] = question.ideal_answer
         return Response(result)

@@ -1,17 +1,10 @@
 """
-Careers pipelines expressed as graphs (see core/graph.py).
+Careers ATS check expressed as a graph (see core/graph.py).
 
-ATS check:
   parse_resume -> load_job -> keyword_score -> quota_precheck
     -> jev_assess (only if Jev is enabled) -> rescore (only if Jev answered) -> save
   Any node that sets state["response"] ends the run (400/404/422/429), so an
   over-quota user never reaches the paid Jev call.
-
-Practice answer:
-  keyword_score -> (blank/short, confident, or Jev off: done)
-    -> jev_grade -> combine
-  Jev is only asked about answers the keyword scorer is unsure of, and any
-  Jev failure falls back to the keyword result.
 """
 
 from django.contrib.auth import get_user_model
@@ -24,7 +17,6 @@ from core.graph import END, Graph
 from . import jev
 from .ats import MAX_TEXT_CHARS, ats_check
 from .models import Job, ResumeCheck
-from .practice import score_answer
 from .resume_parser import ResumeParseError, extract_text
 
 MIN_RESUME_CHARS = 100
@@ -150,59 +142,3 @@ def run_ats_check(user, job_id, upload=None, resume_text=""):
     state, trace = ats_graph.run({"user": user, "job_id": job_id, "upload": upload, "resume_text": resume_text})
     status, body = state["response"]
     return status, body, trace
-
-
-# ---------------------------------------------------------------------------
-# Practice answer grading
-# ---------------------------------------------------------------------------
-
-MIN_WORDS_FOR_AI = 8          # shorter answers are graded by keywords alone
-CONFIDENT_LOW, CONFIDENT_HIGH = 3, 8
-KEYWORD_WEIGHT = 0.4
-MAX_AI_BOOST = 4              # Jev can lift a score at most this far above keywords
-
-
-def _practice_keyword_score(state):
-    result = score_answer(state["answer"], state["ideal"])
-    result.update(ai_assisted=False, method="keyword")
-    return {"result": result}
-
-
-def _needs_second_opinion(state):
-    score = state["result"]["score"]
-    if len(state["answer"].split()) < MIN_WORDS_FOR_AI:
-        return END
-    if score < CONFIDENT_LOW or score >= CONFIDENT_HIGH or not jev.enabled():
-        return END
-    return "jev_grade"
-
-
-def _jev_grade(state):
-    return {"jev_grade": jev.grade_answer(state["question"], state["ideal"], state["answer"])}
-
-
-def _combine(state):
-    keyword = state["result"]["score"]
-    ai = state["jev_grade"] / (len(jev.ANSWER_LEVELS) - 1) * 10
-    final = KEYWORD_WEIGHT * keyword + (1 - KEYWORD_WEIGHT) * ai
-    # Clamp the upside: answer text is model input, so cap how far a crafted
-    # answer can inflate the score over what the keyword check found.
-    final = max(0.0, min(10.0, final, keyword + MAX_AI_BOOST))
-    return {"result": {**state["result"], "score": round(final, 1), "ai_assisted": True, "method": "keyword+jev"}}
-
-
-practice_graph = (
-    Graph("practice_answer")
-    .node("keyword_score", _practice_keyword_score)
-    .node("jev_grade", _jev_grade)
-    .node("combine", _combine)
-    .route("keyword_score", _needs_second_opinion)
-    .route("jev_grade", lambda s: "combine" if s.get("jev_grade") is not None else END)
-    .on_error("jev_grade", END)
-)
-
-
-def run_practice(question: str, ideal: str, answer: str):
-    """Returns (result, trace)."""
-    state, trace = practice_graph.run({"question": question, "ideal": ideal, "answer": answer})
-    return state["result"], trace

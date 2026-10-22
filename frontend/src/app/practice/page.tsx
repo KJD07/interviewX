@@ -114,18 +114,7 @@ export default function PracticePage() {
 
               {result && (
                 <div className="space-y-3 pt-2">
-                  <div className="flex items-center gap-2.5">
-                    <p className="text-2xl font-semibold" style={{ color: "var(--ink)" }}>Score: {result.score}/10</p>
-                    {result.ai_assisted && (
-                      <span
-                        className="text-xs px-2 py-0.5 rounded-full"
-                        style={{ background: "rgba(63,143,94,0.10)", color: "var(--success)" }}
-                        title="Keyword score was borderline, so an AI grader double-checked it against the reference answer."
-                      >
-                        AI-checked
-                      </span>
-                    )}
-                  </div>
+                  <p className="text-2xl font-semibold" style={{ color: "var(--ink)" }}>Score: {result.score}/10</p>
                   {result.missing.length > 0 && (
                     <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
                       Ideas you didn&apos;t cover: {result.missing.join(", ")}

@@ -1121,8 +1121,6 @@ export interface PracticeResult {
   covered: string[];
   missing: string[];
   ideal_answer: string;
-  ai_assisted?: boolean;
-  method?: "keyword" | "keyword+jev";
 }
 
 export const careers = {
