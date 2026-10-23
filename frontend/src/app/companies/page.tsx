@@ -341,7 +341,7 @@ export default function CompaniesPage() {
                 {platformFree ? "Monthly interview limit reached" : `${plan.label} plan limit reached`}
               </p>
               <p className="text-xs mt-1" style={{ color: "var(--ink-dim)" }}>
-                You've used {monthlyUsed}/{monthlyLimit} interviews this month.
+                You&apos;ve used {monthlyUsed}/{monthlyLimit} interviews this month.
                 {platformFree && " Your free interviews reset 30 days after your cycle started."}
               </p>
               {/* Interviews aren't sold while the platform is free — no top-ups/upgrades. */}
@@ -446,7 +446,7 @@ export default function CompaniesPage() {
                 </p>
               ) : companySearch.results.length === 0 ? (
                 <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
-                  No companies match "{companySearch.query}".
+                  No companies match &quot;{companySearch.query}&quot;.
                 </p>
               ) : (
                 <>

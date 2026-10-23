@@ -273,7 +273,7 @@ export default function SkillsPage() {
                       {plan.label} plan limit reached
                     </p>
                     <p className="text-xs mt-1" style={{ color: "var(--ink-dim)" }}>
-                      You've used {monthlyUsed}/{monthlyLimit} interviews this month. Upgrade to continue.
+                      You&apos;ve used {monthlyUsed}/{monthlyLimit} interviews this month. Upgrade to continue.
                     </p>
                   </div>
                 )}
@@ -320,7 +320,7 @@ export default function SkillsPage() {
                       </p>
                     ) : skillSearch.results.length === 0 ? (
                       <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
-                        No skills match "{skillSearch.query}".
+                        No skills match &quot;{skillSearch.query}&quot;.
                       </p>
                     ) : (
                       <>

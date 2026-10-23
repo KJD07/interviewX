@@ -607,7 +607,7 @@ function CandidateDetail({ invite }: { invite: OrgCandidateInvite }) {
           </div>
         ) : (
           <p className="text-sm" style={{ color: "var(--ink-faint)" }}>
-            No scores yet — this candidate hasn't finished their interview.
+            No scores yet — this candidate hasn&apos;t finished their interview.
           </p>
         )}
 
@@ -685,7 +685,7 @@ function InvitesTable({ invites, liveCameraEnabled }: { invites: OrgCandidateInv
           />
 
           {search.results.length === 0 ? (
-            <p className="text-sm" style={{ color: "var(--ink-dim)" }}>No candidates match "{search.query}".</p>
+            <p className="text-sm" style={{ color: "var(--ink-dim)" }}>No candidates match &quot;{search.query}&quot;.</p>
           ) : (
             <div className="hidden md:block rounded-[14px] overflow-hidden" style={{ border: "1px solid var(--border-mid)" }}>
               <div
@@ -958,10 +958,10 @@ function EnterprisePageContent({ view = "overview" }: { view?: "overview" | "can
           {notMember && !loading && (
             <div className="text-center min-w-0">
               <p className="text-sm font-medium px-1" style={{ color: "var(--ink)" }}>
-                You're not a member of any organization yet.
+                You&apos;re not a member of any organization yet.
               </p>
               <p className="mt-1 text-sm px-1" style={{ color: "var(--ink-dim)" }}>
-                Contact EvaluLabs to set up your company's account.
+                Contact EvaluLabs to set up your company&apos;s account.
               </p>
               <EnterprisePricingCard className="mt-6" />
             </div>

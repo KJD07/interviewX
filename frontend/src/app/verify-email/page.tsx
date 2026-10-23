@@ -167,7 +167,7 @@ function VerifyEmailForm() {
         </form>
 
         <p className="mt-6 text-sm text-center" style={{ color: "var(--ink-faint)" }}>
-          Didn't get a code?{" "}
+          Didn&apos;t get a code?{" "}
           <button
             type="button"
             onClick={handleResend}

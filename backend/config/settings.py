@@ -192,6 +192,7 @@ REST_FRAMEWORK = {
         "user": "120/min",
         "careers_ats": "30/min",
         "careers_practice": "30/min",
+        "careers_profile_resume": "10/hour",
         # Tighter scope applied explicitly to auth endpoints (register,
         # verify-OTP, resend-OTP, login, google-auth) to block brute-force /
         # credential-stuffing / OTP-spam attacks.
@@ -252,6 +253,11 @@ TYPESAFE_API_KEY = os.environ.get("TYPESAFE_API_KEY", "")
 TYPESAFE_MODEL = os.environ.get("TYPESAFE_MODEL", "jev-latest")
 # Live-jobs feed refresh interval (lazy, request-driven; no cron worker).
 JOB_REFRESH_HOURS = int(os.environ.get("JOB_REFRESH_HOURS", "5"))
+# Parallel HTTP fetches per sweep over the ~1000 company boards (apps.careers.feeds).
+JOB_FETCH_CONCURRENCY = int(os.environ.get("JOB_FETCH_CONCURRENCY", "16"))
+# Run the sweep inline in the request that finds the feed stale (tests);
+# otherwise it runs on a background thread.
+JOB_REFRESH_SYNC = os.environ.get("JOB_REFRESH_SYNC", "").lower() in ("1", "true", "yes")
 
 # --- PayU (subscriptions) ---
 PAYU_MERCHANT_KEY = os.environ.get("PAYU_MERCHANT_KEY", "")

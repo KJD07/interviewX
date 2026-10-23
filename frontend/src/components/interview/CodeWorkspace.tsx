@@ -96,7 +96,7 @@ export default function CodeWorkspace({
             className="px-4 pt-3 text-xs"
             style={{ color: "var(--ink-faint)" }}
           >
-            The code editor didn't load in time, so here's a plain text box instead — you can still write and submit code.
+            The code editor didn&apos;t load in time, so here&apos;s a plain text box instead — you can still write and submit code.
           </p>
           <textarea
             value={code}

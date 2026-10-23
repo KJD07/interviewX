@@ -102,7 +102,7 @@ export default function ReviewCard({ sessionId, onResolved }: ReviewCardProps) {
             Rate your mock interview experience
           </p>
           <p className="text-xs mt-0.5" style={{ color: "var(--ink-dim)" }}>
-            You've completed {completedCount} interviews — your feedback helps other users.
+            You&apos;ve completed {completedCount} interviews — your feedback helps other users.
           </p>
         </div>
         <button

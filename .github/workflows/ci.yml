@@ -1,0 +1,63 @@
+# Runs on every push to main and every pull request, so lint errors, failing
+# tests and model changes without a migration are caught before a deploy.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: aiis
+          POSTGRES_USER: aiis_user
+          POSTGRES_PASSWORD: aiis_pass
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U aiis_user -d aiis"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DJANGO_DEBUG: "True"  # tests need it off SSL redirect (see CLAUDE.md)
+      POSTGRES_HOST: localhost
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"  # matches backend/Dockerfile
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: pip install -r requirements.txt
+      # Deploys run `migrate` automatically, which can only apply migrations
+      # that exist — fail here if a model change has none.
+      - name: Check for missing migrations
+        run: python manage.py makemigrations --check --dry-run
+      - name: Tests
+        run: python manage.py test --noinput
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"  # matches frontend/Dockerfile
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Type-check
+        run: npx tsc --noEmit
+      - name: Build
+        run: npm run build

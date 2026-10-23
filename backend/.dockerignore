@@ -1,0 +1,6 @@
+# Runtime data never belongs in the image (media holds user-uploaded resumes).
+media/
+staticfiles/
+__pycache__/
+*.pyc
+.env
