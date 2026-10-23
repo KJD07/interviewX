@@ -18,6 +18,10 @@ const LEVELS: { id: JobLevel; label: string }[] = [
   { id: "mid", label: "Mid (1–5 yrs)" },
   { id: "senior", label: "Senior (5+ yrs)" },
 ];
+const REGIONS: { id: NonNullable<JobFilters["region"]>; label: string }[] = [
+  { id: "india", label: "India & remote-friendly" },
+  { id: "", label: "Worldwide" },
+];
 const POSTED: { id: NonNullable<JobFilters["posted"]>; label: string }[] = [
   { id: "", label: "Any time" },
   { id: "1", label: "Past 24 hours" },
@@ -81,7 +85,10 @@ function Toggle({ on, onClick, children }: { on: boolean; onClick: () => void; c
 
 function CheckPanel({ job, profile, onQuota }: { job: Job; profile: CandidateProfile | null; onQuota: (q: AtsQuota) => void }) {
   const hasProfileResume = !!profile?.has_resume;
-  const [useOther, setUseOther] = useState(!hasProfileResume);
+  // null = follow the profile, which may still be loading when a shared job
+  // link opens this panel; only an explicit click pins the choice.
+  const [choice, setUseOther] = useState<boolean | null>(null);
+  const useOther = choice ?? !hasProfileResume;
   const [resume, setResume] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
@@ -335,7 +342,7 @@ export default function JobsPage() {
   const [count, setCount] = useState(0);
   const [q, setQ] = useState("");
   const [loc, setLoc] = useState("");
-  const [filters, setFilters] = useState<JobFilters>({ page: 1, sort: "match" });
+  const [filters, setFilters] = useState<JobFilters>({ page: 1, sort: "match", region: "india" });
   const [quota, setQuota] = useState<AtsQuota | null>(null);
   const [meta, setMeta] = useState<{ refreshed: string | null; refreshing: boolean; jobs: number; companies: number; hasProfile: boolean; sort: string }>(
     { refreshed: null, refreshing: false, jobs: 0, companies: 0, hasProfile: true, sort: "match" }
@@ -353,9 +360,12 @@ export default function JobsPage() {
       setJobs(r.results);
       setCount(r.count);
       setQuota(r.ats_quota);
+      const india = filters.region === "india";
       setMeta({
-        refreshed: r.last_refreshed_at, refreshing: r.refreshing, jobs: r.stats.jobs,
-        companies: r.stats.companies, hasProfile: r.has_profile, sort: r.sort,
+        refreshed: r.last_refreshed_at, refreshing: r.refreshing,
+        jobs: india ? r.stats.india_jobs : r.stats.jobs,
+        companies: india ? r.stats.india_companies : r.stats.companies,
+        hasProfile: r.has_profile, sort: r.sort,
       });
     } catch (e) {
       setError(e instanceof ApiError ? e.detail : "Could not load jobs.");
@@ -462,6 +472,14 @@ export default function JobsPage() {
 
           <div className="mt-4 space-y-2.5">
             <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-xs w-20" style={{ color: "var(--ink-faint)" }}>Region</span>
+              {REGIONS.map((r) => (
+                <Toggle key={r.id || "all"} on={(filters.region ?? "") === r.id} onClick={() => set({ region: r.id })}>
+                  {r.label}
+                </Toggle>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-xs w-20" style={{ color: "var(--ink-faint)" }}>Work mode</span>
               {WORK_MODES.map((m) => (
                 <Toggle key={m.id} on={!!filters.work_mode?.includes(m.id)} onClick={() => set({ work_mode: toggleIn(filters.work_mode, m.id) })}>
@@ -505,7 +523,7 @@ export default function JobsPage() {
                 <button
                   className="text-xs underline"
                   style={{ color: "var(--ink-dim)" }}
-                  onClick={() => { setQ(""); setLoc(""); setFilters({ page: 1, sort: filters.sort }); }}
+                  onClick={() => { setQ(""); setLoc(""); setFilters({ page: 1, sort: filters.sort, region: filters.region }); }}
                 >
                   Clear filters
                 </button>
