@@ -50,8 +50,23 @@ DEACTIVATE_AFTER = 5      # consecutive failed sweeps before a board is switched
 _TAG_RE = re.compile(r"<[^>]+>")
 
 
-def _clean(text: str) -> str:
-    return re.sub(r"\s+", " ", html.unescape(_TAG_RE.sub(" ", text or ""))).strip()
+_BLOCK_BREAK_RE = re.compile(r"</(?:p|div|h[1-6]|ul|ol|tr|section)\s*>|<br\s*/?>", re.I)
+_LI_RE = re.compile(r"<li\b[^>]*>", re.I)
+
+
+def _clean_description(text: str) -> str:
+    """Strip HTML to text, keeping one line per paragraph and "- " list bullets
+    so the jobs page can render the posting's structure instead of one wall of text."""
+    text = _LI_RE.sub("\n- ", _BLOCK_BREAK_RE.sub("\n", text or ""))
+    text = html.unescape(_TAG_RE.sub(" ", text))
+    lines = (re.sub(r"\s+", " ", line).strip() for line in text.split("\n"))
+    return "\n".join(line for line in lines if line and line != "-")
+
+
+def _html_lines(plain: str) -> str:
+    """Plain-text fields carry real newlines; turn them into <br> so
+    _clean_description keeps them alongside the HTML parts it's joined with."""
+    return html.escape(plain or "").replace("\n", "<br>")
 
 
 def _parse_dt(value) -> datetime:
@@ -129,7 +144,7 @@ def fetch_remotive() -> list[dict]:
     return [
         _row(source="remotive", external_id=str(j["id"]), title=j["title"], company=j.get("company_name"),
              location=j.get("candidate_required_location"), url=j["url"],
-             description=_clean(j.get("description", "")), tags=list(j.get("tags") or []),
+             description=_clean_description(j.get("description", "")), tags=list(j.get("tags") or []),
              work_mode=Job.WorkMode.REMOTE, posted_at=_parse_dt(j.get("publication_date")))
         for j in data.get("jobs", [])
     ]
@@ -139,7 +154,7 @@ def fetch_arbeitnow() -> list[dict]:
     data = httpx.get(ARBEITNOW_URL, timeout=TIMEOUT).raise_for_status().json()
     return [
         _row(source="arbeitnow", external_id=j["slug"], title=j["title"], company=j.get("company_name"),
-             location=j.get("location"), url=j["url"], description=_clean(j.get("description", "")),
+             location=j.get("location"), url=j["url"], description=_clean_description(j.get("description", "")),
              tags=list(j.get("tags") or []),
              work_mode=Job.WorkMode.REMOTE if j.get("remote") else infer_work_mode("", j.get("location", "")),
              posted_at=_parse_dt(j.get("created_at")))
@@ -174,11 +189,12 @@ def _fetch_lever(board: JobBoard, client: httpx.Client) -> list[dict]:
     rows = []
     for j in data:
         cats = j.get("categories") or {}
-        lists = " ".join(f"{li.get('text', '')}: {_clean(li.get('content', ''))}" for li in j.get("lists") or [])
+        lists = "\n".join(f"{li.get('text', '')}\n{li.get('content', '')}" for li in j.get("lists") or [])
         rows.append(_row(
             source="lever", external_id=f"{board.token}:{j['id']}", title=j.get("text"), company=board.company,
             location=cats.get("location"), url=j.get("hostedUrl"),
-            description=_clean(f"{j.get('descriptionPlain', '')} {lists} {j.get('additionalPlain', '')}"),
+            description=_clean_description(
+                f"{_html_lines(j.get('descriptionPlain', ''))}\n{lists}\n{_html_lines(j.get('additionalPlain', ''))}"),
             tags=[cats.get("team"), cats.get("commitment")],
             work_mode=infer_work_mode(j.get("workplaceType", ""), cats.get("location", ""), j.get("text", "")),
             posted_at=_parse_dt(j.get("createdAt")),
@@ -190,7 +206,8 @@ def _fetch_ashby(board: JobBoard, client: httpx.Client) -> list[dict]:
     data = client.get(ASHBY_JOBS.format(token=board.token)).raise_for_status().json()
     return [
         _row(source="ashby", external_id=f"{board.token}:{j['id']}", title=j.get("title"), company=board.company,
-             location=j.get("location"), url=j.get("jobUrl"), description=_clean(j.get("descriptionPlain", "")),
+             location=j.get("location"), url=j.get("jobUrl"), description=_clean_description(
+                 j.get("descriptionHtml") or _html_lines(j.get("descriptionPlain", ""))),
              tags=[j.get("department"), j.get("team"), j.get("employmentType")],
              work_mode=Job.WorkMode.REMOTE if j.get("isRemote") and not j.get("workplaceType")
              else infer_work_mode(j.get("workplaceType", ""), j.get("location", ""), j.get("title", "")),
@@ -387,7 +404,7 @@ def ensure_description(job: Job) -> Job:
     except Exception as exc:
         logger.info("greenhouse description fetch failed for %s: %s", job.pk, exc)
         return job
-    job.description = _clean(html.unescape(data.get("content") or ""))[:MAX_DESCRIPTION]
+    job.description = _clean_description(html.unescape(data.get("content") or ""))[:MAX_DESCRIPTION]
     job.skills = job_skills(job.title, job.tags, job.description)
     job.level = infer_level(job.title, job.description) or job.level
     job.save(update_fields=["description", "skills", "level"])
