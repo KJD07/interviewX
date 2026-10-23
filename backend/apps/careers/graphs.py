@@ -78,7 +78,7 @@ def _load_job(state):
 
 def _ats_keyword_score(state):
     job = state["job"]
-    result = ats_check(state["resume"], job.title, job.description, job.tags)
+    result = ats_check(state["resume"], job.title, job.description, job.tags, company=job.company)
     if result["ats_score"] is None:
         return _reply({"detail": "This posting lists no recognisable skills to check against."}, 422)
     return {"result": result}
@@ -98,7 +98,8 @@ def _jev_assess(state):
 
 def _rescore(state):
     job, ai = state["job"], state["ai"]
-    result = ats_check(state["resume"], job.title, job.description, job.tags, extra_have=ai["confirmed"])
+    result = ats_check(state["resume"], job.title, job.description, job.tags, extra_have=ai["confirmed"],
+                       company=job.company)
     result["ai_fit"] = ai["fit"]
     return {"result": result}
 

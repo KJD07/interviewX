@@ -1179,10 +1179,29 @@ export interface JobApplication extends TrackedJob {
   updated_at: string;
 }
 
+export interface AtsKeyword {
+  skill: string; // canonical id ("postgresql", or "java or python" for an either-or requirement)
+  label: string; // display name ("PostgreSQL")
+  importance: "required" | "general" | "preferred";
+  status: "matched" | "implied" | "missing"; // implied = covered by a related skill but not written out
+}
+
+export interface AtsBreakdownPart {
+  key: "keywords" | "experience" | "title" | "education" | "structure";
+  label: string;
+  score: number; // 0-100
+  weight: number; // % of the overall score; parts the posting says nothing about are left out
+}
+
 export interface ResumeCheckResult {
   ats_score: number;
   matched_keywords: string[];
   missing_keywords: string[];
+  implied_keywords: string[];
+  keywords: AtsKeyword[];
+  breakdown: AtsBreakdownPart[];
+  experience: { required_years: number | null; resume_years: number | null };
+  suggestions: string[];
   ai_assisted: boolean;
   ai_fit?: number; // 0-100, present only when the Jev second opinion ran
   ats_quota: AtsQuota;

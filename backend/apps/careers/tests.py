@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import date, timedelta
 from unittest import mock
 
 from django.contrib.auth import get_user_model
@@ -8,7 +8,7 @@ from rest_framework.test import APIClient
 
 from apps.companies.models import Company, InterviewQuestion, Role, Round
 
-from . import feeds
+from . import ats, feeds, skillgraph
 from .ats import ats_check
 from .models import CandidateProfile, Job, JobApplication, JobBoard, JobFeedState, ResumeCheck, SavedJob
 from .practice import score_answer
@@ -30,7 +30,10 @@ class SkillGraphATSTests(TestCase):
         r = ats_check("I know k8s and reactjs", "Frontend", "Need Docker, JavaScript and React")
         self.assertIn("javascript", r["matched_keywords"])  # implied by React
         self.assertIn("docker", r["matched_keywords"])      # implied by Kubernetes alias
-        self.assertEqual(r["ats_score"], 100)
+        self.assertEqual(r["implied_keywords"], ["docker", "javascript"])
+        keywords = next(b for b in r["breakdown"] if b["key"] == "keywords")["score"]
+        self.assertTrue(50 < keywords < 100)  # implied skills earn partial credit
+        self.assertTrue(any("JavaScript" in t for t in r["suggestions"]))
 
     def test_missing_keywords_and_score(self):
         r = ats_check(RESUME, "Python Developer", "Python Django PostgreSQL Docker AWS")
@@ -43,6 +46,133 @@ class SkillGraphATSTests(TestCase):
     def test_word_boundaries(self):
         r = ats_check("javascript developer", "x", "Need Java")
         self.assertEqual(r["matched_keywords"], [])
+
+    def test_plain_english_words_are_not_skills(self):
+        text = "Ready to go-to-market. Excel at communication. React to incidents. Send your CV by 5 pm. R&D team."
+        self.assertEqual(skillgraph.extract_skills(text), {"communication"})
+        self.assertEqual(skillgraph.extract_skills("Go, REST, MS Excel, React, Spring Boot"),
+                         {"go", "rest api", "excel", "react", "spring boot"})
+
+
+JD = """About Acme
+We are a fintech company. Our sales and marketing teams live in Salesforce.
+What you'll do
+- Build backend services in Go and Python
+Requirements
+- 3+ years of experience in backend development
+- Strong proficiency in Python or Java, PostgreSQL and Redis
+- Experience with Docker and AWS
+- Bachelor's degree in Computer Science or equivalent
+Nice to have
+- Terraform, GraphQL
+Benefits
+- Health insurance and Excel training
+"""
+
+CV = """Priya Sharma
+priya@example.com | +91 98765 43210
+Summary
+Backend engineer building payment APIs.
+Experience
+Software Engineer, Acme Corp
+Jan 2023 - Present
+- Built REST APIs with Python, Django and PostgreSQL serving 2M requests/day, cut latency by 40%
+- Deployed on AWS with Docker; 10k events/sec through Redis
+Education
+B.Tech Computer Science, IIT Delhi
+2018 - 2022
+Skills
+Python, Django, PostgreSQL, Docker, Redis, AWS
+"""
+
+
+class ATSScoringTests(TestCase):
+    TODAY = date(2026, 10, 1)
+
+    def check(self, cv=CV, title="Backend Engineer", jd=JD):
+        return ats_check(cv, title, jd, today=self.TODAY)
+
+    def kw(self, r):
+        return {k["skill"]: (k["importance"], k["status"]) for k in r["keywords"]}
+
+    def test_sections_set_importance(self):
+        kw = self.kw(self.check())
+        self.assertEqual(kw["redis"], ("required", "matched"))
+        self.assertEqual(kw["go"], ("general", "missing"))
+        self.assertEqual(kw["terraform"], ("preferred", "missing"))
+        for skill in ("salesforce", "sales", "marketing", "excel"):  # About us / Benefits only
+            self.assertNotIn(skill, kw)
+
+    def test_either_or_requirement(self):
+        kw = self.kw(self.check())
+        self.assertEqual(kw["python"], ("required", "matched"))
+        self.assertNotIn("java", kw)
+        self.assertNotIn("java", self.check()["missing_keywords"])
+        r = self.check(cv=CV.replace("Python, ", ""))  # Django still implies Python
+        self.assertEqual(self.kw(r)["python"], ("required", "implied"))
+        r = self.check(cv=CV.replace("Python, ", "").replace("Django", "Rails"))
+        self.assertIn("java or python", r["missing_keywords"])
+
+    def test_missing_required_costs_more_than_nice_to_have(self):
+        base = self.check()["ats_score"]
+        no_redis = self.check(cv=CV.replace("Redis", "Memcached"))["ats_score"]
+        with_terraform = self.check(cv=CV + "Terraform\n")["ats_score"]
+        self.assertLess(no_redis, base - 3)
+        self.assertLessEqual(with_terraform - base, 3)
+
+    def test_experience_from_dates_excludes_education(self):
+        self.assertEqual(ats.required_years(JD), 3)
+        self.assertEqual(ats.required_years("Experience: 2-4 years in Python"), 2)
+        self.assertIsNone(ats.required_years("Founded 25 years ago. Python."))
+        self.assertEqual(ats.resume_years(CV, self.TODAY), 3.8)  # Jan 2023 -> Oct 2026, not 2018-2022
+        self.assertEqual(ats.resume_years("Summary\n5+ years of professional experience in Java"), 5)
+        r = self.check(cv=CV.replace("Jan 2023", "Jan 2025"))
+        self.assertEqual(r["experience"], {"required_years": 3, "resume_years": 1.8})
+        self.assertLess(next(b["score"] for b in r["breakdown"] if b["key"] == "experience"), 100)
+        self.assertTrue(any("3+ years" in t for t in r["suggestions"]))
+
+    def test_degree_requirement(self):
+        self.assertEqual(ats.required_degree(JD), (1, True))
+        self.assertEqual(ats.required_degree("You must be in the Bangalore office."), (None, False))
+        self.assertEqual(ats.required_degree("MS in CS or PhD"), (2, False))
+        r = self.check(cv=CV.replace("B.Tech Computer Science, IIT Delhi", "Delhi Public School"))
+        self.assertLess(next(b["score"] for b in r["breakdown"] if b["key"] == "education"), 100)
+
+    def test_title_match(self):
+        self.assertEqual(ats._core_title("Senior Backend Developer - Payments (Remote)"), ["backend", "engineer"])
+        self.assertEqual(ats._core_title("SDE-2"), ["engineer"])
+        r = self.check(title="Data Scientist")
+        self.assertLess(next(b["score"] for b in r["breakdown"] if b["key"] == "title"), 100)
+        self.assertEqual(next(b["score"] for b in self.check()["breakdown"] if b["key"] == "title"), 100)
+
+    def test_structure_checks(self):
+        r = self.check(cv="python django postgresql redis docker aws " * 10)
+        structure = next(b["score"] for b in r["breakdown"] if b["key"] == "structure")
+        self.assertLess(structure, 30)
+        tips = " ".join(r["suggestions"])
+        self.assertIn("email and phone", tips)
+        self.assertIn("section headings", tips)
+
+    def test_company_name_and_team_mentions_are_not_requirements(self):
+        jd = ("At Databricks we build the lakehouse. You'll work closely with product management and sales.\n"
+              "Requirements\n- Python and SQL\n- Spark\n")
+        kw = self.kw(ats_check(CV, "Software Engineer", jd, company="Databricks", today=self.TODAY))
+        self.assertEqual(set(kw), {"python", "sql", "spark"})
+
+    def test_real_world_headings(self):
+        for line, kind in [("What you’ll bring", "required"), ("What skills do I need?", "required"),
+                           ("Bonus if you have the following", "preferred"), ("A typical day:", "general"),
+                           ("Our commitment to diversity and inclusion", "ignore"), ("About Groww:", "ignore"),
+                           ("About you", "required"), ("Experience with Python", None),
+                           ("Strong communication skills", None)]:
+            self.assertEqual((ats._heading(line) or [None])[0], kind, line)
+        lines = list(ats._posting_lines("Requirements\n- Location: Bangalore\n- Python and Go\n"))
+        self.assertEqual(lines[-1], ("required", "- Python and Go"))  # a one-off label doesn't open a section
+
+    def test_parts_without_requirements_are_left_out(self):
+        r = ats_check(CV, "Backend Engineer", "Python, Docker and AWS")
+        self.assertEqual({b["key"] for b in r["breakdown"]}, {"keywords", "title", "structure"})
+        self.assertEqual(sum(b["weight"] for b in r["breakdown"]), 100)
 
 
 class PracticeScoringTests(TestCase):
