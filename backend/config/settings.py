@@ -251,13 +251,17 @@ PLATFORM_FREE = os.environ.get("PLATFORM_FREE", "true").lower() in ("1", "true",
 # Optional TypeSafe Jev second opinion on ATS checks (off when key is empty).
 TYPESAFE_API_KEY = os.environ.get("TYPESAFE_API_KEY", "")
 TYPESAFE_MODEL = os.environ.get("TYPESAFE_MODEL", "jev-latest")
-# Live-jobs feed refresh interval (lazy, request-driven; no cron worker).
+# Live-jobs feed refresh interval, run by the job_sweeper service
+# (manage.py sweep_jobs); requests fall back to triggering it lazily.
 JOB_REFRESH_HOURS = int(os.environ.get("JOB_REFRESH_HOURS", "5"))
 # Parallel HTTP fetches per sweep over the ~1000 company boards (apps.careers.feeds).
 JOB_FETCH_CONCURRENCY = int(os.environ.get("JOB_FETCH_CONCURRENCY", "16"))
 # Run the sweep inline in the request that finds the feed stale (tests);
 # otherwise it runs on a background thread.
 JOB_REFRESH_SYNC = os.environ.get("JOB_REFRESH_SYNC", "").lower() in ("1", "true", "yes")
+# Set on the web process when the job_sweeper service runs, so requests stop
+# sweeping inside the web server and only cover for a sweeper that's down.
+JOB_SWEEPER_EXTERNAL = os.environ.get("JOB_SWEEPER_EXTERNAL", "").lower() in ("1", "true", "yes")
 
 # --- PayU (subscriptions) ---
 PAYU_MERCHANT_KEY = os.environ.get("PAYU_MERCHANT_KEY", "")

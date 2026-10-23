@@ -89,6 +89,41 @@ class FeedRefreshTests(TestCase):
         self.assertTrue(feeds.is_sweeping(JobFeedState.objects.get()))
 
 
+    def test_external_sweeper_requests_only_cover_when_twice_stale(self):
+        JobFeedState.objects.create(pk=1, last_refreshed_at=timezone.now() - timedelta(hours=6),
+                                    last_finished_at=timezone.now() - timedelta(hours=6))
+        with override_settings(JOB_SWEEPER_EXTERNAL=True), mock.patch.object(feeds, "FETCHERS", ()):
+            self.assertFalse(feeds.refresh_if_stale())  # the sweeper's job, not the request's
+            JobFeedState.objects.update(last_refreshed_at=timezone.now() - timedelta(hours=11))
+            self.assertTrue(feeds.refresh_if_stale())
+
+    def test_sweep_that_died_midway_is_reclaimed(self):
+        JobFeedState.objects.create(pk=1, last_refreshed_at=timezone.now() - timedelta(hours=2),
+                                    last_finished_at=timezone.now() - timedelta(hours=7))
+        self.assertTrue(feeds.claim_sweep(timedelta(hours=5)))
+        self.assertFalse(feeds.claim_sweep(timedelta(hours=5)))  # just claimed, still running
+
+    def test_sweep_jobs_command_once(self):
+        from django.core.management import call_command
+        with mock.patch.object(feeds, "FETCHERS", ()):
+            call_command("sweep_jobs", "--once", stdout=mock.Mock())
+            state = JobFeedState.objects.get()
+            self.assertFalse(feeds.is_sweeping(state))
+            call_command("sweep_jobs", "--once", stdout=mock.Mock())  # fresh -> no second sweep
+        self.assertEqual(JobFeedState.objects.get().last_refreshed_at, state.last_refreshed_at)
+
+    def test_resweep_skips_unchanged_rows(self):
+        row = feeds._row(source="remotive", external_id="1", title="T", company="C", location="", url="https://a.test",
+                         description="Python", tags=[], posted_at=timezone.now())
+        feeds._upsert([dict(row)])
+        with mock.patch.object(Job.objects, "bulk_create") as bulk:
+            feeds._upsert([dict(row)])
+        bulk.assert_not_called()
+        feeds._upsert([dict(row, description="Python and Go")])
+        self.assertEqual(Job.objects.get().description, "Python and Go")
+        self.assertEqual(Job.objects.count(), 1)
+
+
 def _resp(payload):
     r = mock.Mock()
     r.json.return_value = payload

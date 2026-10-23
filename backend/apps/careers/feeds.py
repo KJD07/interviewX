@@ -253,26 +253,34 @@ UPDATE_FIELDS = ["title", "company", "location", "url", "tags", "work_mode", "po
 
 
 def _upsert(rows: list[dict], board: JobBoard | None = None) -> set[str]:
-    """Bulk upsert rows of one source. Skills are only extracted for new or
-    retitled rows, so re-sweeps of unchanged jobs stay cheap."""
+    """Bulk upsert rows of one source; returns every external_id seen.
+    Only new or changed rows are written (most of a re-sweep is unchanged), and
+    skills are only re-extracted for new or retitled rows."""
     rows = list({r["external_id"]: r for r in rows}.values())  # one row per id, or ON CONFLICT errors
     if not rows:
         return set()
     source = rows[0]["source"]
     ids = [r["external_id"] for r in rows]
-    known = {eid: (title, skills) for eid, title, skills in
-             Job.objects.filter(source=source, external_id__in=ids).values_list("external_id", "title", "skills")}
-    now = timezone.now()
-    objs = []
-    for r in rows:
-        title, skills = known.get(r["external_id"], (None, None))
-        if title != r["title"]:  # new or retitled posting (skill extraction is the costly step)
-            skills = job_skills(r["title"], r["tags"], r["description"])
-        objs.append(Job(board=board, skills=skills, fetched_at=now, **r))
     # Greenhouse rows carry no description (fetched lazily), so don't wipe the
     # description and what was derived from it once filled in.
     fields = UPDATE_FIELDS + ([] if source == "greenhouse" else ["description", "skills", "level"])
-    Job.objects.bulk_create(objs, update_conflicts=True, unique_fields=["source", "external_id"], update_fields=fields)
+    compared = [f for f in fields if f not in ("fetched_at", "board", "skills")]
+    known = {eid: (board_id, skills, dict(zip(compared, vals))) for eid, board_id, skills, *vals in
+             Job.objects.filter(source=source, external_id__in=ids)
+             .values_list("external_id", "board_id", "skills", *compared)}
+    board_id = board.pk if board else None
+    now = timezone.now()
+    objs = []
+    for r in rows:
+        old_board, skills, old = known.get(r["external_id"], (None, None, None))
+        if old is not None and old_board == board_id and all(old[f] == r[f] for f in compared):
+            continue
+        if old is None or old["title"] != r["title"]:  # skill extraction is the costly step
+            skills = job_skills(r["title"], r["tags"], r["description"])
+        objs.append(Job(board=board, skills=skills, fetched_at=now, **r))
+    if objs:
+        Job.objects.bulk_create(objs, update_conflicts=True, unique_fields=["source", "external_id"],
+                                update_fields=fields)
     return set(ids)
 
 
@@ -369,18 +377,32 @@ def _run_sweep_in_thread() -> None:
         close_old_connections()
 
 
-def refresh_if_stale() -> bool:
-    """Start a sweep if the last one started >= JOB_REFRESH_HOURS ago. The row
-    lock lets exactly one request claim it; the sweep itself runs off-request
-    (inline when JOB_REFRESH_SYNC, e.g. tests)."""
-    interval = timedelta(hours=settings.JOB_REFRESH_HOURS)
+# A sweep takes minutes; one still "running" after this died with its process.
+STUCK_SWEEP = timedelta(hours=1)
+
+
+def claim_sweep(interval: timedelta) -> bool:
+    """Stamp a new sweep start if the last one started >= interval ago (or died
+    mid-run). The row lock lets exactly one caller claim it."""
     with transaction.atomic():
         state, _ = JobFeedState.objects.select_for_update().get_or_create(pk=1)
-        if state.last_refreshed_at and timezone.now() - state.last_refreshed_at < interval:
+        since = timezone.now() - state.last_refreshed_at if state.last_refreshed_at else None
+        if since is not None and since < interval and not (is_sweeping(state) and since >= STUCK_SWEEP):
             return False
         # Stamp before fetching: a failing feed is retried next interval, not on every request.
         state.last_refreshed_at = timezone.now()
         state.save(update_fields=["last_refreshed_at"])
+    return True
+
+
+def refresh_if_stale() -> bool:
+    """Request-path fallback. With the job_sweeper service running
+    (JOB_SWEEPER_EXTERNAL) it owns the schedule and requests only step in once
+    the feed is twice as stale, i.e. the sweeper is down. The sweep runs
+    off-request (inline when JOB_REFRESH_SYNC, e.g. tests)."""
+    hours = settings.JOB_REFRESH_HOURS * (2 if settings.JOB_SWEEPER_EXTERNAL else 1)
+    if not claim_sweep(timedelta(hours=hours)):
+        return False
     if settings.JOB_REFRESH_SYNC:
         run_sweep()
     else:
