@@ -2,6 +2,8 @@
 import { useCallback, useEffect, useState } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AppShell from "@/components/AppShell";
+import CompanyLogo from "@/components/CompanyLogo";
+import JobDescription from "@/components/JobDescription";
 import Link from "next/link";
 import { careers, ApiError } from "@/lib/api";
 import type { AtsQuota, CandidateProfile, Job, JobFilters, JobLevel, ResumeCheckResult, WorkMode } from "@/lib/api";
@@ -192,29 +194,20 @@ function CheckPanel({ job, profile, onQuota }: { job: Job; profile: CandidatePro
 
 function JobDetails({ job, profile, onQuota }: { job: Job; profile: CandidateProfile | null; onQuota: (q: AtsQuota) => void }) {
   const [description, setDescription] = useState<string | null>(job.description ?? null);
-  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     if (description !== null) return;
     careers.job(job.id).then((j) => setDescription(j.description ?? "")).catch(() => setDescription(""));
   }, [job.id, description]);
 
-  const long = (description?.length ?? 0) > 700;
   return (
     <div className="mt-4 pt-4 border-t space-y-4" style={{ borderColor: "var(--border)" }}>
       <div>
-        <p className="text-sm font-medium mb-1" style={{ color: "var(--ink)" }}>About the role</p>
+        <p className="text-sm font-medium mb-2" style={{ color: "var(--ink)" }}>About the role</p>
         {description === null ? (
           <p className="text-sm" style={{ color: "var(--ink-faint)" }}>Loading description…</p>
         ) : description ? (
-          <p className="text-sm whitespace-pre-line leading-relaxed" style={{ color: "var(--ink-dim)" }}>
-            {long && !expanded ? `${description.slice(0, 700)}…` : description}{" "}
-            {long && (
-              <button className="underline text-xs" onClick={() => setExpanded(!expanded)}>
-                {expanded ? "show less" : "show more"}
-              </button>
-            )}
-          </p>
+          <JobDescription text={description} />
         ) : (
           <p className="text-sm" style={{ color: "var(--ink-faint)" }}>
             Full description is on the company&apos;s site.
@@ -274,24 +267,27 @@ function JobCard({
   return (
     <li className="rounded-xl p-4" style={{ background: "var(--surface)" }}>
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-        <div className="min-w-0">
-          <button onClick={onToggle} className="text-left font-medium hover:underline" style={{ color: "var(--ink)" }}>
-            {job.title}
-          </button>
-          <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
-            {job.company}{job.location && ` · ${job.location}`} · {timeAgo(job.posted_at)}
-          </p>
-          <div className="flex flex-wrap gap-1.5 mt-2">
-            {job.match !== null && <Badge strong={job.match >= 60}>{job.match}% match</Badge>}
-            {job.work_mode && <Badge>{MODE_LABEL[job.work_mode]}</Badge>}
-            {job.level && <Badge>{LEVEL_LABEL[job.level]}</Badge>}
-            {job.application_status && <Badge strong>Applied ✓</Badge>}
-            {job.skills.slice(0, 5).map((s) => (
-              <span key={s} className="text-[11px] px-2 py-0.5 rounded-full border" style={{ borderColor: "var(--border-mid)", color: "var(--ink-faint)" }}>
-                {s}
-              </span>
-            ))}
-          </div>
+        <div className="flex gap-3 min-w-0">
+        <CompanyLogo company={job.company} url={job.url} />
+          <div className="min-w-0">
+            <button onClick={onToggle} className="text-left font-medium hover:underline" style={{ color: "var(--ink)" }}>
+              {job.title}
+            </button>
+            <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
+              {job.company}{job.location && ` · ${job.location}`} · {timeAgo(job.posted_at)}
+            </p>
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {job.match !== null && <Badge strong={job.match >= 60}>{job.match}% match</Badge>}
+              {job.work_mode && <Badge>{MODE_LABEL[job.work_mode]}</Badge>}
+              {job.level && <Badge>{LEVEL_LABEL[job.level]}</Badge>}
+              {job.application_status && <Badge strong>Applied ✓</Badge>}
+              {job.skills.slice(0, 5).map((s) => (
+                <span key={s} className="text-[11px] px-2 py-0.5 rounded-full border" style={{ borderColor: "var(--border-mid)", color: "var(--ink-faint)" }}>
+                  {s}
+                </span>
+              ))}
+            </div>
+        </div>
         </div>
         <div className="flex gap-2 shrink-0 flex-wrap">
           <button

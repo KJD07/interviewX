@@ -252,3 +252,12 @@ a, button {
     transform: none;
   }
 }
+/* Sidebar nav: thin scrollbar that only shows on hover, so a short viewport
+   doesn't put a heavy gray track beside the menu. */
+.sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.sidebar-scroll:hover {
+  scrollbar-color: var(--border-mid) transparent;
+}

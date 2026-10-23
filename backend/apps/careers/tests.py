@@ -96,6 +96,16 @@ def _resp(payload):
     return r
 
 
+class DescriptionCleaningTests(TestCase):
+    def test_html_keeps_paragraphs_and_bullets(self):
+        raw = "<h3>About us</h3><p>We build &amp; ship.</p><ul><li><p>Python</p></li><li>Docker</li></ul>"
+        self.assertEqual(feeds._clean_description(raw), "About us\nWe build & ship.\n- Python\n- Docker")
+
+    def test_plain_text_newlines_survive(self):
+        raw = feeds._html_lines("Line one\n\nUse <Go>\n- x")
+        self.assertEqual(feeds._clean_description(raw), "Line one\nUse <Go>\n- x")
+
+
 class CompanyBoardTests(TestCase):
     """Greenhouse / Lever / Ashby boards: parsing, closed-role removal, auto-deactivation."""
 

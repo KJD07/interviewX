@@ -56,6 +56,14 @@ function QuestionsIcon() {
   );
 }
 
+function BriefcaseIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 20 20" fill="currentColor" fillRule="evenodd">
+      <path d="M7.25 3.5h5.5A1.75 1.75 0 0 1 14.5 5.25V6h1.75A1.75 1.75 0 0 1 18 7.75v7.5A1.75 1.75 0 0 1 16.25 17H3.75A1.75 1.75 0 0 1 2 15.25v-7.5A1.75 1.75 0 0 1 3.75 6H5.5v-.75A1.75 1.75 0 0 1 7.25 3.5Zm0 1.75V6h5.5v-.75h-5.5ZM8.5 10h3v1.75h-3V10Z" />
+    </svg>
+  );
+}
+
 function UserIcon() {
   return (
     <svg width="17" height="17" viewBox="0 0 20 20" fill="currentColor">
@@ -116,8 +124,8 @@ function PlanCard({
 }) {
   const pct = limit && limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
   return (
-    <div className="rounded-[14px] px-4 py-3.5" style={{ background: "var(--hero-bg)" }}>
-      <div className="flex items-center justify-between mb-2.5">
+    <div className="rounded-[12px] px-3.5 py-3" style={{ background: "var(--hero-bg)" }}>
+      <div className="flex items-center justify-between mb-1">
         <span className="font-mono text-[9px] uppercase tracking-[0.16em]" style={{ color: "#7E7D74" }}>
           Plan
         </span>
@@ -132,7 +140,7 @@ function PlanCard({
         )}
       </div>
       <div
-        className="font-display text-[19px] font-bold tracking-[-0.02em] mb-2.5 truncate"
+        className="font-display text-[16px] font-bold tracking-[-0.02em] mb-2 truncate"
         style={{ color: "var(--hero-text)" }}
       >
         {planLabel}
@@ -150,7 +158,7 @@ function PlanCard({
               style={{ width: `${pct}%`, background: "var(--lime)" }}
             />
           </div>
-          <div className="font-mono text-[10px] mt-2 uppercase" style={{ color: "#7E7D74" }}>
+          <div className="font-mono text-[10px] mt-1.5 uppercase" style={{ color: "#7E7D74" }}>
             {enterprise
               ? limit == null
                 ? "candidate quota"
@@ -233,7 +241,7 @@ export default function Sidebar({ enterprise = false, partner = false, mobileOpe
           ? [{ href: "/skills", label: "Skills", icon: SparkleIcon }]
           : []),
         { href: "/practice", label: "Practice", icon: QuestionsIcon },
-        { href: "/jobs", label: "Live jobs", icon: BuildingIcon },
+        { href: "/jobs", label: "Live jobs", icon: BriefcaseIcon },
         { href: "/progress", label: "Progress", icon: TrendIcon },
         // Partner is a separate (referral) portal, never part of the candidate nav.
         { href: "/profile", label: "Profile", icon: UserIcon },
@@ -260,71 +268,79 @@ export default function Sidebar({ enterprise = false, partner = false, mobileOpe
     return pathname === href || pathname?.startsWith(href + "/");
   };
 
+  const navList = (onNavigate?: () => void) => (
+    <nav className="sidebar-scroll flex flex-col gap-0.5 overflow-y-auto min-h-0 flex-1 -mr-1 pr-1">
+      {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+        const active = isActive(href);
+        return (
+          <Link
+            key={href}
+            href={href}
+            onClick={onNavigate}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-[10px] text-[14.5px] shrink-0 transition-colors duration-200 ease-out ${
+              active ? "" : "hover:bg-[var(--surface)]"
+            }`}
+            style={{
+              background: active ? "var(--ink)" : undefined,
+              color: active ? "var(--page)" : "#3A3933",
+              fontWeight: active ? 600 : 500,
+            }}
+          >
+            <NavGlyph Icon={Icon} active={active} />
+            {label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+
+  const footer = (
+    <div className="shrink-0 pt-3 mt-3 border-t space-y-2.5" style={{ borderColor: "var(--border)" }}>
+      <PlanCard planLabel={planLabel} linkLabel={planLinkLabel} enterprise={enterprise} partner={partner} used={used} limit={limit} bonus={bonus} />
+
+      <div className="flex items-center justify-between px-1">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span
+            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold shrink-0"
+            style={{ background: "var(--ink)", color: "var(--page)" }}
+          >
+            {initial}
+          </span>
+          <span className="text-[13px] truncate" style={{ color: "var(--ink-dim)" }}>
+            {user?.username}
+          </span>
+        </div>
+        <button
+          onClick={handleLogout}
+          className="shrink-0 p-1 rounded-md hover:opacity-80"
+          style={{ color: "var(--ink-faint)" }}
+          title="Sign out"
+          aria-label="Sign out"
+        >
+          <LogoutIcon />
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <>
       {/* Desktop sidebar */}
       <aside
-        className="hidden md:flex w-[250px] shrink-0 h-screen sticky top-0 flex-col px-[18px] py-6 border-r"
+        className="hidden md:flex w-[240px] shrink-0 h-screen sticky top-0 flex-col px-4 py-5 border-r"
         style={{ background: "var(--surface-2)", borderColor: "var(--border-mid)" }}
       >
-        <div className="flex flex-col min-h-0 flex-1">
         <Link
           href="/"
-          className="font-display flex items-center gap-2.5 text-[19px] font-semibold tracking-tight px-1.5 mb-9 shrink-0"
+          className="font-display flex items-center gap-2.5 text-[18px] font-semibold tracking-tight px-1.5 mb-6 shrink-0"
           style={{ color: "var(--ink)" }}
         >
-          <Image src={icon} alt="EvaluLabs" width={28} height={28} className="rounded-md" priority />
+          <Image src={icon} alt="EvaluLabs" width={26} height={26} className="rounded-md" priority />
           EvaluLabs
         </Link>
 
-        <nav className="space-y-1 overflow-y-auto min-h-0 flex-1 pr-1">
-          {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-            const active = isActive(href);
-            return (
-              <Link
-                key={href}
-                href={href}
-                className="w-full flex items-center gap-[11px] px-3.5 py-[11px] rounded-[11px] text-[15px] transition-colors duration-200 ease-out"
-                style={{
-                  background: active ? "var(--ink)" : "transparent",
-                  color: active ? "var(--page)" : "#3A3933",
-                  fontWeight: active ? 600 : 500,
-                }}
-              >
-                <NavGlyph Icon={Icon} active={active} />
-                {label}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-
-      <div className="space-y-3 shrink-0">
-        <PlanCard planLabel={planLabel} linkLabel={planLinkLabel} enterprise={enterprise} partner={partner} used={used} limit={limit} bonus={bonus} />
-
-        <div className="flex items-center justify-between px-1 py-1">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <span
-              className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold shrink-0"
-              style={{ background: "var(--ink)", color: "var(--page)" }}
-            >
-              {initial}
-            </span>
-            <span className="text-[13.5px] truncate" style={{ color: "var(--ink-dim)" }}>
-              {user?.username}
-            </span>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="shrink-0 hover:opacity-80"
-            style={{ color: "var(--ink-faint)" }}
-            title="Sign out"
-          >
-            <LogoutIcon />
-          </button>
-        </div>
-      </div>
-
+        {navList()}
+        {footer}
       </aside>
 
       {/* Mobile drawer */}
@@ -341,55 +357,14 @@ export default function Sidebar({ enterprise = false, partner = false, mobileOpe
           }`}
           style={{ background: 'var(--surface-2)' }}
         >
-            <div className="flex flex-col h-full px-5 py-6 border-r" style={{ borderColor: 'var(--border-mid)' }}>
-              <div className="mb-6 shrink-0">
-                <Link href="/" className="font-display flex items-center gap-2.5 text-[18px] font-semibold tracking-tight px-1.5 mb-4 shrink-0" style={{ color: 'var(--ink)' }}>
-                  <Image src={icon} alt="EvaluLabs" width={24} height={24} className="rounded-md" priority />
-                  EvaluLabs
-                </Link>
-              </div>
+            <div className="flex flex-col h-full px-4 py-5 border-r" style={{ borderColor: 'var(--border-mid)' }}>
+              <Link href="/" className="font-display flex items-center gap-2.5 text-[18px] font-semibold tracking-tight px-1.5 mb-6 shrink-0" style={{ color: 'var(--ink)' }}>
+                <Image src={icon} alt="EvaluLabs" width={24} height={24} className="rounded-md" priority />
+                EvaluLabs
+              </Link>
 
-              <nav className="space-y-1 overflow-y-auto flex-1 min-h-0 pr-1 pb-2">
-                {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-                  const active = isActive(href);
-                  return (
-                    <Link
-                      key={href}
-                      href={href}
-                      onClick={onClose}
-                      className="w-full flex items-center gap-[11px] px-3.5 py-[11px] rounded-[11px] text-[15px] transition-colors duration-200 ease-out"
-                      style={{
-                        background: active ? "var(--ink)" : "transparent",
-                        color: active ? "var(--page)" : "#3A3933",
-                        fontWeight: active ? 600 : 500,
-                      }}
-                    >
-                      <NavGlyph Icon={Icon} active={active} />
-                      {label}
-                    </Link>
-                  );
-                })}
-              </nav>
-
-              <div className="mt-auto pt-4 border-t shrink-0" style={{ borderColor: 'var(--border)' }}>
-                <div className="space-y-3">
-                  <PlanCard planLabel={planLabel} linkLabel={planLinkLabel} enterprise={enterprise} partner={partner} used={used} limit={limit} bonus={bonus} />
-
-                  <div className="flex items-center justify-between px-1 py-1">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold shrink-0" style={{ background: "var(--ink)", color: "var(--page)" }}>
-                        {initial}
-                      </span>
-                      <span className="text-[13.5px] truncate" style={{ color: "var(--ink-dim)" }}>
-                        {user?.username}
-                      </span>
-                    </div>
-                    <button onClick={handleLogout} className="shrink-0 hover:opacity-80" style={{ color: "var(--ink-faint)" }} title="Sign out">
-                      <LogoutIcon />
-                    </button>
-                  </div>
-                </div>
-              </div>
+              {navList(onClose)}
+              {footer}
             </div>
           </div>
         </div>
