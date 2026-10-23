@@ -3,6 +3,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AppShell from "@/components/AppShell";
+import { Skeleton } from "@/components/Skeleton";
+import { PageContainer, PageHeader, EmptyState, Notice, Segmented, StatTile, IconBriefcase, IconDoc } from "@/components/ui";
 import { careers, ApiError } from "@/lib/api";
 import type {
   ApplicationStatus, CandidateProfile, EducationEntry, ExperienceEntry, JobApplication, JobLevel, ProjectEntry,
@@ -24,10 +26,8 @@ const STATUSES: { id: ApplicationStatus; label: string }[] = [
   { id: "withdrawn", label: "Withdrawn" },
 ];
 
-const inputCls = "w-full rounded-lg px-3 py-2 text-sm border";
-const inputStyle = { background: "var(--surface)", borderColor: "var(--border-mid)", color: "var(--ink)" };
-const card = "rounded-xl p-5";
-const cardStyle = { background: "var(--surface)" };
+const inputCls = "ui-input";
+const card = "ui-card p-5 sm:p-6";
 
 function fmtDate(iso: string | null) {
   return iso ? new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "";
@@ -40,7 +40,7 @@ function errText(e: unknown, fallback: string) {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="text-xs block mb-1" style={{ color: "var(--ink-dim)" }}>{label}</span>
+      <span className="text-xs font-medium block mb-1.5" style={{ color: "var(--ink-dim)" }}>{label}</span>
       {children}
     </label>
   );
@@ -48,8 +48,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function SectionTitle({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between mb-3">
-      <h2 className="font-display text-lg font-semibold" style={{ color: "var(--ink)" }}>{children}</h2>
+    <div className="flex items-center justify-between gap-3 mb-4">
+      <h2 className="font-display text-[19px] font-bold tracking-[-0.02em]" style={{ color: "var(--ink)" }}>{children}</h2>
       {action}
     </div>
   );
@@ -65,9 +65,9 @@ function TagInput({ value, onChange, placeholder, max }: { value: string[]; onCh
     setDraft("");
   };
   return (
-    <div className="rounded-lg border p-2 flex flex-wrap gap-1.5" style={inputStyle}>
+    <div className="ui-input !h-auto min-h-[40px] !p-1.5 flex flex-wrap items-center gap-1.5">
       {value.map((v) => (
-        <span key={v} className="text-xs px-2 py-1 rounded-full flex items-center gap-1" style={{ background: "var(--surface-2)", color: "var(--ink)" }}>
+        <span key={v} className="tag" style={{ color: "var(--ink)" }}>
           {v}
           <button type="button" aria-label={`Remove ${v}`} onClick={() => onChange(value.filter((x) => x !== v))} style={{ color: "var(--ink-faint)" }}>×</button>
         </span>
@@ -82,7 +82,7 @@ function TagInput({ value, onChange, placeholder, max }: { value: string[]; onCh
           }}
           onBlur={add}
           placeholder={placeholder}
-          className="flex-1 min-w-[140px] text-sm outline-none bg-transparent px-1"
+          className="flex-1 min-w-[140px] h-7 text-sm outline-none bg-transparent px-1.5 border-0"
           style={{ color: "var(--ink)" }}
         />
       )}
@@ -104,21 +104,21 @@ function EntryList<T extends { [K in keyof T]: string }>({
   return (
     <div className="space-y-3">
       {items.map((item, i) => (
-        <div key={i} className="rounded-lg border p-3" style={{ borderColor: "var(--border-mid)" }}>
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-medium" style={{ color: "var(--ink)" }}>{title(item) || "New entry"}</span>
-            <button type="button" className="text-xs underline" style={{ color: "var(--danger)" }} onClick={() => onChange(items.filter((_, j) => j !== i))}>
+        <div key={i} className="rounded-[14px] p-4" style={{ background: "var(--surface-alt)", border: "1px solid var(--border)" }}>
+          <div className="flex justify-between items-center gap-3 mb-3">
+            <span className="text-sm font-semibold truncate" style={{ color: "var(--ink)" }}>{title(item) || "New entry"}</span>
+            <button type="button" className="btn btn-danger btn-sm" onClick={() => onChange(items.filter((_, j) => j !== i))}>
               Remove
             </button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {fields.map((f) => (
               <div key={f.key} className={f.wide || f.multiline ? "sm:col-span-2" : ""}>
                 <Field label={f.label}>
                   {f.multiline ? (
-                    <textarea rows={3} value={item[f.key] ?? ""} onChange={(e) => update(i, f.key, e.target.value)} className={inputCls} style={inputStyle} />
+                    <textarea rows={3} value={item[f.key] ?? ""} onChange={(e) => update(i, f.key, e.target.value)} className={inputCls} />
                   ) : (
-                    <input value={item[f.key] ?? ""} onChange={(e) => update(i, f.key, e.target.value)} className={inputCls} style={inputStyle} />
+                    <input value={item[f.key] ?? ""} onChange={(e) => update(i, f.key, e.target.value)} className={inputCls} />
                   )}
                 </Field>
               </div>
@@ -126,9 +126,22 @@ function EntryList<T extends { [K in keyof T]: string }>({
           </div>
         </div>
       ))}
-      <button type="button" onClick={() => onChange([...items, { ...blank }])} className="text-sm underline" style={{ color: "var(--ink)" }}>
+      <button type="button" onClick={() => onChange([...items, { ...blank }])} className="btn btn-secondary btn-sm">
         + {addLabel}
       </button>
+    </div>
+  );
+}
+
+function ListSkeleton() {
+  return (
+    <div className="space-y-3">
+      {[1, 2, 3].map((n) => (
+        <div key={n} className="ui-card p-5 sm:p-6">
+          <Skeleton className="h-4 w-48 rounded mb-2.5" />
+          <Skeleton className="h-3 w-72 max-w-full rounded" />
+        </div>
+      ))}
     </div>
   );
 }
@@ -177,27 +190,31 @@ function ResumeCard({ profile, onProfile }: { profile: CandidateProfile; onProfi
   };
 
   return (
-    <div className={card} style={cardStyle}>
+    <div className={card}>
       <SectionTitle>Resume</SectionTitle>
       <input ref={fileRef} type="file" accept=".pdf,.docx,.txt,.md,.rtf" className="hidden" onChange={(e) => upload(e.target.files?.[0])} />
       {profile.has_resume ? (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="text-sm" style={{ color: "var(--ink-dim)" }}>
-            <p className="font-medium" style={{ color: "var(--ink)" }}>{profile.resume_filename}</p>
-            Uploaded {fmtDate(profile.resume_uploaded_at)}
-            {profile.resume_parsed_by && ` · read by ${profile.resume_parsed_by === "ai" ? "AI" : "keyword rules"}`}
-            . Used automatically for ATS checks on Live jobs.
+          <div className="flex items-center gap-3.5 min-w-0">
+            <span className="w-11 h-11 rounded-[12px] flex items-center justify-center shrink-0" style={{ background: "var(--surface-2)", color: "var(--ink)" }}>
+              <IconDoc />
+            </span>
+            <div className="text-[13px] min-w-0" style={{ color: "var(--ink-dim)" }}>
+              <p className="text-sm font-semibold truncate" style={{ color: "var(--ink)" }}>{profile.resume_filename}</p>
+              Uploaded {fmtDate(profile.resume_uploaded_at)}
+              {profile.resume_parsed_by && ` · read by ${profile.resume_parsed_by === "ai" ? "AI" : "keyword rules"}`}
+              . Used automatically for ATS checks on Live jobs.
+            </div>
           </div>
-          <div className="flex gap-2 shrink-0">
-            <button className="px-3 py-1.5 rounded-lg text-xs border" style={{ borderColor: "var(--border-mid)", color: "var(--ink)" }}
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <button className="btn btn-secondary btn-sm"
               onClick={() => careers.downloadResume(profile.resume_filename).catch((e) => setErr(errText(e, "Download failed.")))}>
               Download
             </button>
-            <button className="px-3 py-1.5 rounded-lg text-xs border" style={{ borderColor: "var(--border-mid)", color: "var(--ink)" }}
-              disabled={busy} onClick={() => fileRef.current?.click()}>
+            <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => fileRef.current?.click()}>
               {busy ? "Reading…" : "Replace"}
             </button>
-            <button className="px-3 py-1.5 rounded-lg text-xs" style={{ color: "var(--danger)" }} onClick={remove}>Remove</button>
+            <button className="btn btn-danger btn-sm" onClick={remove}>Remove</button>
           </div>
         </div>
       ) : (
@@ -206,11 +223,14 @@ function ResumeCard({ profile, onProfile }: { profile: CandidateProfile; onProfi
           disabled={busy}
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => { e.preventDefault(); upload(e.dataTransfer.files?.[0]); }}
-          className="w-full rounded-xl border-2 border-dashed p-8 text-center"
+          className="w-full rounded-[14px] border-2 border-dashed px-6 py-10 flex flex-col items-center text-center transition-colors hover:bg-[var(--surface-alt)]"
           style={{ borderColor: "var(--border-mid)", color: "var(--ink-dim)" }}
         >
-          <p className="font-medium" style={{ color: "var(--ink)" }}>{busy ? "Reading your resume…" : "Upload your resume"}</p>
-          <p className="text-xs mt-1">PDF, DOCX or text · max 5 MB. We fill in your whole profile from it — you can edit anything after.</p>
+          <span className="w-11 h-11 rounded-[12px] flex items-center justify-center mb-3" style={{ background: "var(--surface-2)", color: "var(--ink)" }}>
+            <IconDoc />
+          </span>
+          <p className="font-display text-[17px] font-bold tracking-[-0.02em]" style={{ color: "var(--ink)" }}>{busy ? "Reading your resume…" : "Upload your resume"}</p>
+          <p className="text-[13px] mt-1 max-w-sm">PDF, DOCX or text · max 5 MB. We fill in your whole profile from it — you can edit anything after.</p>
         </button>
       )}
       {msg && <p className="text-sm mt-3" style={{ color: "var(--success)" }}>{msg}</p>}
@@ -248,7 +268,7 @@ function ProfileTab({ profile, onProfile }: { profile: CandidateProfile; onProfi
 
   const text = (k: keyof CandidateProfile, label: string, type = "text") => (
     <Field label={label}>
-      <input type={type} value={(draft[k] as string | number | null) ?? ""} onChange={(e) => set(k, e.target.value as never)} className={inputCls} style={inputStyle} />
+      <input type={type} value={(draft[k] as string | number | null) ?? ""} onChange={(e) => set(k, e.target.value as never)} className={inputCls} />
     </Field>
   );
 
@@ -256,9 +276,9 @@ function ProfileTab({ profile, onProfile }: { profile: CandidateProfile; onProfi
     <div className="space-y-4 pb-20">
       <ResumeCard profile={profile} onProfile={onProfile} />
 
-      <div className={card} style={cardStyle}>
+      <div className={card}>
         <SectionTitle>Basic details</SectionTitle>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {text("full_name", "Full name")}
           {text("headline", "Headline (e.g. Backend Engineer)")}
           {text("email", "Email", "email")}
@@ -270,18 +290,24 @@ function ProfileTab({ profile, onProfile }: { profile: CandidateProfile; onProfi
           <div className="sm:col-span-2">{text("portfolio_url", "Portfolio / website")}</div>
           <div className="sm:col-span-2">
             <Field label="Summary">
-              <textarea rows={4} value={draft.summary} onChange={(e) => set("summary", e.target.value)} className={inputCls} style={inputStyle} />
+              <textarea rows={4} value={draft.summary} onChange={(e) => set("summary", e.target.value)} className={inputCls} />
             </Field>
           </div>
         </div>
       </div>
 
-      <div className={card} style={cardStyle}>
-        <SectionTitle>Skills</SectionTitle>
-        <TagInput value={draft.skills} onChange={(v) => set("skills", v)} placeholder="Add a skill and press Enter" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className={card}>
+          <SectionTitle>Skills</SectionTitle>
+          <TagInput value={draft.skills} onChange={(v) => set("skills", v)} placeholder="Add a skill and press Enter" />
+        </div>
+        <div className={card}>
+          <SectionTitle>Certifications</SectionTitle>
+          <TagInput value={draft.certifications} onChange={(v) => set("certifications", v)} placeholder="Add a certification and press Enter" />
+        </div>
       </div>
 
-      <div className={card} style={cardStyle}>
+      <div className={card}>
         <SectionTitle>Experience</SectionTitle>
         <EntryList items={draft.experience} onChange={(v) => set("experience", v)} blank={BLANK_EXP} addLabel="Add experience"
           title={(e) => [e.title, e.company].filter(Boolean).join(" · ")}
@@ -292,7 +318,7 @@ function ProfileTab({ profile, onProfile }: { profile: CandidateProfile; onProfi
           ]} />
       </div>
 
-      <div className={card} style={cardStyle}>
+      <div className={card}>
         <SectionTitle>Education</SectionTitle>
         <EntryList items={draft.education} onChange={(v) => set("education", v)} blank={BLANK_EDU} addLabel="Add education"
           title={(e) => [e.degree, e.institution].filter(Boolean).join(" · ")}
@@ -302,23 +328,19 @@ function ProfileTab({ profile, onProfile }: { profile: CandidateProfile; onProfi
           ]} />
       </div>
 
-      <div className={card} style={cardStyle}>
+      <div className={card}>
         <SectionTitle>Projects</SectionTitle>
         <EntryList items={draft.projects} onChange={(v) => set("projects", v)} blank={BLANK_PROJ} addLabel="Add project"
           title={(p) => p.name}
           fields={[{ key: "name", label: "Name" }, { key: "link", label: "Link" }, { key: "description", label: "Description", multiline: true }]} />
       </div>
 
-      <div className={card} style={cardStyle}>
-        <SectionTitle>Certifications</SectionTitle>
-        <TagInput value={draft.certifications} onChange={(v) => set("certifications", v)} placeholder="Add a certification and press Enter" />
-      </div>
 
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 md:left-[calc(50%+125px)] z-30 flex items-center gap-3 rounded-full px-4 py-2 shadow-lg"
+      <div className="fixed bottom-5 left-1/2 -translate-x-1/2 md:left-[calc(50%+120px)] z-30 flex items-center gap-3 rounded-full pl-5 pr-1.5 py-1.5 shadow-[0_12px_32px_rgba(12,12,11,0.22)]"
         style={{ background: "var(--hero-bg)", color: "var(--hero-text)", visibility: dirty || status ? "visible" : "hidden" }}>
-        <span className="text-xs">{status || "Unsaved changes"}</span>
+        <span className="text-[13px] py-1.5">{status || "Unsaved changes"}</span>
         {dirty && (
-          <button onClick={save} disabled={saving} className="px-3 py-1 rounded-full text-xs font-semibold" style={{ background: "var(--lime)", color: "var(--ink)" }}>
+          <button onClick={save} disabled={saving} className="btn btn-lime btn-sm">
             {saving ? "Saving…" : "Save profile"}
           </button>
         )}
@@ -344,7 +366,7 @@ function PreferencesTab({ profile, onProfile }: { profile: CandidateProfile; onP
   };
 
   return (
-    <div className={`${card} space-y-4`} style={cardStyle}>
+    <div className={`${card} space-y-5`}>
       <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
         These drive the <strong>Best match</strong> ranking on Live jobs, together with the skills on your profile.
       </p>
@@ -355,14 +377,13 @@ function PreferencesTab({ profile, onProfile }: { profile: CandidateProfile; onP
         <TagInput value={locs} onChange={setLocs} placeholder="e.g. Bengaluru" max={5} />
       </Field>
       <div>
-        <span className="text-xs block mb-1" style={{ color: "var(--ink-dim)" }}>Work mode</span>
+        <span className="text-xs font-medium block mb-1.5" style={{ color: "var(--ink-dim)" }}>Work mode</span>
         <div className="flex gap-1.5 flex-wrap">
           {(["remote", "hybrid", "onsite"] as WorkMode[]).map((m) => {
             const on = modes.includes(m);
             return (
               <button key={m} type="button" onClick={() => setModes(on ? modes.filter((x) => x !== m) : [...modes, m])}
-                className="text-xs px-3 py-1.5 rounded-full border"
-                style={{ background: on ? "var(--ink)" : "var(--surface)", color: on ? "var(--page)" : "var(--ink-dim)", borderColor: on ? "var(--ink)" : "var(--border-mid)" }}>
+                aria-pressed={on} className="chip">
                 {m === "onsite" ? "On-site" : m[0].toUpperCase() + m.slice(1)}
               </button>
             );
@@ -370,7 +391,7 @@ function PreferencesTab({ profile, onProfile }: { profile: CandidateProfile; onP
         </div>
       </div>
       <Field label="Experience level">
-        <select value={level} onChange={(e) => setLevel(e.target.value as JobLevel | "")} className={inputCls} style={inputStyle}>
+        <select value={level} onChange={(e) => setLevel(e.target.value as JobLevel | "")} className={inputCls}>
           <option value="">Work it out from my experience</option>
           <option value="entry">Fresher / Entry (0–1 yr)</option>
           <option value="mid">Mid (1–5 yrs)</option>
@@ -378,7 +399,7 @@ function PreferencesTab({ profile, onProfile }: { profile: CandidateProfile; onP
         </select>
       </Field>
       <div className="flex items-center gap-3">
-        <button onClick={save} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ background: "var(--accent)", color: "var(--accent-ink)" }}>
+        <button onClick={save} className="btn btn-primary">
           Save preferences
         </button>
         {status && <span className="text-sm" style={{ color: "var(--ink-dim)" }}>{status}</span>}
@@ -416,60 +437,58 @@ function ApplicationsTab() {
     }
   };
 
-  if (!apps) return <p className="text-sm" style={{ color: "var(--ink-dim)" }}>{err || "Loading…"}</p>;
+  if (!apps) return err ? <Notice tone="error">{err}</Notice> : <ListSkeleton />;
   const counts = STATUSES.map((s) => ({ ...s, n: apps.filter((a) => a.status === s.id).length }));
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {counts.map((c) => (
-          <div key={c.id} className="rounded-xl p-3" style={cardStyle}>
-            <p className="text-xl font-semibold" style={{ color: "var(--ink)" }}>{c.n}</p>
-            <p className="text-xs" style={{ color: "var(--ink-dim)" }}>{c.label}</p>
-          </div>
+          <StatTile key={c.id} label={c.label} value={c.n} tone={c.id === "offer" && c.n > 0 ? "lime" : "default"} />
         ))}
       </div>
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <p className="text-sm" style={{ color: "var(--ink-dim)" }}>Jobs you apply to from Live jobs are tracked here automatically.</p>
-        <button onClick={() => setAdding(!adding)} className="text-sm underline shrink-0" style={{ color: "var(--ink)" }}>
+        <button onClick={() => setAdding(!adding)} className={`btn btn-sm shrink-0 ${adding ? "btn-ghost" : "btn-secondary"}`}>
           {adding ? "Cancel" : "+ Track another"}
         </button>
       </div>
       {adding && (
-        <form onSubmit={add} className={`${card} grid grid-cols-1 sm:grid-cols-3 gap-2`} style={cardStyle}>
-          <input required placeholder="Job title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className={inputCls} style={inputStyle} />
-          <input required placeholder="Company" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} className={inputCls} style={inputStyle} />
-          <input type="url" placeholder="Posting link (optional)" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} className={inputCls} style={inputStyle} />
-          <button className="sm:col-span-3 px-4 py-2 rounded-lg text-sm font-medium" style={{ background: "var(--accent)", color: "var(--accent-ink)" }}>Add application</button>
+        <form onSubmit={add} className={`${card} grid grid-cols-1 sm:grid-cols-3 gap-2.5`}>
+          <input required placeholder="Job title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className={inputCls} />
+          <input required placeholder="Company" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} className={inputCls} />
+          <input type="url" placeholder="Posting link (optional)" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} className={inputCls} />
+          <button className="btn btn-primary sm:col-span-3 sm:justify-self-start">Add application</button>
         </form>
       )}
-      {err && <p className="text-sm" style={{ color: "var(--danger)" }}>{err}</p>}
+      {err && <Notice tone="error">{err}</Notice>}
       {apps.length === 0 ? (
-        <div className={card} style={cardStyle}>
-          <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
-            No applications yet. <Link href="/jobs" className="underline">Browse live jobs →</Link>
-          </p>
-        </div>
+        <EmptyState
+          icon={<IconBriefcase />}
+          title="No applications yet"
+          body="Hit Apply on any live job and it lands here, ready to track through interviews and offers."
+          action={<Link href="/jobs" className="btn btn-primary">Browse live jobs</Link>}
+        />
       ) : (
         <ul className="space-y-3">
           {apps.map((a) => (
-            <li key={a.id} className={card} style={cardStyle}>
+            <li key={a.id} className={card}>
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="font-medium" style={{ color: "var(--ink)" }}>
+                  <p className="font-display text-[17px] font-bold tracking-[-0.015em]" style={{ color: "var(--ink)" }}>
                     {a.url ? <a href={a.url} target="_blank" rel="noopener noreferrer nofollow" className="hover:underline">{a.title}</a> : a.title}
                   </p>
-                  <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
+                  <p className="text-[13px] mt-0.5" style={{ color: "var(--ink-dim)" }}>
                     {a.company}{a.location && ` · ${a.location}`} · applied {fmtDate(a.applied_at)}
                     {a.job_id !== null && !a.is_live && " · posting closed"}
                   </p>
                 </div>
                 <div className="flex gap-2 items-center shrink-0">
                   <select value={a.status} onChange={(e) => patch(a, { status: e.target.value as ApplicationStatus })}
-                    className="rounded-lg px-2 py-1.5 text-xs border" style={inputStyle}>
+                    className="ui-input !h-8 !w-auto !rounded-full !px-3 !text-[13px]">
                     {STATUSES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
                   </select>
-                  <button onClick={() => remove(a)} className="text-xs" style={{ color: "var(--danger)" }}>Remove</button>
+                  <button onClick={() => remove(a)} className="btn btn-danger btn-sm">Remove</button>
                 </div>
               </div>
               <textarea
@@ -477,8 +496,7 @@ function ApplicationsTab() {
                 onBlur={(e) => e.target.value !== a.notes && patch(a, { notes: e.target.value })}
                 rows={1}
                 placeholder="Notes (interview dates, contacts…)"
-                className="mt-3 w-full rounded-lg px-3 py-2 text-xs border"
-                style={inputStyle}
+                className="ui-input mt-3.5 !text-[13px]"
               />
             </li>
           ))}
@@ -498,36 +516,37 @@ function SavedTab() {
     await careers.removeSaved(s.id).catch(() => {});
   };
 
-  if (!saved) return <p className="text-sm" style={{ color: "var(--ink-dim)" }}>{err || "Loading…"}</p>;
+  if (!saved) return err ? <Notice tone="error">{err}</Notice> : <ListSkeleton />;
   if (saved.length === 0) {
     return (
-      <div className={card} style={cardStyle}>
-        <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
-          No saved jobs yet. Tap ☆ Save on any job to bookmark it here. <Link href="/jobs" className="underline">Browse live jobs →</Link>
-        </p>
-      </div>
+      <EmptyState
+        icon={<IconBriefcase />}
+        title="No saved jobs yet"
+        body="Tap ☆ Save on any job to bookmark it here."
+        action={<Link href="/jobs" className="btn btn-primary">Browse live jobs</Link>}
+      />
     );
   }
   return (
     <ul className="space-y-3">
       {saved.map((s) => (
-        <li key={s.id} className={card} style={cardStyle}>
+        <li key={s.id} className={card}>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="font-medium" style={{ color: "var(--ink)" }}>{s.title}</p>
-              <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
+              <p className="font-display text-[17px] font-bold tracking-[-0.015em]" style={{ color: "var(--ink)" }}>{s.title}</p>
+              <p className="text-[13px] mt-0.5" style={{ color: "var(--ink-dim)" }}>
                 {s.company}{s.location && ` · ${s.location}`} · saved {fmtDate(s.saved_at)}
                 {!s.is_live && " · no longer open"}
               </p>
             </div>
             <div className="flex gap-2 shrink-0">
-              <button onClick={() => remove(s)} className="px-3 py-1.5 rounded-lg text-xs border" style={{ borderColor: "var(--border-mid)", color: "var(--ink)" }}>
+              <button onClick={() => remove(s)} className="btn btn-secondary btn-sm">
                 Remove
               </button>
               {s.is_live && s.job_id !== null && (
                 <a href={s.url} target="_blank" rel="noopener noreferrer nofollow"
                   onClick={() => careers.markApplied(s.job_id as number).catch(() => {})}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium" style={{ background: "var(--accent)", color: "var(--accent-ink)" }}>
+                  className="btn btn-primary btn-sm">
                   Apply ↗
                 </a>
               )}
@@ -560,51 +579,40 @@ export default function ProfilePage() {
   return (
     <ProtectedRoute>
       <AppShell>
-        <div className="min-h-screen px-4 sm:px-6 py-8 max-w-3xl mx-auto" style={{ background: "var(--page)" }}>
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="font-display text-2xl font-semibold" style={{ color: "var(--ink)" }}>
-                {profile?.full_name || "My profile"}
-              </h1>
-              <p className="text-sm mt-1" style={{ color: "var(--ink-dim)" }}>
-                {profile?.headline || "Your resume, applications and saved jobs in one place."}
-              </p>
-            </div>
-            {profile && (
-              <div className="shrink-0 text-right">
-                <p className="text-xs" style={{ color: "var(--ink-faint)" }}>Profile {pct}% complete</p>
-                <div className="w-32 h-1.5 rounded-full mt-1" style={{ background: "var(--surface-2)" }}>
-                  <div className="h-full rounded-full" style={{ width: `${pct}%`, background: "var(--success)" }} />
-                </div>
-              </div>
-            )}
-          </div>
+        <div className="min-h-screen" style={{ background: "var(--page)" }}>
+          <PageContainer>
+            <PageHeader
+              eyebrow="Profile"
+              title={profile?.full_name || "My profile"}
+              subtitle={profile?.headline || "Your resume, applications and saved jobs in one place."}
+              actions={
+                profile && (
+                  <div className="ui-card px-4 py-3 w-full sm:w-56">
+                    <div className="flex items-baseline justify-between mb-2">
+                      <span className="font-mono text-[10px] uppercase tracking-[0.16em]" style={{ color: "var(--ink-faint)" }}>
+                        Profile
+                      </span>
+                      <span className="font-display text-[15px] font-bold tabular-nums" style={{ color: "var(--ink)" }}>
+                        {pct}% complete
+                      </span>
+                    </div>
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--surface-2)" }}>
+                      <div className="h-full rounded-full" style={{ width: `${pct}%`, background: "var(--success)" }} />
+                    </div>
+                  </div>
+                )
+              }
+            />
 
-          <div className="flex gap-1 mt-6 mb-5 overflow-x-auto border-b" style={{ borderColor: "var(--border-mid)" }}>
-            {TABS.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => go(t.id)}
-                className="px-3 py-2 text-sm whitespace-nowrap -mb-px border-b-2"
-                style={{
-                  borderColor: tab === t.id ? "var(--ink)" : "transparent",
-                  color: tab === t.id ? "var(--ink)" : "var(--ink-dim)",
-                  fontWeight: tab === t.id ? 600 : 500,
-                }}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
+            <Segmented options={TABS} value={tab} onChange={go} className="mb-5" />
 
-          {err && <p className="text-sm" style={{ color: "var(--danger)" }}>{err}</p>}
-          {!profile && !err && (tab === "profile" || tab === "preferences") && (
-            <p className="text-sm" style={{ color: "var(--ink-dim)" }}>Loading…</p>
-          )}
-          {profile && tab === "profile" && <ProfileTab profile={profile} onProfile={setProfile} />}
-          {profile && tab === "preferences" && <PreferencesTab profile={profile} onProfile={setProfile} />}
-          {tab === "applications" && <ApplicationsTab />}
-          {tab === "saved" && <SavedTab />}
+            {err && <Notice tone="error" className="mb-4">{err}</Notice>}
+            {!profile && !err && (tab === "profile" || tab === "preferences") && <ListSkeleton />}
+            {profile && tab === "profile" && <ProfileTab profile={profile} onProfile={setProfile} />}
+            {profile && tab === "preferences" && <PreferencesTab profile={profile} onProfile={setProfile} />}
+            {tab === "applications" && <ApplicationsTab />}
+            {tab === "saved" && <SavedTab />}
+          </PageContainer>
         </div>
       </AppShell>
     </ProtectedRoute>

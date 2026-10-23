@@ -14,74 +14,10 @@ import type {
 import { isPaidPlan } from "@/lib/plans";
 import PaginationControls from "@/components/PaginationControls";
 import { useSearchAndPaginate } from "@/hooks/useSearchAndPaginate";
-import { SkeletonStatCard } from "@/components/Skeleton";
+import { Skeleton, SkeletonStatCard } from "@/components/Skeleton";
 import { trackEvent } from "@/lib/posthog";
-
-// ── Small SVG line chart (no chart library — keeps bundle light) ───────────────
-
-function LineChart({
-  data,
-  color = "var(--accent)",
-  fill,
-  height = 72,
-  max = 10,
-  endDot = false,
-}: {
-  data: (number | null | undefined)[];
-  color?: string;
-  fill?: string;
-  height?: number;
-  max?: number;
-  endDot?: boolean;
-}) {
-  const width = 100; // percentage-based viewBox, scales with container
-  const points = data
-    .map((v, i) => ({ v, i }))
-    .filter((p): p is { v: number; i: number } => typeof p.v === "number");
-
-  if (points.length === 0) {
-    return (
-      <div
-        className="flex items-center justify-center text-xs"
-        style={{ height, color: "var(--ink-faint)" }}
-      >
-        No data yet
-      </div>
-    );
-  }
-
-  const n = data.length;
-  const xFor = (i: number) => (n <= 1 ? width / 2 : (i / (n - 1)) * width);
-  const yFor = (v: number) => height - (v / max) * height;
-
-  const pathD = points
-    .map((p, idx) => `${idx === 0 ? "M" : "L"} ${xFor(p.i)} ${yFor(p.v)}`)
-    .join(" ");
-  // Same line, closed along the baseline — the tinted area under the trend.
-  const areaD = `${pathD} L ${xFor(points[points.length - 1].i)} ${height} L ${xFor(points[0].i)} ${height} Z`;
-  const last = points[points.length - 1];
-
-  return (
-    <svg
-      viewBox={`0 0 ${width} ${height}`}
-      preserveAspectRatio="none"
-      className="w-full"
-      style={{ height }}
-    >
-      {fill && <path d={areaD} fill={fill} />}
-      <path
-        d={pathD}
-        fill="none"
-        stroke={color}
-        strokeWidth={2}
-        strokeLinejoin="round"
-        strokeLinecap="round"
-        vectorEffect="non-scaling-stroke"
-      />
-      {endDot && <circle cx={xFor(last.i)} cy={yFor(last.v)} r={1.8} fill={color} />}
-    </svg>
-  );
-}
+import LineChart from "@/components/LineChart";
+import { PageContainer, PageHeader, Card, CardHeader, EmptyState, Notice, SearchField, ScoreBar, IconSpark, scoreColor } from "@/components/ui";
 
 function MomentumBadge({ momentum, onDark = false }: { momentum: number | null; onDark?: boolean }) {
   if (momentum === null || momentum === undefined) return null;
@@ -122,17 +58,6 @@ function ConsistencyBadge({
     >
       {label}
     </span>
-  );
-}
-
-function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div
-      className={`rounded-[16px] px-4 py-5 sm:px-[22px] sm:py-[22px] ${className}`}
-      style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
-    >
-      {children}
-    </div>
   );
 }
 
@@ -190,51 +115,43 @@ export default function ProgressPage() {
             </nav>
           )}
 
-          <main className="max-w-[1080px] mx-auto px-4 sm:px-[44px] pt-6 sm:pt-9 pb-[60px] fade-up">
-            <div className="mb-[26px]">
-              {data && data.overall_trend.length > 0 && (
-                <div className="font-label mb-2.5">Last {data.overall_trend.length} sessions</div>
-              )}
-              <h1
-                className="font-display text-[32px] sm:text-[44px] font-bold leading-none"
-                style={{ color: "var(--ink)", letterSpacing: "-0.035em" }}
-              >
-                Your progress
-              </h1>
-              <p className="mt-2 text-sm sm:text-[15px]" style={{ color: "var(--ink-dim)" }}>
-                How you&apos;re trending across every mock interview you&apos;ve completed.
-              </p>
-            </div>
+          <PageContainer>
+            <PageHeader
+              eyebrow={data && data.overall_trend.length > 0 ? `Last ${data.overall_trend.length} sessions` : "Progress"}
+              title="Your progress"
+              subtitle="How you're trending across every mock interview you've completed."
+              actions={
+                <button onClick={() => router.push("/companies")} className="btn btn-primary">
+                  <span style={{ color: "var(--lime)" }}>+</span> New interview
+                </button>
+              }
+            />
 
             {loading ? (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 fade-up">
-                {[1, 2, 3, 4].map((n) => <SkeletonStatCard key={n} />)}
+              <div className="space-y-4 fade-up">
+                <Skeleton className="h-[220px] !rounded-[18px]" />
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {[1, 2, 3].map((n) => <SkeletonStatCard key={n} />)}
+                </div>
               </div>
             ) : error ? (
-              <p className="text-sm" style={{ color: "var(--danger)" }}>
-                {error}
-              </p>
+              <Notice tone="error">{error}</Notice>
             ) : !data || data.total_completed === 0 ? (
-              <Card className="text-center py-10">
-                <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>
-                  No completed interviews yet.
-                </p>
-                <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
-                  Finish your first mock interview to start seeing your progress here.
-                </p>
-                <button
-                  onClick={() => router.push("/companies")}
-                  className="mt-5 px-5 py-2 rounded-full text-sm font-semibold"
-                  style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
-                >
-                  Browse companies
-                </button>
-              </Card>
+              <EmptyState
+                icon={<IconSpark />}
+                title="No completed interviews yet"
+                body="Finish your first mock interview to start seeing your progress here."
+                action={
+                  <button onClick={() => router.push("/companies")} className="btn btn-primary">
+                    Browse companies
+                  </button>
+                }
+              />
             ) : (
               <>
                 {/* Hero readiness card */}
                 <div
-                  className="mb-3.5 grid grid-cols-1 gap-8 rounded-[18px] p-[26px] lg:grid-cols-[1fr_1.1fr] lg:items-center"
+                  className="mb-4 grid grid-cols-1 gap-8 rounded-[18px] p-6 sm:p-7 lg:grid-cols-[1fr_1.1fr] lg:items-center"
                   style={{ background: "var(--hero-bg)", color: "var(--hero-text)" }}
                 >
                   <div>
@@ -287,7 +204,7 @@ export default function ProgressPage() {
                 )}
               </>
             )}
-          </main>
+          </PageContainer>
         </div>
       </AppShell>
     </ProtectedRoute>
@@ -300,7 +217,7 @@ function LockedTeaser({ router }: { router: ReturnType<typeof useRouter> }) {
   return (
     <Card className="relative overflow-hidden">
       <div className="blur-sm pointer-events-none select-none opacity-60">
-        <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--ink-dim)" }}>
+        <p className="font-label mb-3">
           Topic breakdown
         </p>
         <div className="space-y-3">
@@ -326,8 +243,7 @@ function LockedTeaser({ router }: { router: ReturnType<typeof useRouter> }) {
         </p>
         <button
           onClick={() => router.push("/pricing")}
-          className="mt-4 px-5 py-2 rounded-full text-sm font-semibold"
-          style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
+          className="btn btn-primary mt-4"
         >
           Upgrade to unlock →
         </button>
@@ -359,25 +275,22 @@ function DetailedView({
   const companySearch = useSearchAndPaginate(data.companies, (c) => c.company);
 
   return (
-    <div className="space-y-3.5">
+    <div className="space-y-4">
       {/* Per-dimension trendlines */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {dims.map((d) => {
           const series = data.dimension_trends[d.key];
           const withValues = series.filter((v): v is number => typeof v === "number");
           const latest = withValues[withValues.length - 1];
           return (
-            <div
-              key={d.key}
-              className="rounded-[16px] p-5"
-              style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
-            >
-              <div className="flex items-baseline justify-between mb-2.5">
-                <span className="text-sm font-semibold" style={{ color: "var(--ink)" }}>
+            <div key={d.key} className="ui-card p-5">
+              <div className="flex items-baseline justify-between mb-3">
+                <span className="font-mono text-[10px] uppercase tracking-[0.16em]" style={{ color: "var(--ink-faint)" }}>
                   {d.label}
                 </span>
-                <span className="font-mono text-[15px] font-bold tabular-nums" style={{ color: d.color }}>
+                <span className="font-display text-[24px] font-bold leading-none tracking-[-0.03em] tabular-nums" style={{ color: d.color }}>
                   {latest ?? "—"}
+                  {latest !== undefined && <span className="text-[13px] font-medium" style={{ color: "var(--ink-faint)" }}>/10</span>}
                 </span>
               </div>
               <LineChart data={series} color={d.color} fill={d.fill} height={56} />
@@ -386,22 +299,14 @@ function DetailedView({
         })}
       </div>
 
-      <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-[1.35fr_1fr] lg:items-start">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.35fr_1fr] lg:items-start">
         {/* Topic breakdown — weakest first, doubles as "what to practise" */}
         {data.topics.length > 0 && (
           <Card>
-            <div className="flex items-center justify-between gap-4 mb-[18px]">
-              <h2 className="font-display text-xl font-bold tracking-[-0.025em]" style={{ color: "var(--ink)" }}>
-                What to practise next
-              </h2>
-              <span className="font-mono text-[11px]" style={{ color: "var(--ink-faint)" }}>
-                Weakest first
-              </span>
-            </div>
+            <CardHeader title="What to practise next" meta="Weakest first" />
             <div className="grid gap-0.5">
               {data.topics.map((t: ProgressTopic) => {
-                const color =
-                  t.average >= 6 ? "var(--success)" : t.average >= 3 ? "var(--warn)" : "var(--danger)";
+                const color = scoreColor(t.average);
                 return (
                   <div
                     key={t.name}
@@ -410,15 +315,7 @@ function DetailedView({
                     <span className="text-sm break-words" style={{ color: "var(--ink)" }} title={t.name}>
                       {t.name}
                     </span>
-                    <span
-                      className="relative block h-1.5 rounded-[3px]"
-                      style={{ background: "var(--surface-2)" }}
-                    >
-                      <span
-                        className="absolute inset-y-0 left-0 rounded-[3px]"
-                        style={{ width: `${Math.min(t.average, 10) * 10}%`, background: color }}
-                      />
-                    </span>
+                    <ScoreBar value={t.average} />
                     <span className="font-mono text-[13px] font-bold text-right tabular-nums" style={{ color }}>
                       {t.average}
                     </span>
@@ -431,10 +328,10 @@ function DetailedView({
             </div>
             <button
               onClick={() => router.push("/companies")}
-              className="mt-[18px] px-5 py-3 rounded-full text-sm font-semibold transition-colors hover:bg-[var(--accent-dim)]"
-              style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
+              className="btn btn-primary mt-[18px] max-w-full"
             >
-              Practise {data.topics[0]?.name ?? "your weakest topic"} →
+              <span className="truncate">
+              Practise {data.topics[0]?.name ?? "your weakest topic"} →</span>
             </button>
           </Card>
         )}
@@ -442,18 +339,14 @@ function DetailedView({
         {/* Company comparison + readiness */}
         {data.companies.length > 0 && (
           <Card>
-            <h2 className="font-display text-xl font-bold tracking-[-0.025em] mb-4" style={{ color: "var(--ink)" }}>
-              Performance by company
-            </h2>
+            <CardHeader title="Performance by company" meta={`${data.companies.length} total`} />
 
             {data.companies.length > 5 && (
-              <input
-                type="text"
+              <SearchField
                 value={companySearch.query}
-                onChange={(e) => companySearch.setQuery(e.target.value)}
+                onChange={companySearch.setQuery}
                 placeholder="Search companies…"
-                className="w-full rounded-full px-4 py-2.5 text-sm mb-3.5 outline-none"
-                style={{ background: "var(--surface-alt)", border: "1px solid var(--border-mid)", color: "var(--ink)" }}
+                className="!h-10 mb-3.5"
               />
             )}
 
@@ -464,8 +357,7 @@ function DetailedView({
             ) : (
               <div className="grid gap-0.5">
                 {companySearch.results.map((c: ProgressCompany) => {
-                  const color =
-                    c.average >= 6 ? "var(--success)" : c.average >= 3 ? "var(--warn)" : "var(--danger)";
+                  const color = scoreColor(c.average);
                   return (
                     <div
                       key={c.company}
@@ -475,12 +367,7 @@ function DetailedView({
                         <span className="text-sm font-semibold break-words" style={{ color: "var(--ink)" }}>
                           {c.company}
                           {c.ready && (
-                            <span
-                              className="ml-2 text-[10px] font-semibold px-2 py-0.5 rounded-full align-middle"
-                              style={{ background: "var(--success-bg)", color: "#2F6B48" }}
-                            >
-                              Ready
-                            </span>
+                            <span className="tag tag-success ml-2 !h-5 !text-[10px] align-middle">Ready</span>
                           )}
                         </span>
                         <span className="flex items-baseline gap-2.5 shrink-0">
@@ -492,12 +379,7 @@ function DetailedView({
                           </span>
                         </span>
                       </div>
-                      <span className="relative block h-[5px] rounded-[3px]" style={{ background: "var(--surface-2)" }}>
-                        <span
-                          className="absolute inset-y-0 left-0 rounded-[3px]"
-                          style={{ width: `${Math.min(c.average, 10) * 10}%`, background: color }}
-                        />
-                      </span>
+                      <ScoreBar value={c.average} height={5} />
                     </div>
                   );
                 })}

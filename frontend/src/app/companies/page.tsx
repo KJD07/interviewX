@@ -12,6 +12,7 @@ import InterviewInstructionsModal from "@/components/InterviewInstructionsModal"
 import PaginationControls from "@/components/PaginationControls";
 import { useSearchAndPaginate } from "@/hooks/useSearchAndPaginate";
 import { SkeletonCard } from "@/components/Skeleton";
+import { PageContainer, PageHeader, EmptyState, Notice, SearchField, IconSpark } from "@/components/ui";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -33,23 +34,16 @@ function ArrowLeft() {
 
 // ── Round type badge ──────────────────────────────────────────────────────────
 
-const ROUND_COLORS: Record<string, { bg: string; color: string; label: string }> = {
-  technical:    { bg: "rgba(99,102,241,0.12)",  color: "var(--accent)",   label: "Technical"    },
-  behavioral:   { bg: "rgba(63,143,94,0.10)",   color: "var(--success)",         label: "Behavioral"   },
-  system_design:{ bg: "rgba(180,115,30,0.12)",  color: "var(--warn)",         label: "System Design"},
-  hr:           { bg: "rgba(100,116,139,0.15)", color: "var(--ink-dim)",    label: "HR"           },
+const ROUND_TYPES: Record<string, { cls: string; label: string }> = {
+  technical:     { cls: "tag",             label: "Technical"     },
+  behavioral:    { cls: "tag tag-success", label: "Behavioral"    },
+  system_design: { cls: "tag tag-warn",    label: "System Design" },
+  hr:            { cls: "tag tag-outline", label: "HR"            },
 };
 
 function RoundTypeBadge({ type }: { type: string }) {
-  const c = ROUND_COLORS[type] ?? { bg: "rgba(100,116,139,0.15)", color: "var(--ink-dim)", label: type };
-  return (
-    <span
-      className="text-xs font-medium px-2 py-0.5 rounded-full"
-      style={{ background: c.bg, color: c.color }}
-    >
-      {c.label}
-    </span>
-  );
+  const c = ROUND_TYPES[type] ?? { cls: "tag tag-outline", label: type };
+  return <span className={c.cls}>{c.label}</span>;
 }
 
 // ── Breadcrumb ────────────────────────────────────────────────────────────────
@@ -58,7 +52,7 @@ type Crumb = { label: string; onClick: () => void };
 
 function Breadcrumbs({ crumbs }: { crumbs: Crumb[] }) {
   return (
-    <nav className="flex items-center gap-1.5 text-sm mb-8">
+    <nav className="flex flex-wrap items-center gap-1.5 text-[13px] mb-5">
       {crumbs.map((c, i) => (
         <span key={i} className="flex items-center gap-1.5">
           {i > 0 && <span style={{ color: "var(--border-mid)" }}>/</span>}
@@ -296,115 +290,69 @@ export default function CompaniesPage() {
           </nav>
         )}
 
-        <main className="max-w-[1080px] mx-auto px-4 sm:px-[44px] pt-6 sm:pt-9 pb-[60px] fade-up">
+        <PageContainer>
 
           <Breadcrumbs crumbs={crumbs} />
 
           {/* Global fetch error */}
-          {fetchError && (
-            <p
-              className="mb-6 text-sm rounded px-3 py-2"
-              style={{
-                background: "rgba(239,68,68,0.1)",
-                border: "1px solid rgba(239,68,68,0.3)",
-                color: "var(--danger)",
-              }}
-            >
-              {fetchError}
-            </p>
-          )}
+          {fetchError && <Notice tone="error" className="mb-5">{fetchError}</Notice>}
 
           {/* Start error */}
-          {startError && (
-            <p
-              className="mb-6 text-sm rounded px-3 py-2"
-              style={{
-                background: "rgba(239,68,68,0.1)",
-                border: "1px solid rgba(239,68,68,0.3)",
-                color: "var(--danger)",
-              }}
-            >
-              {startError}
-            </p>
-          )}
+          {startError && <Notice tone="error" className="mb-5">{startError}</Notice>}
 
           {/* Limit warning */}
           {limitReached && (
-            <div
-              className="mb-6 rounded-lg px-5 py-4"
-              style={{
-                background: "rgba(99,102,241,0.08)",
-                border: "1px solid rgba(99,102,241,0.25)",
-              }}
+            <Notice
+              tone="warn"
+              className="mb-5"
+              title={platformFree ? "Monthly interview limit reached" : `${plan.label} plan limit reached`}
+              action={
+                // Interviews aren't sold while the platform is free — no top-ups/upgrades.
+                !platformFree && (
+                  <>
+                    <button onClick={() => setShowTopup(true)} className="btn btn-primary btn-sm">
+                      Buy more interviews
+                    </button>
+                    <button onClick={() => router.push("/pricing")} className="btn btn-secondary btn-sm">
+                      Upgrade plan →
+                    </button>
+                  </>
+                )
+              }
             >
-              <p className="text-sm font-medium" style={{ color: "var(--accent)" }}>
-                {platformFree ? "Monthly interview limit reached" : `${plan.label} plan limit reached`}
-              </p>
-              <p className="text-xs mt-1" style={{ color: "var(--ink-dim)" }}>
-                You&apos;ve used {monthlyUsed}/{monthlyLimit} interviews this month.
-                {platformFree && " Your free interviews reset 30 days after your cycle started."}
-              </p>
-              {/* Interviews aren't sold while the platform is free — no top-ups/upgrades. */}
-              {!platformFree && (
-              <div className="flex flex-wrap gap-2.5 mt-3">
-                <button
-                  onClick={() => setShowTopup(true)}
-                  className="px-3.5 py-1.5 rounded-full text-xs font-semibold"
-                  style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
-                >
-                  Buy more interviews
-                </button>
-                <button
-                  onClick={() => router.push("/pricing")}
-                  className="px-3.5 py-1.5 rounded-full text-xs font-semibold"
-                  style={{ background: "transparent", color: "var(--accent)", border: "1px solid var(--accent)" }}
-                >
-                  Upgrade plan →
-                </button>
-              </div>
-              )}
-            </div>
+              You&apos;ve used {monthlyUsed}/{monthlyLimit} interviews this month.
+              {platformFree && " Your free interviews reset 30 days after your cycle started."}
+            </Notice>
           )}
 
           {/* ── COMPANIES ── */}
           {view.step === "companies" && (
             <>
-              <div className="mb-8">
-                <h1
-                  className="font-display text-[32px] sm:text-[44px] font-bold leading-none"
-                  style={{ color: "var(--ink)", letterSpacing: "-0.035em" }}
-                >
-                  Choose a company
-                </h1>
-                <p className="mt-3 text-sm sm:text-[15px]" style={{ color: "var(--ink-dim)" }}>
-                  Select a company to browse roles and interview rounds.
-                  {companyList.length > 0 && (
-                    <> All {companyList.length} companies have verified question banks.</>
-                  )}
-                </p>
-              </div>
+              <PageHeader
+                eyebrow="Step 1 of 3 · Company"
+                title="Choose a company"
+                subtitle={
+                  <>
+                    Select a company to browse roles and interview rounds.
+                    {companyList.length > 0 && (
+                      <> All {companyList.length} companies have verified question banks.</>
+                    )}
+                  </>
+                }
+              />
 
               {companyList.length > 0 && (
                 <div className="flex flex-col sm:flex-row items-stretch gap-2 mb-3.5">
-                  <div
-                    className="flex-1 rounded-full px-5 flex items-center gap-3"
-                    style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
-                  >
-                    <span style={{ color: "var(--ink-faint)" }}>⌕</span>
-                    <input
-                      type="text"
-                      value={companySearch.query}
-                      onChange={(e) => companySearch.setQuery(e.target.value)}
-                      placeholder={`Search ${companyList.length}+ companies…`}
-                      className="flex-1 bg-transparent outline-none text-[15px] py-3.5 min-w-0"
-                      style={{ color: "var(--ink)" }}
-                    />
-                  </div>
+                  <SearchField
+                    value={companySearch.query}
+                    onChange={companySearch.setQuery}
+                    placeholder={`Search ${companyList.length}+ companies…`}
+                    className="w-full sm:flex-1"
+                  />
                   <div className="relative shrink-0">
                     <button
                       onClick={() => setSortMenuOpen((v) => !v)}
-                      className="w-full sm:w-auto px-5 py-3.5 rounded-full text-sm font-semibold flex items-center justify-center gap-2"
-                      style={{ background: "var(--surface)", border: "1px solid var(--border-mid)", color: "var(--ink)" }}
+                      className="btn btn-secondary !h-11 w-full sm:w-auto"
                     >
                       {sortDesc ? "Z-A" : "A-Z"}
                       <span style={{ color: "var(--ink-faint)" }}>▾</span>
@@ -441,19 +389,17 @@ export default function CompaniesPage() {
                   {[1, 2, 3].map((n) => <SkeletonCard key={n} />)}
                 </div>
               ) : companyList.length === 0 ? (
-                <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
-                  No companies available yet.
-                </p>
+                <EmptyState compact icon={<IconSpark />} title="No companies available yet" />
               ) : companySearch.results.length === 0 ? (
-                <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
-                  No companies match &quot;{companySearch.query}&quot;.
-                </p>
+                <EmptyState
+                  compact
+                  title="No matches"
+                  body={<>No companies match &quot;{companySearch.query}&quot;.</>}
+                  action={<button className="btn btn-secondary btn-sm" onClick={() => companySearch.setQuery("")}>Clear search</button>}
+                />
               ) : (
                 <>
-                  <div
-                    className="rounded-[16px] overflow-hidden"
-                    style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
-                  >
+                  <div className="ui-card overflow-hidden">
                     {companySearch.results.map((c) => (
                       <ListCard
                         key={c.id}
@@ -480,24 +426,16 @@ export default function CompaniesPage() {
           {/* ── ROLES ── */}
           {view.step === "roles" && (
             <>
-              <div className="mb-6">
-                <h1 className="font-display text-2xl sm:text-3xl font-semibold tracking-tight" style={{ color: "var(--ink)" }}>
-                  {view.company.name}
-                </h1>
-                <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
-                  Pick a role to see available interview rounds.
-                </p>
-              </div>
+              <PageHeader
+                eyebrow="Step 2 of 3 · Role"
+                title={view.company.name}
+                subtitle="Pick a role to see available interview rounds."
+              />
 
               {view.company.roles.length === 0 ? (
-                <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
-                  No roles available for this company yet.
-                </p>
+                <EmptyState compact title="No roles yet" body="No roles available for this company yet." />
               ) : (
-                <div
-                  className="rounded-[16px] overflow-hidden"
-                  style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
-                >
+                <div className="ui-card overflow-hidden">
                   {view.company.roles.map((role) => (
                     <ListCard
                       key={role.id}
@@ -516,43 +454,31 @@ export default function CompaniesPage() {
             const v = view as { step: "rounds"; company: CompanyDetail; role: Role };
             return (
               <>
-                <div className="mb-6">
-                  <h1 className="font-display text-2xl sm:text-3xl font-semibold tracking-tight" style={{ color: "var(--ink)" }}>
-                    {v.role.title}
-                  </h1>
-                  <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
-                    Select a round to start your AI interview.
-                  </p>
-                </div>
+                <PageHeader
+                  eyebrow="Step 3 of 3 · Round"
+                  title={v.role.title}
+                  subtitle="Select a round to start your AI interview."
+                />
 
                 {v.role.rounds.length === 0 ? (
-                  <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
-                    No rounds configured for this role yet.
-                  </p>
+                  <EmptyState compact title="No rounds yet" body="No rounds configured for this role yet." />
                 ) : (
-                  <div className="space-y-3">
-                    {v.role.rounds.map((round) => (
-                      <div
-                        key={round.id}
-                        className="rounded-lg px-4 py-4 sm:px-5 sm:py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4"
-                        style={{
-                          background: "var(--surface)",
-                          border: "1px solid var(--border-mid)",
-                        }}
-                      >
-                        <div className="min-w-0 w-full sm:w-auto">
-                          <p className="text-sm sm:text-[15px] font-medium break-words" style={{ color: "var(--ink)" }}>
-                            {round.title}
-                          </p>
-                          <div className="mt-1.5">
-                            <RoundTypeBadge type={round.round_type} />
-                          </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {v.role.rounds.map((round, i) => (
+                      <div key={round.id} className="ui-card card-hover p-5 flex flex-col gap-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="font-mono text-[11px]" style={{ color: "var(--ink-faint)" }}>
+                            Round {String(i + 1).padStart(2, "0")}
+                          </span>
+                          <RoundTypeBadge type={round.round_type} />
                         </div>
+                        <p className="flex-1 font-display text-[17px] font-bold leading-snug tracking-[-0.015em] break-words" style={{ color: "var(--ink)" }}>
+                          {round.title}
+                        </p>
                         <button
                           onClick={() => setPendingRound({ id: round.id, title: round.title })}
                           disabled={limitReached || starting === round.id}
-                          className="w-full sm:w-auto shrink-0 px-4 py-2.5 rounded-full text-sm font-semibold transition-opacity disabled:opacity-40"
-                          style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
+                          className="btn btn-primary w-full"
                         >
                           {starting === round.id ? "Starting…" : "Start interview"}
                         </button>
@@ -564,7 +490,7 @@ export default function CompaniesPage() {
             );
           })()}
 
-        </main>
+        </PageContainer>
       </div>
       </AppShell>
 
