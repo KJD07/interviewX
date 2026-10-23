@@ -20,6 +20,8 @@ docker compose up --build
 ```
 Frontend: http://localhost:3000 · Backend: http://localhost:8000 · Admin: http://localhost:8000/admin
 
+Migrations apply automatically on every container start (`backend/docker-entrypoint.sh` is the image ENTRYPOINT → `manage.py migrate_on_deploy`, advisory-locked; the RQ worker only waits for them). So a model change must ship with its migration — CI fails on `makemigrations --check`.
+
 ### Backend (Django, from `backend/`)
 ```bash
 python manage.py runserver
@@ -42,7 +44,8 @@ Test gotchas: settings default to `DEBUG=False`, which turns on `SECURE_SSL_REDI
 ```bash
 npm run dev
 npm run build
-npm run lint
+npm run lint        # ESLint (next/core-web-vitals); also runs in the Docker build and CI
+npm run lint:fix
 ```
 
 There is no automated frontend test suite (see STATE.md "Known issues").

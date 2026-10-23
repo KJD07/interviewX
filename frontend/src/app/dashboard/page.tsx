@@ -87,7 +87,7 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [refreshUser]); // stable (useCallback with no deps): still runs once
 
   const handleLogout = () => {
     logout();

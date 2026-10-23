@@ -218,7 +218,7 @@ Still not started from the original spec:
   `aggressive`) — affected companies fall back to a generic tone instead
   of the intended one.
 - No rate limiting on login/register/OTP endpoints.
-- No automated tests, backend or frontend.
+- No automated frontend tests (the backend has a Django test suite; CI runs it plus frontend lint/type-check/build — see "Deploy & CI").
 - Local dev needs real Razorpay test-mode keys in `.env` to complete a
   payment or top-up purchase — without them it fails with a clean
   "Authentication failed" error. Expected, not a bug.
@@ -239,3 +239,9 @@ Still not started from the original spec:
 - `core/graph.py`: tiny plain-Python graph runner (no deps). Nodes are `fn(state) -> partial dict`, static `.edge()`, code-controlled `.route()` routers, per-node `.on_error()` fallback, `END`, `max_steps` guard, per-run trace `[{node, ms, error}]` (logged at DEBUG). Routing is always decided in code, never by a model.
 - **ATS graph**: `parse_resume` (400) → `load_job` (404) → `keyword_score` (422) → `quota_precheck` (429, before any paid call) → `jev_assess` only if Jev enabled (failure → `save`) → `rescore` only if Jev answered → `save` (locked transaction, re-checks quota, writes `ResumeCheck`). `ResumeCheckView` just runs the graph; HTTP behaviour unchanged.
 - Next: the interview loop (`apps/interviews` start/chat/end) as a graph — separate PR, not started.
+
+## Deploy & CI
+- **Migrations run on every deploy.** `backend/docker-entrypoint.sh` is the image `ENTRYPOINT`, so it runs before any command — including compose's `command:` override (previously the entrypoint was the `CMD`, which compose replaced, so `docker compose up` never migrated). It runs `manage.py migrate_on_deploy`: waits for Postgres, then `migrate` under a Postgres advisory lock so several containers starting at once migrate one at a time. The RQ worker uses `RUN_MIGRATIONS=wait` (waits until the schema is current, never migrates); `RUN_MIGRATIONS=false` skips. It also runs `collectstatic` (`COLLECTSTATIC=false` skips).
+- **Lint gates every build.** ESLint is configured (`frontend/.eslintrc.json`, `next/core-web-vitals`); the frontend image runs `npm run lint` and an error fails the build. `npm run lint:fix` fixes what's auto-fixable.
+- **CI** (`.github/workflows/ci.yml`, every push to main and every PR): `makemigrations --check` (a deploy can only apply migrations that exist), backend tests on Postgres 15, frontend lint, `tsc --noEmit` and `next build`.
+

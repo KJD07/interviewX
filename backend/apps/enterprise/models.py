@@ -1,4 +1,5 @@
 import secrets
+from decimal import Decimal
 
 from django.conf import settings
 from django.db import models
@@ -208,7 +209,7 @@ class ReferralPartner(models.Model):
     commission_rate = models.DecimalField(
         max_digits=5,
         decimal_places=4,
-        default=0.20,
+        default=Decimal("0.20"),
         help_text="Commission rate as a decimal fraction, e.g. 0.20 = 20%.",
     )
     status = models.CharField(

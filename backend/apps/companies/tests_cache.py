@@ -5,6 +5,8 @@ from django.core.cache import cache
 from django.test import TestCase
 from rest_framework.test import APIClient
 
+from apps.subscriptions.plans import effective_plan
+
 from core.read_cache import (
     company_list_cache_key,
     get_company_catalog_version,
@@ -47,13 +49,18 @@ class CompanyListCacheTests(TestCase):
     def test_catalog_invalidation_bumps_version_and_refreshes_list(self):
         res1 = self.client.get("/api/companies/")
         self.assertEqual(len(res1.json()), 1)
-        key_before = company_list_cache_key(Company.Kind.COMPANY, "free")
+        # Keyed by the effective plan, as in the view (Max for everyone while PLATFORM_FREE).
+        key_before = company_list_cache_key(Company.Kind.COMPANY, effective_plan(self.user))
         self.assertIsNotNone(cache.get(key_before))
 
         Company.objects.create(name="Another Free", tone_style="formal_strict", is_free=True)
         invalidate_company_catalog_cache()
         self.assertNotEqual(get_company_catalog_version(), 0)
-        self.assertIsNone(cache.get(key_before))
+        # Version bump, not delete: the old entry is left to expire, but lookups
+        # now use a new key that misses.
+        key_after = company_list_cache_key(Company.Kind.COMPANY, effective_plan(self.user))
+        self.assertNotEqual(key_after, key_before)
+        self.assertIsNone(cache.get(key_after))
 
         res2 = self.client.get("/api/companies/")
         self.assertEqual(len(res2.json()), 2)

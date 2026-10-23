@@ -298,7 +298,7 @@ function EndModal({
           End interview?
         </h2>
         <p className="text-sm mb-6" style={{ color: "var(--ink-dim)" }}>
-          The AI will score your performance and generate feedback. You won't be able to continue after this.
+          The AI will score your performance and generate feedback. You won&apos;t be able to continue after this.
         </p>
         <div className="flex gap-3">
           <button
