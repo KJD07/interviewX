@@ -444,6 +444,7 @@ class CareersAPITests(TestCase):
         self.assertEqual(ResumeCheck.objects.count(), 0)
 
     def test_practice_flow_hides_ideal_answer_until_validated(self):
+        Company.objects.all().delete()  # drop the seeded skill bank (migration 0010)
         co = Company.objects.create(name="Acme", is_free=False)
         rnd = Round.objects.create(role=Role.objects.create(company=co, title="SDE"), title="Tech")
         q = InterviewQuestion.objects.create(round=rnd, question_text="Two sum?", question_type="coding",

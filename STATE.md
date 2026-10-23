@@ -127,8 +127,15 @@ section is a catch-up, not a phase-by-phase log like the ones above.
 - Mid-month interview top-up packs (Spark/Boost/Power) — buy extra
   interviews with Razorpay without upgrading your plan; credits roll over
 - Skill-based interviews (Premium/Max only) — practice a single skill
-  (React, SQL, Docker, etc.) instead of a full company loop, via `/skills`
-  and `seed_skills`
+  (React, SQL, Docker, etc.) instead of a full company loop, via `/skills`.
+  The catalog is a curated bank in `apps/companies/skill_bank.py`: 25 skills
+  in 8 categories (Frontend, Backend, Databases, CS Fundamentals incl. DSA/OOP/
+  OS/CN/DBMS, Architecture, DevOps, Data & AI, Career/HR) × 3 rounds × 3
+  hand-written questions with ideal answers (225 total, also listed in
+  `/practice`). Data migration `companies.0010_seed_skill_bank` loads it on
+  deploy; `seed_skills` runs the same idempotent, additive sync (missing
+  skills/rounds/questions only, admin edits untouched) and can still
+  AI-source extra questions with `--with-questions`
 - Voice — Web Speech API speech-to-text/text-to-speech during interviews
   (this is the spec's Phase 8, in early form). The two halves are separate
   switches: the interviewer **always speaks its turns out loud** (on by

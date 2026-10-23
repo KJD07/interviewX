@@ -1,28 +1,26 @@
 """
-Bulk-seed skill-based practice entries (Company rows with kind="skill"),
-grouped by category, and optionally trigger the AI question-sourcing
-pipeline for each round — same mechanism used for real companies.
+Seed skill-based practice entries (Company rows with kind="skill") from the
+curated bank in apps/companies/skill_bank.py — skills, rounds and
+hand-written questions with ideal answers. Idempotent: only what's missing
+is created. (Migration 0010_seed_skill_bank runs the same sync on deploy.)
 
 USAGE
 -----
-Just create the Skill/Role/Round skeleton (fast, no AI calls):
+Sync the curated bank (fast, no AI calls):
 
     python manage.py seed_skills
 
-Also source real questions via AI for every round just created:
+Also source extra real questions via AI for every round:
 
     python manage.py seed_skills --with-questions
 
-Only seed specific skills by name (case-insensitive substring match):
+Only AI-source specific skills by name (case-insensitive substring match):
 
     python manage.py seed_skills --with-questions --only React Python
 
 EDITING THE DATA
 ----------------
-Add/remove entries in the DATA list below. Each skill has one or more
-"roles" (difficulty tracks, e.g. Beginner/Intermediate/Advanced), and each
-role has a list of round titles. `category` groups skills in the frontend
-Skills section (e.g. "Frontend", "Backend", "Databases", "DevOps").
+Add skills/rounds/questions to SKILLS in apps/companies/skill_bank.py.
 """
 
 from __future__ import annotations
@@ -33,110 +31,9 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from apps.companies.models import Company, InterviewQuestion, Role, Round
+from apps.companies.skill_bank import ROLE_TITLE, SKILLS, sync_skill_bank
 from core.question_sourcing import QuestionSourcingError, source_questions_for_round
 from core.read_cache import invalidate_company_catalog_cache
-
-# ---------------------------------------------------------------------------
-# Edit this list to add more skills.
-# ---------------------------------------------------------------------------
-DATA = [
-    {
-        "name": "React",
-        "category": "Frontend",
-        "tone_style": "casual_friendly",
-        "description": "Component architecture, hooks, state management, and performance.",
-        "roles": [
-            {
-                "title": "Intermediate",
-                "rounds": ["Core Concepts", "Hooks & State Management", "Performance & Debugging"],
-            },
-        ],
-    },
-    {
-        "name": "JavaScript",
-        "category": "Frontend",
-        "tone_style": "formal_strict",
-        "description": "Core language fundamentals, async patterns, and the event loop.",
-        "roles": [
-            {
-                "title": "Intermediate",
-                "rounds": ["Fundamentals", "Async & Promises", "Advanced Concepts"],
-            },
-        ],
-    },
-    {
-        "name": "Python",
-        "category": "Backend",
-        "tone_style": "casual_friendly",
-        "description": "Language fundamentals, OOP, and common backend patterns.",
-        "roles": [
-            {
-                "title": "Intermediate",
-                "rounds": ["Fundamentals", "OOP & Design", "Backend Patterns"],
-            },
-        ],
-    },
-    {
-        "name": "Django",
-        "category": "Backend",
-        "tone_style": "formal_strict",
-        "description": "ORM, views/serializers, auth, and REST API design.",
-        "roles": [
-            {
-                "title": "Intermediate",
-                "rounds": ["ORM & Models", "Views, Serializers & Auth", "REST API Design"],
-            },
-        ],
-    },
-    {
-        "name": "Node.js",
-        "category": "Backend",
-        "tone_style": "casual_friendly",
-        "description": "Event loop, Express, middleware, and API design.",
-        "roles": [
-            {
-                "title": "Intermediate",
-                "rounds": ["Core Concepts & Event Loop", "Express & Middleware", "API Design"],
-            },
-        ],
-    },
-    {
-        "name": "SQL",
-        "category": "Databases",
-        "tone_style": "formal_strict",
-        "description": "Joins, indexing, query optimization, and schema design.",
-        "roles": [
-            {
-                "title": "Intermediate",
-                "rounds": ["Queries & Joins", "Indexing & Optimization", "Schema Design"],
-            },
-        ],
-    },
-    {
-        "name": "System Design",
-        "category": "Architecture",
-        "tone_style": "aggressive",
-        "description": "Scalability, tradeoffs, caching, and distributed systems basics.",
-        "roles": [
-            {
-                "title": "Intermediate",
-                "rounds": ["Fundamentals & Tradeoffs", "Scalability & Caching", "Case Study Deep Dive"],
-            },
-        ],
-    },
-    {
-        "name": "Docker",
-        "category": "DevOps",
-        "tone_style": "casual_friendly",
-        "description": "Images, containers, Compose, and deployment basics.",
-        "roles": [
-            {
-                "title": "Intermediate",
-                "rounds": ["Core Concepts", "Compose & Networking", "Deployment Practices"],
-            },
-        ],
-    },
-]
 
 
 class Command(BaseCommand):
@@ -172,87 +69,68 @@ class Command(BaseCommand):
         only = [s.lower() for s in options["only"]] if options["only"] else None
         sleep_seconds = options["sleep"]
 
-        skills_data = DATA
+        counts = sync_skill_bank(Company, Role, Round, InterviewQuestion)
+        self.stdout.write(self.style.SUCCESS(
+            f"Skill bank synced: {counts['skills']} skills, {counts['rounds']} rounds, "
+            f"{counts['questions']} questions created."
+        ))
+        invalidate_company_catalog_cache()
+        if not with_questions:
+            return
+
+        skills_data = SKILLS
         if only:
-            skills_data = [s for s in DATA if any(sub in s["name"].lower() for sub in only)]
+            skills_data = [s for s in SKILLS if any(sub in s["name"].lower() for sub in only)]
             if not skills_data:
-                raise CommandError(f"No skills in DATA matched --only {options['only']}")
+                raise CommandError(f"No skills in the bank matched --only {options['only']}")
 
         total_rounds_sourced = 0
         total_questions_created = 0
 
         for skill_data in skills_data:
-            skill, created = Company.objects.get_or_create(
-                name=skill_data["name"],
-                kind=Company.Kind.SKILL,
-                defaults={
-                    "tone_style": skill_data["tone_style"],
-                    "description": skill_data["description"],
-                    "category": skill_data.get("category", ""),
-                },
-            )
-            self.stdout.write(
-                self.style.SUCCESS(f"{'Created' if created else 'Found'} skill: {skill.name} [{skill.category}]")
-            )
+            skill = Company.objects.get(name=skill_data["name"], kind=Company.Kind.SKILL, organization=None)
+            role = Role.objects.get(company=skill, title=ROLE_TITLE)
+            self.stdout.write(self.style.SUCCESS(f"Skill: {skill.name} [{skill.category}]"))
+            for round_title, _, _ in skill_data["rounds"]:
+                round_obj = Round.objects.get(role=role, title=round_title)
+                self.stdout.write(f"    Round: {round_obj.title}")
+                has_ai_questions = round_obj.questions.filter(generated_by_ai=True).exists()
+                if has_ai_questions and not refresh_questions:
+                    self.stdout.write("      Skipping (already has AI questions, use --refresh-questions to redo).")
+                    continue
 
-            for role_data in skill_data["roles"]:
-                role, r_created = Role.objects.get_or_create(
-                    company=skill,
-                    title=role_data["title"],
-                )
-                self.stdout.write(f"  {'Created' if r_created else 'Found'} role: {role.title}")
-
-                for order, round_title in enumerate(role_data["rounds"]):
-                    round_obj, rd_created = Round.objects.get_or_create(
-                        role=role,
-                        title=round_title,
-                        defaults={
-                            "order": order,
-                            "round_type": Round.infer_round_type(round_title),
-                        },
+                self.stdout.write("      Sourcing questions via AI...")
+                try:
+                    sourced = source_questions_for_round(
+                        company_name=skill.name,
+                        role_title=role.title,
+                        round_title=round_obj.title,
                     )
-                    self.stdout.write(f"    {'Created' if rd_created else 'Found'} round: {round_obj.title}")
-
-                    if not with_questions:
-                        continue
-
-                    has_ai_questions = round_obj.questions.filter(generated_by_ai=True).exists()
-                    if has_ai_questions and not refresh_questions:
-                        self.stdout.write("      Skipping (already has AI questions, use --refresh-questions to redo).")
-                        continue
-
-                    self.stdout.write("      Sourcing questions via AI...")
-                    try:
-                        sourced = source_questions_for_round(
-                            company_name=skill.name,
-                            role_title=role.title,
-                            round_title=round_obj.title,
-                        )
-                    except QuestionSourcingError as exc:
-                        self.stderr.write(self.style.ERROR(f"      Failed: {exc}"))
-                        time.sleep(sleep_seconds)
-                        continue
-
-                    with transaction.atomic():
-                        round_obj.questions.filter(generated_by_ai=True).delete()
-                        InterviewQuestion.objects.bulk_create(
-                            [
-                                InterviewQuestion(
-                                    round=round_obj,
-                                    question_text=q.question_text,
-                                    question_type=q.question_type,
-                                    ideal_answer=q.ideal_answer,
-                                    source_url=q.source_url,
-                                    generated_by_ai=True,
-                                )
-                                for q in sourced
-                            ]
-                        )
-
-                    total_rounds_sourced += 1
-                    total_questions_created += len(sourced)
-                    self.stdout.write(self.style.SUCCESS(f"      Sourced {len(sourced)} questions."))
+                except QuestionSourcingError as exc:
+                    self.stderr.write(self.style.ERROR(f"      Failed: {exc}"))
                     time.sleep(sleep_seconds)
+                    continue
+
+                with transaction.atomic():
+                    round_obj.questions.filter(generated_by_ai=True).delete()
+                    InterviewQuestion.objects.bulk_create(
+                        [
+                            InterviewQuestion(
+                                round=round_obj,
+                                question_text=q.question_text,
+                                question_type=q.question_type,
+                                ideal_answer=q.ideal_answer,
+                                source_url=q.source_url,
+                                generated_by_ai=True,
+                            )
+                            for q in sourced
+                        ]
+                    )
+
+                total_rounds_sourced += 1
+                total_questions_created += len(sourced)
+                self.stdout.write(self.style.SUCCESS(f"      Sourced {len(sourced)} questions."))
+                time.sleep(sleep_seconds)
 
         self.stdout.write(
             self.style.SUCCESS(
