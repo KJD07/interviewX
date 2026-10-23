@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/Skeleton";
 import { PageContainer, PageHeader, Card, EmptyState, Notice, SearchField, ScoreBar, IconBriefcase } from "@/components/ui";
 import Link from "next/link";
 import { careers, ApiError } from "@/lib/api";
-import type { AtsQuota, CandidateProfile, Job, JobFilters, JobLevel, ResumeCheckResult, WorkMode } from "@/lib/api";
+import type { AtsKeyword, AtsQuota, CandidateProfile, Job, JobFilters, JobLevel, ResumeCheckResult, WorkMode } from "@/lib/api";
 
 const WORK_MODES: { id: WorkMode; label: string }[] = [
   { id: "remote", label: "Remote" },
@@ -41,8 +41,30 @@ function timeAgo(iso: string) {
   return h < 24 ? `${h}h ago` : `${Math.floor(h / 24)}d ago`;
 }
 
-function Chip({ text, tone }: { text: string; tone: "ok" | "miss" }) {
-  return <span className={`tag ${tone === "ok" ? "tag-success" : "tag-danger"}`}>{text}</span>;
+type ChipTone = "ok" | "miss" | "warn" | "soft";
+const CHIP_CLASS: Record<ChipTone, string> = { ok: "tag-success", miss: "tag-danger", warn: "tag-warn", soft: "tag-outline" };
+
+function Chip({ text, tone }: { text: string; tone: ChipTone }) {
+  return <span className={`tag ${CHIP_CLASS[tone]}`}>{text}</span>;
+}
+
+// required = only "required"; not required = everything else (general mentions + nice-to-haves).
+function keywordsWhere(result: ResumeCheckResult, status: AtsKeyword["status"], required?: boolean) {
+  return result.keywords
+    .filter((k) => k.status === status && (required === undefined || (k.importance === "required") === required))
+    .map((k) => k.label);
+}
+
+function KeywordGroup({ title, tone, items }: { title: string; tone: ChipTone; items: string[] }) {
+  if (!items.length) return null;
+  return (
+    <div>
+      <p className="text-xs mb-1.5" style={{ color: "var(--ink-dim)" }}>{title}</p>
+      <div className="flex flex-wrap gap-1.5">
+        {items.map((k) => <Chip key={k} text={k} tone={tone} />)}
+      </div>
+    </div>
+  );
 }
 
 function Badge({ children, strong = false }: { children: React.ReactNode; strong?: boolean }) {
@@ -165,20 +187,41 @@ function CheckPanel({ job, profile, onQuota }: { job: Job; profile: CandidatePro
               </p>
             )}
           </div>
-          {result.missing_keywords.length > 0 && (
-            <div>
-              <p className="text-xs mb-1.5" style={{ color: "var(--ink-dim)" }}>Missing keywords</p>
-              <div className="flex flex-wrap gap-1.5">
-                {result.missing_keywords.map((k) => <Chip key={k} text={k} tone="miss" />)}
-              </div>
+          {result.breakdown.length > 0 && (
+            <div className="space-y-2">
+              {result.breakdown.map((p) => (
+                <div key={p.key}>
+                  <div className="flex items-baseline justify-between text-xs mb-1" style={{ color: "var(--ink-dim)" }}>
+                    <span>
+                      {p.label} <span style={{ color: "var(--ink-faint)" }}>· {p.weight}%</span>
+                    </span>
+                    <span className="tabular-nums font-semibold" style={{ color: "var(--ink)" }}>{p.score}</span>
+                  </div>
+                  <ScoreBar value={p.score} outOf={100} height={4} />
+                </div>
+              ))}
+              {result.experience.required_years !== null && (
+                <p className="text-xs" style={{ color: "var(--ink-faint)" }}>
+                  Asks for {result.experience.required_years}+ years · we count{" "}
+                  {result.experience.resume_years === null ? "no dated roles" : `~${result.experience.resume_years} years`} on your resume
+                </p>
+              )}
             </div>
           )}
-          {result.matched_keywords.length > 0 && (
+          <KeywordGroup title="Missing — required" tone="miss" items={keywordsWhere(result, "missing", true)} />
+          <KeywordGroup title="Missing — nice to have" tone="soft" items={keywordsWhere(result, "missing", false)} />
+          <KeywordGroup
+            title="Implied — write these out, ATS filters match exact words"
+            tone="warn"
+            items={keywordsWhere(result, "implied")}
+          />
+          <KeywordGroup title="Matched" tone="ok" items={keywordsWhere(result, "matched")} />
+          {result.suggestions.length > 0 && (
             <div>
-              <p className="text-xs mb-1.5" style={{ color: "var(--ink-dim)" }}>Matched keywords</p>
-              <div className="flex flex-wrap gap-1.5">
-                {result.matched_keywords.map((k) => <Chip key={k} text={k} tone="ok" />)}
-              </div>
+              <p className="text-xs mb-1.5" style={{ color: "var(--ink-dim)" }}>How to improve</p>
+              <ul className="space-y-1.5 text-[13px] list-disc pl-4" style={{ color: "var(--ink)" }}>
+                {result.suggestions.map((t) => <li key={t}>{t}</li>)}
+              </ul>
             </div>
           )}
         </div>
