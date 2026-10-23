@@ -261,3 +261,129 @@ a, button {
 .sidebar-scroll:hover {
   scrollbar-color: var(--border-mid) transparent;
 }
+
+/* ── Candidate app UI kit ──
+   One card, button, chip, tag and field style shared by every page inside
+   the candidate shell (dashboard, companies, skills, practice, jobs,
+   progress, profile), so surfaces line up instead of each page inventing
+   its own radius/border/padding. React wrappers live in components/ui.tsx. */
+@layer components {
+  .ui-card {
+    background: var(--surface);
+    border: 1px solid var(--border-mid);
+    border-radius: 18px;
+    box-shadow: 0 1px 2px rgba(12, 12, 11, 0.03);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    height: 40px;
+    padding: 0 18px;
+    border-radius: 9999px;
+    border: 1px solid transparent;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-sm { height: 32px; padding: 0 14px; font-size: 13px; }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); }
+  .btn-primary:not(:disabled):hover { background: var(--accent-dim); }
+  .btn-secondary { background: var(--surface); color: var(--ink); border-color: var(--border-mid); }
+  .btn-secondary:not(:disabled):hover { background: var(--surface-alt); border-color: var(--ink-faint); }
+  .btn-ghost { background: transparent; color: var(--ink-dim); }
+  .btn-ghost:not(:disabled):hover { background: var(--surface-2); color: var(--ink); }
+  .btn-danger { background: transparent; color: var(--danger); }
+  .btn-danger:not(:disabled):hover { background: rgba(179, 64, 42, 0.08); }
+  .btn-lime { background: var(--lime); color: var(--ink); }
+  .btn-lime:not(:disabled):hover { filter: brightness(0.95); }
+
+  /* Filter / toggle chip. Pressed state comes from aria-pressed. */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 9999px;
+    border: 1px solid var(--border-mid);
+    background: var(--surface);
+    color: var(--ink-dim);
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .chip:hover { color: var(--ink); border-color: var(--ink-faint); }
+  .chip[aria-pressed="true"] { background: var(--ink); color: var(--page); border-color: var(--ink); font-weight: 600; }
+
+  /* Small read-only label (status, level, keyword). */
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    height: 24px;
+    padding: 0 10px;
+    border-radius: 9999px;
+    background: var(--surface-2);
+    color: var(--ink-dim);
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .tag-success { background: var(--success-bg); color: #2F6B48; }
+  .tag-danger { background: rgba(179, 64, 42, 0.1); color: var(--danger); }
+  .tag-warn { background: rgba(180, 115, 30, 0.14); color: #7A5A12; }
+  .tag-outline { background: transparent; border: 1px solid var(--border-mid); color: var(--ink-faint); }
+
+  .ui-input {
+    width: 100%;
+    height: 40px;
+    padding: 0 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border-mid);
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 14px;
+  }
+  textarea.ui-input { height: auto; padding: 10px 14px; line-height: 1.55; }
+  .ui-input::placeholder { color: var(--ink-faint); }
+  .ui-input:disabled { background: var(--surface-alt); color: var(--ink-faint); }
+  textarea.ui-input:focus,
+  select.ui-input:focus {
+    outline: none;
+    border-color: var(--indigo);
+    box-shadow: 0 0 0 3px var(--indigo-glow);
+  }
+
+  /* Segmented control: a pill track holding mutually exclusive options. */
+  .segmented {
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 9999px;
+    background: var(--surface);
+    border: 1px solid var(--border-mid);
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .segmented > button {
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 9999px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-dim);
+    white-space: nowrap;
+  }
+  .segmented > button:hover { color: var(--ink); }
+  .segmented > button[aria-pressed="true"] { background: var(--ink); color: var(--page); font-weight: 600; }
+
+  /* Pill search field: the ring sits on the wrapper, not the bare input. */
+  .ui-search { background: var(--surface); border: 1px solid var(--border-mid); }
+  .ui-search:focus-within { border-color: var(--indigo); box-shadow: 0 0 0 3px var(--indigo-glow); }
+  .ui-search input:focus { box-shadow: none; }
+}

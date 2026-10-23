@@ -48,7 +48,7 @@ export default function CompanyLogo({ company, url, size = 40 }: { company: stri
   if (!domain) {
     return (
       <span
-        className="rounded-lg border flex items-center justify-center shrink-0 font-display font-semibold"
+        className="rounded-[12px] border flex items-center justify-center shrink-0 font-display font-semibold"
         style={{ ...box, background: "var(--surface-2)", color: "var(--ink-dim)", fontSize: size * 0.42 }}
         aria-hidden
       >
@@ -58,7 +58,7 @@ export default function CompanyLogo({ company, url, size = 40 }: { company: stri
   }
 
   return (
-    <span className="rounded-lg border flex items-center justify-center shrink-0 overflow-hidden" style={box}>
+    <span className="rounded-[12px] border flex items-center justify-center shrink-0 overflow-hidden" style={box}>
       {/* eslint-disable-next-line @next/next/no-img-element -- external favicon, not worth next/image config */}
       <img
         key={domain}

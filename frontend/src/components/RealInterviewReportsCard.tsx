@@ -1,100 +1,72 @@
 "use client";
 import { useEffect, useState } from "react";
-import { interviews, ApiError } from "@/lib/api";
+import { interviews } from "@/lib/api";
 import type { RealInterviewReport } from "@/lib/api";
-import RealInterviewReportModal from "@/components/RealInterviewReportModal";
+import { Card, CardHeader } from "@/components/ui";
 
 function StatusPill({ status }: { status: RealInterviewReport["status"] }) {
   const map = {
-    pending: { label: "Pending review", bg: "var(--surface-2)", color: "var(--ink-dim)" },
-    approved: { label: "Approved · +5 credited", bg: "var(--success-bg)", color: "var(--success)" },
-    rejected: { label: "Not approved", bg: "var(--surface-2)", color: "var(--ink-faint)" },
+    pending: { label: "Pending review", cls: "tag" },
+    approved: { label: "Approved · +5 credited", cls: "tag tag-success" },
+    rejected: { label: "Not approved", cls: "tag tag-outline" },
   };
   const s = map[status];
-  return (
-    <span className="text-xs font-medium px-2.5 py-1 rounded-full shrink-0" style={{ background: s.bg, color: s.color }}>
-      {s.label}
-    </span>
-  );
+  return <span className={`${s.cls} shrink-0`}>{s.label}</span>;
 }
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
-export default function RealInterviewReportsCard() {
+/**
+ * The user's submitted real-interview reports and their review status.
+ * Renders nothing until there is at least one report — the "Report a real
+ * interview" entry point itself is a dashboard quick action, which owns the
+ * submission modal and bumps `reloadKey` after a submit.
+ */
+export default function RealInterviewReportsCard({
+  reloadKey = 0,
+  onNew,
+}: {
+  reloadKey?: number;
+  onNew: () => void;
+}) {
   const [reports, setReports] = useState<RealInterviewReport[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
 
-  const load = () => {
-    setLoading(true);
-    interviews
-      .realReports()
-      .then(setReports)
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  };
+  useEffect(() => {
+    interviews.realReports().then(setReports).catch(() => {});
+  }, [reloadKey]);
 
-  useEffect(load, []);
+  if (reports.length === 0) return null;
 
   return (
-    <div
-      className="card-hover h-full rounded-[16px] p-[22px]"
-      style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
-    >
-      <div className="flex items-start justify-between gap-4 mb-1">
-        <div>
-          <h2 className="font-display text-xl font-semibold tracking-[-0.02em]" style={{ color: "var(--ink)" }}>
-            Report a real interview
-          </h2>
-          <p className="text-sm mt-1" style={{ color: "var(--ink-dim)" }}>
-            Interviewed elsewhere recently? Share what was asked — approved reports earn you{" "}
-            <span className="font-semibold" style={{ color: "var(--accent)" }}>5 free interviews</span>.
-          </p>
-        </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-transform duration-200 hover:scale-[1.03] active:scale-[0.98]"
-          style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
-        >
-          + New report
-        </button>
-      </div>
-
-      {!loading && reports.length > 0 && (
-        <div className="mt-4 space-y-2">
-          {reports.map((r) => (
-            <div
-              key={r.id}
-              className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3"
-              style={{ background: "var(--surface-2)" }}
-            >
-              <div className="min-w-0">
-                <p className="text-sm font-medium truncate" style={{ color: "var(--ink)" }}>
-                  {r.had_recent_interview === "yes"
-                    ? `${r.company_name || "—"} · ${r.role_title || "—"}`
-                    : "No recent interview reported"}
-                </p>
-                <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
-                  Submitted {formatDate(r.created_at)}
-                </p>
-              </div>
-              <StatusPill status={r.status} />
+    <Card>
+      <CardHeader
+        title="Your interview reports"
+        meta={`${reports.length} submitted`}
+        action={
+          <button onClick={onNew} className="btn btn-secondary btn-sm">
+            + New report
+          </button>
+        }
+      />
+      <ul className="divide-y" style={{ borderColor: "var(--border)" }}>
+        {reports.map((r) => (
+          <li key={r.id} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0" style={{ borderColor: "var(--border)" }}>
+            <div className="min-w-0">
+              <p className="text-sm font-medium truncate" style={{ color: "var(--ink)" }}>
+                {r.had_recent_interview === "yes"
+                  ? `${r.company_name || "—"} · ${r.role_title || "—"}`
+                  : "No recent interview reported"}
+              </p>
+              <p className="text-xs mt-0.5" style={{ color: "var(--ink-faint)" }}>
+                Submitted {formatDate(r.created_at)}
+              </p>
             </div>
-          ))}
-        </div>
-      )}
-
-      {showModal && (
-        <RealInterviewReportModal
-          onClose={() => setShowModal(false)}
-          onSubmitted={() => {
-            setShowModal(false);
-            load();
-          }}
-        />
-      )}
-    </div>
+            <StatusPill status={r.status} />
+          </li>
+        ))}
+      </ul>
+    </Card>
   );
 }

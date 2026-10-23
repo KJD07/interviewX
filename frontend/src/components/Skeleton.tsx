@@ -13,12 +13,9 @@ export function Skeleton({
 
 export function SkeletonStatCard() {
   return (
-    <div
-      className="rounded-[18px] p-[22px]"
-      style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-    >
-      <Skeleton className="h-9 w-16 rounded-lg mb-3" />
-      <Skeleton className="h-3 w-24 rounded" />
+    <div className="ui-card p-5 min-h-[118px] flex flex-col justify-between">
+      <Skeleton className="h-2.5 w-20 rounded" />
+      <Skeleton className="h-8 w-16 rounded-lg" />
     </div>
   );
 }
@@ -45,17 +42,14 @@ export function SkeletonRow({ last = false }: { last?: boolean }) {
 
 export function SkeletonTable({ rows = 5 }: { rows?: number }) {
   return (
-    <div
-      className="rounded-3xl overflow-hidden shadow-[0_8px_32px_rgba(28,26,22,0.06)]"
-      style={{ border: "1px solid var(--border)", background: "var(--surface)" }}
-    >
+    <div className="ui-card overflow-hidden">
       <div
-        className="grid text-xs font-medium uppercase tracking-wider px-5 py-3"
+        className="grid font-mono text-[10px] uppercase tracking-[0.14em] px-5 py-3"
         style={{
           gridTemplateColumns: "1fr 130px 70px 70px 80px 110px",
           columnGap: "24px",
-          background: "var(--surface-2)",
-          color: "var(--ink-dim)",
+          background: "var(--surface-alt)",
+          color: "var(--ink-faint)",
           borderBottom: "1px solid var(--border)",
         }}
       >
@@ -75,12 +69,12 @@ export function SkeletonTable({ rows = 5 }: { rows?: number }) {
 
 export function SkeletonCard() {
   return (
-    <div
-      className="rounded-lg px-5 py-4"
-      style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
-    >
-      <Skeleton className="h-4 w-32 rounded mb-2" />
-      <Skeleton className="h-3 w-20 rounded" />
+    <div className="ui-card px-5 py-4 flex items-center gap-4">
+      <Skeleton className="w-10 h-10 !rounded-[11px] shrink-0" />
+      <div className="flex-1">
+        <Skeleton className="h-4 w-40 rounded mb-2" />
+        <Skeleton className="h-3 w-24 rounded" />
+      </div>
     </div>
   );
 }

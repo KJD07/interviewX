@@ -11,6 +11,7 @@ import PaginationControls from "@/components/PaginationControls";
 import { useSearchAndPaginate } from "@/hooks/useSearchAndPaginate";
 import { SkeletonCard } from "@/components/Skeleton";
 import InterviewInstructionsModal from "@/components/InterviewInstructionsModal";
+import { PageContainer, PageHeader, EmptyState, Notice, SearchField, IconSpark } from "@/components/ui";
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -28,7 +29,7 @@ type Crumb = { label: string; onClick: () => void };
 
 function Breadcrumbs({ crumbs }: { crumbs: Crumb[] }) {
   return (
-    <nav className="flex items-center gap-1.5 text-sm mb-8">
+    <nav className="flex flex-wrap items-center gap-1.5 text-[13px] mb-5">
       {crumbs.map((c, i) => (
         <span key={i} className="flex items-center gap-1.5">
           {i > 0 && <span style={{ color: "var(--border-mid)" }}>/</span>}
@@ -66,30 +67,30 @@ function ListCard({
     <button
       onClick={onClick}
       disabled={disabled}
-      className="company-row w-full text-left rounded-2xl px-6 py-5 flex items-center justify-between gap-4 disabled:opacity-40"
-      style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+      className="company-row w-full text-left px-4 py-4 sm:px-[22px] flex items-center justify-between gap-4 disabled:opacity-40 border-b last:border-b-0"
+      style={{ background: "var(--surface)", borderColor: "var(--border)" }}
     >
-      <div className="flex items-center gap-4 min-w-0">
+      <div className="flex items-center gap-3 sm:gap-4 min-w-0">
         {avatarLabel && (
           <span
-            className="company-avatar w-11 h-11 rounded-[10px] flex items-center justify-center text-[15px] font-semibold tracking-tight shrink-0"
-            style={{ background: "var(--surface-2)", color: "var(--ink)" }}
+            className="company-avatar w-[38px] h-[38px] rounded-[11px] flex items-center justify-center font-mono text-[13px] font-bold shrink-0"
+            style={{ background: "var(--page)", border: "1px solid var(--border)", color: "var(--ink)" }}
           >
             {avatarLabel}
           </span>
         )}
         <div className="min-w-0">
-          <p className="company-title text-[17.5px] font-semibold truncate" style={{ color: "var(--ink)", letterSpacing: "-0.015em" }}>
+          <p className="company-title font-display text-[17px] sm:text-[19px] font-semibold leading-snug truncate tracking-[-0.02em]" style={{ color: "var(--ink)" }}>
             {title}
           </p>
           {subtitle && (
-            <p className="company-subtitle text-[13px] mt-0.5 truncate" style={{ color: "var(--ink-faint)" }}>
+            <p className="company-subtitle text-xs sm:text-[13px] mt-0.5 truncate" style={{ color: "var(--ink-faint)" }}>
               {subtitle}
             </p>
           )}
         </div>
       </div>
-      <div className="flex items-center gap-4 shrink-0">
+      <div className="flex items-center gap-3 sm:gap-4 shrink-0">
         {right}
         <span className="company-chevron" style={{ color: "var(--ink-faint)" }}>
           <ChevronRight />
@@ -102,10 +103,10 @@ function ListCard({
 function TonePill({ tone }: { tone: string }) {
   return (
     <span
-      className="company-tonepill text-[11.5px] px-3 py-1 rounded-full font-medium capitalize"
-      style={{ background: "var(--surface-2)", color: "var(--ink)" }}
+      className="company-tonepill hidden sm:inline font-mono text-[10px] uppercase tracking-[0.08em] px-[11px] py-1.5 rounded-full"
+      style={{ background: "var(--page)", border: "1px solid var(--border)", color: "var(--ink-dim)" }}
     >
-      {tone}
+      {tone.replace(/_/g, " ")}
     </span>
   );
 }
@@ -221,93 +222,46 @@ export default function SkillsPage() {
     <ProtectedRoute redirect={false}>
       <AppShell>
         <div className="min-h-screen" style={{ background: "var(--page)" }}>
-          <main className="max-w-[1080px] mx-auto px-[44px] pt-9 pb-[60px] fade-up">
+          <PageContainer>
             <Breadcrumbs crumbs={crumbs} />
 
             {!entitled ? (
-              <div
-                className="rounded-lg px-6 py-8 text-center"
-                style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
-              >
-                <h1 className="font-display text-xl font-bold mb-2" style={{ color: "var(--ink)" }}>
-                  Skills is a Premium & Max feature
-                </h1>
-                <p className="text-sm mb-5" style={{ color: "var(--ink-dim)" }}>
-                  Practice a single skill — like React, SQL, or System Design — instead of a
-                  full company loop. Upgrade to Premium or Max to unlock it.
-                </p>
-                <button
-                  onClick={() => router.push("/pricing")}
-                  className="px-4 py-2 rounded-full text-sm font-semibold"
-                  style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
-                >
-                  Upgrade plan
-                </button>
-              </div>
+              <EmptyState
+                icon={<IconSpark />}
+                title="Skills is a Premium & Max feature"
+                body="Practice a single skill — like React, SQL, or System Design — instead of a full company loop. Upgrade to Premium or Max to unlock it."
+                action={
+                  <button onClick={() => router.push("/pricing")} className="btn btn-primary">
+                    Upgrade plan
+                  </button>
+                }
+              />
             ) : (
               <>
-                {fetchError && (
-                  <p
-                    className="mb-6 text-sm rounded px-3 py-2"
-                    style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "var(--danger)" }}
-                  >
-                    {fetchError}
-                  </p>
-                )}
-
-                {startError && (
-                  <p
-                    className="mb-6 text-sm rounded px-3 py-2"
-                    style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "var(--danger)" }}
-                  >
-                    {startError}
-                  </p>
-                )}
-
+                {fetchError && <Notice tone="error" className="mb-5">{fetchError}</Notice>}
+                {startError && <Notice tone="error" className="mb-5">{startError}</Notice>}
                 {limitReached && (
-                  <div
-                    className="mb-6 rounded-lg px-5 py-4"
-                    style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.25)" }}
-                  >
-                    <p className="text-sm font-medium" style={{ color: "var(--accent)" }}>
-                      {plan.label} plan limit reached
-                    </p>
-                    <p className="text-xs mt-1" style={{ color: "var(--ink-dim)" }}>
-                      You&apos;ve used {monthlyUsed}/{monthlyLimit} interviews this month. Upgrade to continue.
-                    </p>
-                  </div>
+                  <Notice tone="warn" className="mb-5" title={`${plan.label} plan limit reached`}>
+                    You&apos;ve used {monthlyUsed}/{monthlyLimit} interviews this month. Upgrade to continue.
+                  </Notice>
                 )}
 
                 {/* ── SKILLS (grouped by category) ── */}
                 {view.step === "skills" && (
                   <>
-                    <div className="mb-8">
-                      <h1
-                        className="font-display text-[44px] font-semibold leading-none"
-                        style={{ color: "var(--ink)", letterSpacing: "-0.035em" }}
-                      >
-                        Practice by skill
-                      </h1>
-                      <p className="mt-3 text-[15px]" style={{ color: "var(--ink-dim)" }}>
-                        Skip the company loop — drill a single skill directly.
-                      </p>
-                    </div>
+                    <PageHeader
+                      eyebrow="Step 1 of 3 · Skill"
+                      title="Practice by skill"
+                      subtitle="Skip the company loop — drill a single skill directly."
+                    />
 
                     {skillList.length > 0 && (
-                      <div
-                        className="rounded-[18px] p-2 flex items-center gap-3 mb-3.5"
-                        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-                      >
-                        <span className="pl-3" style={{ color: "var(--ink-faint)" }}>⌕</span>
-                        <input
-                          type="text"
-                          value={skillSearch.query}
-                          onChange={(e) => skillSearch.setQuery(e.target.value)}
-                          placeholder="Search skills…"
-                          className="flex-1 bg-transparent outline-none text-[14.5px] py-2.5"
-                          style={{ color: "var(--ink)" }}
-                        />
-                      </div>
+                      <SearchField
+                        value={skillSearch.query}
+                        onChange={skillSearch.setQuery}
+                        placeholder="Search skills…"
+                        className="mb-5"
+                      />
                     )}
 
                     {loading || detailLoading ? (
@@ -315,25 +269,21 @@ export default function SkillsPage() {
                         {[1, 2, 3].map((n) => <SkeletonCard key={n} />)}
                       </div>
                     ) : skillList.length === 0 ? (
-                      <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
-                        No skills available yet.
-                      </p>
+                      <EmptyState compact icon={<IconSpark />} title="No skills available yet" />
                     ) : skillSearch.results.length === 0 ? (
-                      <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
-                        No skills match &quot;{skillSearch.query}&quot;.
-                      </p>
+                      <EmptyState
+                        compact
+                        title="No matches"
+                        body={<>No skills match &quot;{skillSearch.query}&quot;.</>}
+                        action={<button className="btn btn-secondary btn-sm" onClick={() => skillSearch.setQuery("")}>Clear search</button>}
+                      />
                     ) : (
                       <>
-                        <div className="space-y-8">
+                        <div className="space-y-6">
                           {grouped.map(([category, items]) => (
                             <div key={category}>
-                              <h2
-                                className="text-xs font-semibold uppercase tracking-wider mb-3"
-                                style={{ color: "var(--ink-faint)" }}
-                              >
-                                {category}
-                              </h2>
-                              <div className="flex flex-col gap-[10px]">
+                              <h2 className="font-label mb-2.5">{category}</h2>
+                              <div className="ui-card overflow-hidden">
                                 {items.map((s) => (
                                   <ListCard
                                     key={s.id}
@@ -363,21 +313,16 @@ export default function SkillsPage() {
                 {/* ── ROLES (difficulty tracks) ── */}
                 {view.step === "roles" && (
                   <>
-                    <div className="mb-6">
-                      <h1 className="font-display text-3xl font-semibold tracking-tight" style={{ color: "var(--ink)" }}>
-                        {view.skill.name}
-                      </h1>
-                      <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
-                        Pick a difficulty track to see available rounds.
-                      </p>
-                    </div>
+                    <PageHeader
+                      eyebrow="Step 2 of 3 · Track"
+                      title={view.skill.name}
+                      subtitle="Pick a difficulty track to see available rounds."
+                    />
 
                     {view.skill.roles.length === 0 ? (
-                      <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
-                        No tracks available for this skill yet.
-                      </p>
+                      <EmptyState compact title="No tracks yet" body="No tracks available for this skill yet." />
                     ) : (
-                      <div className="flex flex-col gap-[10px]">
+                      <div className="ui-card overflow-hidden">
                         {view.skill.roles.map((role) => (
                           <ListCard
                             key={role.id}
@@ -396,35 +341,28 @@ export default function SkillsPage() {
                   const v = view as { step: "rounds"; skill: CompanyDetail; role: Role };
                   return (
                     <>
-                      <div className="mb-6">
-                        <h1 className="font-display text-3xl font-semibold tracking-tight" style={{ color: "var(--ink)" }}>
-                          {v.role.title}
-                        </h1>
-                        <p className="mt-1 text-sm" style={{ color: "var(--ink-dim)" }}>
-                          Select a round to start your skill interview.
-                        </p>
-                      </div>
+                      <PageHeader
+                        eyebrow="Step 3 of 3 · Round"
+                        title={v.role.title}
+                        subtitle="Select a round to start your skill interview."
+                      />
 
                       {v.role.rounds.length === 0 ? (
-                        <p className="text-sm" style={{ color: "var(--ink-dim)" }}>
-                          No rounds configured yet.
-                        </p>
+                        <EmptyState compact title="No rounds yet" body="No rounds configured yet." />
                       ) : (
-                        <div className="space-y-3">
-                          {v.role.rounds.map((round) => (
-                            <div
-                              key={round.id}
-                              className="rounded-lg px-5 py-4 flex items-center justify-between gap-4"
-                              style={{ background: "var(--surface)", border: "1px solid var(--border-mid)" }}
-                            >
-                              <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {v.role.rounds.map((round, i) => (
+                            <div key={round.id} className="ui-card card-hover p-5 flex flex-col gap-4">
+                              <span className="font-mono text-[11px]" style={{ color: "var(--ink-faint)" }}>
+                                Round {String(i + 1).padStart(2, "0")}
+                              </span>
+                              <p className="flex-1 font-display text-[17px] font-bold leading-snug tracking-[-0.015em] break-words" style={{ color: "var(--ink)" }}>
                                 {round.title}
                               </p>
                               <button
                                 onClick={() => setPendingRound({ id: round.id, title: round.title })}
                                 disabled={limitReached || starting === round.id}
-                                className="shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-opacity disabled:opacity-40"
-                                style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
+                                className="btn btn-primary w-full"
                               >
                                 {starting === round.id ? "Starting…" : "Start interview"}
                               </button>
@@ -437,7 +375,7 @@ export default function SkillsPage() {
                 })()}
               </>
             )}
-          </main>
+          </PageContainer>
         </div>
       </AppShell>
 
