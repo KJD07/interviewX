@@ -42,6 +42,8 @@ def _tracking(user, job_ids):
 
 def _filtered_jobs(params):
     qs = Job.objects.defer("description")  # list views never show it; it's most of each row
+    if params.get("region") == "india":
+        qs = qs.filter(in_india=True)
     q = params.get("q", "").strip()
     if q:
         qs = qs.filter(Q(title__icontains=q) | Q(company__icontains=q) | Q(skills__contains=[q.lower()]))
@@ -95,7 +97,9 @@ class JobListView(APIView):
             "count": total, "page": page, "page_size": PAGE_SIZE, "sort": sort,
             "last_refreshed_at": (state.last_finished_at or state.last_refreshed_at) if state else None,
             "refreshing": feeds.is_sweeping(state),
-            "stats": {"jobs": state.jobs_count if state else 0, "companies": state.companies_count if state else 0},
+            "stats": {"jobs": state.jobs_count if state else 0, "companies": state.companies_count if state else 0,
+                      "india_jobs": state.india_jobs_count if state else 0,
+                      "india_companies": state.india_companies_count if state else 0},
             "has_profile": sig.usable,
             "ats_quota": {"limit": limit, "used": used},
         })

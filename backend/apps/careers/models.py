@@ -11,6 +11,7 @@ class JobBoard(models.Model):
         GREENHOUSE = "greenhouse"
         LEVER = "lever"
         ASHBY = "ashby"
+        SMARTRECRUITERS = "smartrecruiters"  # fetched with country=in: India roles only
 
     ats = models.CharField(max_length=20, choices=ATS.choices)
     token = models.CharField(max_length=120)
@@ -56,6 +57,9 @@ class Job(models.Model):
     skills = models.JSONField(default=list, blank=True)
     work_mode = models.CharField(max_length=10, choices=WorkMode.choices, blank=True, db_index=True)
     level = models.CharField(max_length=10, choices=Level.choices, blank=True, db_index=True)
+    # Located in India, or remote and open to India/APAC/anywhere (feeds.is_india_job).
+    # The jobs page shows only these by default.
+    in_india = models.BooleanField(default=False, db_index=True)
     posted_at = models.DateTimeField(db_index=True)
     fetched_at = models.DateTimeField(auto_now=True)
 
@@ -80,6 +84,8 @@ class JobFeedState(models.Model):
     boards_failed = models.PositiveIntegerField(default=0)
     jobs_count = models.PositiveIntegerField(default=0)
     companies_count = models.PositiveIntegerField(default=0)
+    india_jobs_count = models.PositiveIntegerField(default=0)
+    india_companies_count = models.PositiveIntegerField(default=0)
 
 
 class ResumeCheck(models.Model):

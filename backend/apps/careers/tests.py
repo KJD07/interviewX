@@ -157,17 +157,26 @@ class CompanyBoardTests(TestCase):
                        "location": "Remote", "isRemote": True, "workplaceType": "Remote",
                        "publishedAt": "2026-10-19T00:00:00Z", "descriptionPlain": "React and TypeScript."}]}
 
+    SR = {"totalFound": 2, "content": [
+        {"id": "601", "name": "Delivery Operations Manager", "company": {"identifier": "SWIGGY"},
+         "releasedDate": "2026-10-22T06:00:00Z", "location": {"city": "Bengaluru", "country": "in", "hybrid": True},
+         "function": {"label": "Operations"}, "typeOfEmployment": {"label": "Full-time"}},
+        {"id": "602", "name": "Legacy Role", "company": {"identifier": "SWIGGY"},
+         "releasedDate": "2026-01-01T00:00:00Z", "location": {"city": "Pune", "country": "in"}},
+    ]}
+
     def setUp(self):
         self.gh = JobBoard.objects.create(ats="greenhouse", token="acme", company="Acme")
         self.lv = JobBoard.objects.create(ats="lever", token="beta", company="Beta")
         self.ab = JobBoard.objects.create(ats="ashby", token="gamma", company="Gamma")
+        self.sr = JobBoard.objects.create(ats="smartrecruiters", token="Swiggy", company="Swiggy")
 
     def _client(self, gh=None):
         client = mock.Mock()
         payloads = {"greenhouse": gh or self.GH, "lever": self.LEVER, "ashby": self.ASHBY}
         client.get.side_effect = lambda url, **kw: _resp(next(v for k, v in (
             ("boards-api.greenhouse.io", payloads["greenhouse"]), ("api.lever.co", payloads["lever"]),
-            ("api.ashbyhq.com", payloads["ashby"])) if k in url))
+            ("api.ashbyhq.com", payloads["ashby"]), ("api.smartrecruiters.com", self.SR)) if k in url))
         return client
 
     def _sweep(self, client):
@@ -175,8 +184,8 @@ class CompanyBoardTests(TestCase):
             cls.return_value.__enter__.return_value = client
             return feeds.refresh_boards(list(JobBoard.objects.filter(is_active=True)))
 
-    def test_parses_all_three_ats(self):
-        self.assertEqual(self._sweep(self._client()), (3, 0))
+    def test_parses_all_ats(self):
+        self.assertEqual(self._sweep(self._client()), (4, 0))
         senior = Job.objects.get(external_id="acme:1")
         self.assertEqual((senior.level, senior.work_mode, senior.board, senior.company),
                          ("senior", "onsite", self.gh, "Acme"))
@@ -206,6 +215,42 @@ class CompanyBoardTests(TestCase):
         for _ in range(feeds.DEACTIVATE_AFTER):
             self._sweep(client)
         self.assertFalse(JobBoard.objects.filter(is_active=True).exists())
+
+    def test_smartrecruiters_india_roles_and_lazy_description(self):
+        self._sweep(self._client())
+        job = Job.objects.get(source="smartrecruiters")  # the January posting is past JOB_MAX_AGE_DAYS
+        self.assertEqual((job.location, job.work_mode, job.in_india, job.company),
+                         ("Bengaluru, India", "hybrid", True, "Swiggy"))
+        self.assertEqual(job.url, "https://jobs.smartrecruiters.com/SWIGGY/601")
+        detail = {"jobAd": {"sections": {"jobDescription": {"title": "Job Description",
+                                                            "text": "<ul><li>SQL and Excel</li></ul>"}}}}
+        with mock.patch.object(feeds.httpx, "get", return_value=_resp(detail)) as get:
+            feeds.ensure_description(job)
+        self.assertIn("/companies/Swiggy/postings/601", get.call_args.args[0])
+        job.refresh_from_db()
+        self.assertEqual(job.description, "Job Description\n- SQL and Excel")
+        self.assertIn("sql", job.skills)
+
+    def test_india_flag(self):
+        self._sweep(self._client())
+        flags = dict(Job.objects.values_list("external_id", "in_india"))
+        self.assertTrue(flags["acme:1"])        # Bengaluru, India
+        self.assertTrue(flags["acme:2"])        # Remote - India
+        self.assertTrue(flags["beta:abc"])      # Pune
+        self.assertFalse(flags["gamma:z1"])     # plain "Remote" (could be US-only)
+        self.assertTrue(feeds.is_india_job("Remote - APAC", "remote"))
+        self.assertFalse(feeds.is_india_job("APAC", "onsite"))
+
+    def test_old_postings_skipped_and_deleted(self):
+        stale = make_job(posted_at=timezone.now() - timedelta(days=61), board=self.ab, source="ashby",
+                         external_id="gamma:old")
+        aggregator = make_job(posted_at=timezone.now() - timedelta(days=61))
+        fresh = make_job(posted_at=timezone.now() - timedelta(days=59))
+        with mock.patch.object(feeds, "refresh_jobs", lambda: (0, [])), \
+                mock.patch.object(feeds, "refresh_boards", lambda: (0, 0)):
+            feeds.run_sweep()
+        self.assertFalse(Job.objects.filter(pk__in=[stale.pk, aggregator.pk]).exists())
+        self.assertTrue(Job.objects.filter(pk=fresh.pk).exists())
 
     def test_greenhouse_description_fetched_lazily(self):
         self._sweep(self._client())
@@ -593,6 +638,8 @@ class JobFilterAndMatchTests(TestCase):
         return [j["id"] for j in self.c.get("/api/careers/jobs/" + qs).data["results"]]
 
     def test_filters(self):
+        Job.objects.filter(pk=self.fe.pk).update(in_india=True)
+        self.assertEqual(self._ids("?region=india"), [self.fe.id])
         self.assertEqual(self._ids("?work_mode=remote"), [self.backend.id])
         self.assertEqual(self._ids("?level=entry,senior"), [self.chef.id, self.fe.id])
         self.assertEqual(self._ids("?posted=1"), [self.chef.id, self.fe.id])

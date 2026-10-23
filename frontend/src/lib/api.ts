@@ -1101,6 +1101,7 @@ export interface Job {
 }
 
 export interface JobFilters {
+  region?: "india" | ""; // "india": located in India or remote-open to India
   q?: string;
   location?: string;
   company?: string;
@@ -1119,7 +1120,7 @@ export interface JobListResponse {
   sort: "recent" | "match";
   last_refreshed_at: string | null;
   refreshing: boolean;
-  stats: { jobs: number; companies: number };
+  stats: { jobs: number; companies: number; india_jobs: number; india_companies: number };
   has_profile: boolean;
   ats_quota: AtsQuota;
 }
@@ -1219,6 +1220,7 @@ async function postForm<T>(path: string, form: FormData): Promise<T> {
 function jobQuery(f: JobFilters): string {
   const p = new URLSearchParams();
   p.set("page", String(f.page ?? 1));
+  if (f.region) p.set("region", f.region);
   if (f.q) p.set("q", f.q);
   if (f.location) p.set("location", f.location);
   if (f.company) p.set("company", f.company);
@@ -1268,10 +1270,20 @@ export const careers = {
   },
   // Sends a file, pasted text, or neither — then the profile's saved resume is used.
   checkResume: (jobId: number, resume: { file?: File | null; text?: string }) => {
-    const form = new FormData();
-    if (resume.file) form.append("resume_file", resume.file);
-    else if (resume.text) form.append("resume_text", resume.text);
-    return postForm<ResumeCheckResult>(`/api/careers/jobs/${jobId}/resume-check/`, form);
+    const path = `/api/careers/jobs/${jobId}/resume-check/`;
+    if (resume.file) {
+      const form = new FormData();
+      form.append("resume_file", resume.file);
+      return postForm<ResumeCheckResult>(path, form);
+    }
+    // JSON, never an empty FormData: daphne's HTTP layer (Twisted) rejects a
+    // multipart body with no parts with a bare 400 before Django (and CORS)
+    // sees it, which the browser reports as a network error. An empty
+    // resume_text means "use the resume saved on my profile".
+    return request<ResumeCheckResult>(path, {
+      method: "POST",
+      body: JSON.stringify({ resume_text: resume.text ?? "" }),
+    });
   },
   practiceQuestions: (type = "") =>
     request<PracticeQuestion[]>(`/api/careers/practice/questions/${type ? `?type=${type}` : ""}`),

@@ -39,15 +39,32 @@ GREENHOUSE_JOBS = "https://boards-api.greenhouse.io/v1/boards/{token}/jobs"
 GREENHOUSE_JOB = "https://boards-api.greenhouse.io/v1/boards/{token}/jobs/{id}"
 LEVER_JOBS = "https://api.lever.co/v0/postings/{token}?mode=json"
 ASHBY_JOBS = "https://api.ashbyhq.com/posting-api/job-board/{token}"
+# country=in: the platform serves Indian candidates, and big SmartRecruiters
+# employers (Bosch, ServiceNow…) list thousands of roles worldwide.
+SMARTRECRUITERS_JOBS = "https://api.smartrecruiters.com/v1/companies/{token}/postings?country=in&limit=100&offset={offset}"
+SMARTRECRUITERS_JOB = "https://api.smartrecruiters.com/v1/companies/{token}/postings/{id}"
 BOARDS_FILE = Path(__file__).resolve().parent / "data" / "job_boards.json"
 
 TIMEOUT = 15
 LEVER_TIMEOUT = 45
-KEEP_DAYS = 30            # aggregator jobs only; board jobs live until the company closes them
+# Jobs posted more than settings.JOB_MAX_AGE_DAYS ago are dropped at ingest and
+# deleted every sweep; otherwise board jobs live until the company closes them.
 MAX_PER_BOARD = 200       # newest N per company keeps one mega-board from flooding the list
 MAX_DESCRIPTION = 8000
 DEACTIVATE_AFTER = 5      # consecutive failed sweeps before a board is switched off
 _TAG_RE = re.compile(r"<[^>]+>")
+# Plain alternation (no \b) so the same patterns work in Postgres regex too —
+# migration 0003 froze a copy to backfill in_india.
+INDIA_LOCATION_PATTERN = (
+    r"india|bengaluru|bangalore|hyderabad|mumbai|pune|gurgaon|gurugram|noida|delhi|chennai|kolkata"
+    r"|ahmedabad|jaipur|kochi|cochin|coimbatore|indore|chandigarh|thiruvananthapuram|trivandrum|mysore"
+    r"|mysuru|vadodara|nagpur|bhubaneswar|lucknow|visakhapatnam"
+)
+OPEN_REMOTE_PATTERN = r"anywhere|worldwide|global|apac|asia"
+_INDIA_RE = re.compile(INDIA_LOCATION_PATTERN, re.I)
+_OPEN_REMOTE_RE = re.compile(OPEN_REMOTE_PATTERN, re.I)
+# Sources whose list payload has no description; it's fetched on first open.
+LAZY_DESCRIPTION_SOURCES = ("greenhouse", "smartrecruiters")
 
 
 _BLOCK_BREAK_RE = re.compile(r"</(?:p|div|h[1-6]|ul|ol|tr|section)\s*>|<br\s*/?>", re.I)
@@ -120,6 +137,12 @@ def infer_work_mode(explicit: str = "", *texts: str) -> str:
     return Job.WorkMode.ONSITE if blob.strip() else ""
 
 
+def is_india_job(location: str, work_mode: str) -> bool:
+    """In India, or remote and open to India (anywhere / APAC / Asia)."""
+    return bool(_INDIA_RE.search(location or "")) or (
+        work_mode == Job.WorkMode.REMOTE and bool(_OPEN_REMOTE_RE.search(location or "")))
+
+
 def job_skills(title: str, tags, description: str) -> list[str]:
     return sorted(skillgraph.extract_skills(f"{title}\n{' '.join(tags or [])}\n{description[:MAX_DESCRIPTION]}"))
 
@@ -132,6 +155,7 @@ def _row(**kw) -> dict:
     kw["tags"] = [str(t)[:60] for t in (kw.get("tags") or []) if t][:20]
     kw.setdefault("work_mode", infer_work_mode("", kw["location"], kw["title"]))
     kw["level"] = infer_level(kw["title"], kw["description"])
+    kw["in_india"] = is_india_job(kw["location"], kw["work_mode"])
     return kw
 
 
@@ -216,10 +240,37 @@ def _fetch_ashby(board: JobBoard, client: httpx.Client) -> list[dict]:
     ]
 
 
+def _fetch_smartrecruiters(board: JobBoard, client: httpx.Client) -> list[dict]:
+    # Paged at 100; descriptions are fetched lazily per job (ensure_description).
+    postings = []
+    for offset in range(0, MAX_PER_BOARD, 100):
+        data = client.get(SMARTRECRUITERS_JOBS.format(token=board.token, offset=offset)).raise_for_status().json()
+        page = data.get("content") or []
+        postings += page
+        if len(postings) >= (data.get("totalFound") or 0) or len(page) < 100:
+            break
+    rows = []
+    for j in postings:
+        loc = j.get("location") or {}
+        city = loc.get("city") or ""
+        location = ", ".join(p for p in (city, "India" if loc.get("country") == "in" else "") if p)
+        work_mode = (Job.WorkMode.REMOTE if loc.get("remote") else Job.WorkMode.HYBRID if loc.get("hybrid")
+                     else infer_work_mode("", location, j.get("name", "")))
+        rows.append(_row(
+            source="smartrecruiters", external_id=f"{board.token}:{j['id']}", title=j.get("name"),
+            company=board.company, location=location,
+            url=f"https://jobs.smartrecruiters.com/{(j.get('company') or {}).get('identifier') or board.token}/{j['id']}",
+            tags=[(j.get(k) or {}).get("label") for k in ("department", "function", "typeOfEmployment")],
+            work_mode=work_mode, posted_at=_parse_dt(j.get("releasedDate")),
+        ))
+    return rows
+
+
 BOARD_FETCHERS = {
     JobBoard.ATS.GREENHOUSE: _fetch_greenhouse,
     JobBoard.ATS.LEVER: _fetch_lever,
     JobBoard.ATS.ASHBY: _fetch_ashby,
+    JobBoard.ATS.SMARTRECRUITERS: _fetch_smartrecruiters,
 }
 
 
@@ -249,21 +300,28 @@ def sync_boards_from_file() -> int:
 # Persistence
 # ---------------------------------------------------------------------------
 
-UPDATE_FIELDS = ["title", "company", "location", "url", "tags", "work_mode", "posted_at", "fetched_at", "board"]
+UPDATE_FIELDS = ["title", "company", "location", "url", "tags", "work_mode", "in_india", "posted_at", "fetched_at",
+                 "board"]
+
+
+def _max_age_cutoff():
+    return timezone.now() - timedelta(days=settings.JOB_MAX_AGE_DAYS)
 
 
 def _upsert(rows: list[dict], board: JobBoard | None = None) -> set[str]:
     """Bulk upsert rows of one source; returns every external_id seen.
     Only new or changed rows are written (most of a re-sweep is unchanged), and
-    skills are only re-extracted for new or retitled rows."""
-    rows = list({r["external_id"]: r for r in rows}.values())  # one row per id, or ON CONFLICT errors
+    skills are only re-extracted for new or retitled rows. Postings older than
+    JOB_MAX_AGE_DAYS are skipped (and so left out of the returned ids)."""
+    cutoff = _max_age_cutoff()
+    rows = list({r["external_id"]: r for r in rows if r["posted_at"] >= cutoff}.values())  # one per id for ON CONFLICT
     if not rows:
         return set()
     source = rows[0]["source"]
     ids = [r["external_id"] for r in rows]
-    # Greenhouse rows carry no description (fetched lazily), so don't wipe the
+    # Lazy-description rows carry none in the list payload, so don't wipe the
     # description and what was derived from it once filled in.
-    fields = UPDATE_FIELDS + ([] if source == "greenhouse" else ["description", "skills", "level"])
+    fields = UPDATE_FIELDS + ([] if source in LAZY_DESCRIPTION_SOURCES else ["description", "skills", "level"])
     compared = [f for f in fields if f not in ("fetched_at", "board", "skills")]
     known = {eid: (board_id, skills, dict(zip(compared, vals))) for eid, board_id, skills, *vals in
              Job.objects.filter(source=source, external_id__in=ids)
@@ -350,7 +408,6 @@ def refresh_jobs() -> tuple[int, list[str]]:
             errors.append(f"{fetch.__name__}: {exc}"[:100])
             continue
         count += len(_upsert(rows))
-    Job.objects.filter(board__isnull=True, posted_at__lt=timezone.now() - timedelta(days=KEEP_DAYS)).delete()
     return count, errors
 
 
@@ -358,6 +415,8 @@ def run_sweep() -> None:
     """One full refresh: aggregator feeds + every company board, then stats."""
     _, errors = refresh_jobs()
     ok, failed = refresh_boards()
+    Job.objects.filter(posted_at__lt=_max_age_cutoff()).delete()
+    india = Job.objects.filter(in_india=True)
     JobFeedState.objects.update_or_create(pk=1, defaults={
         "last_finished_at": timezone.now(),
         "last_error": "; ".join(errors)[:300],
@@ -365,6 +424,8 @@ def run_sweep() -> None:
         "boards_failed": failed,
         "jobs_count": Job.objects.count(),
         "companies_count": Job.objects.values("company").distinct().count(),
+        "india_jobs_count": india.count(),
+        "india_companies_count": india.values("company").distinct().count(),
     })
 
 
@@ -416,17 +477,26 @@ def is_sweeping(state: JobFeedState | None) -> bool:
     return not state.last_finished_at or state.last_finished_at < state.last_refreshed_at
 
 
+def _fetch_description_html(job: Job) -> str:
+    token, _, post_id = job.external_id.partition(":")
+    if job.source == "greenhouse":
+        data = httpx.get(GREENHOUSE_JOB.format(token=token, id=post_id), timeout=TIMEOUT).raise_for_status().json()
+        return html.unescape(data.get("content") or "")
+    data = httpx.get(SMARTRECRUITERS_JOB.format(token=token, id=post_id), timeout=TIMEOUT).raise_for_status().json()
+    sections = ((data.get("jobAd") or {}).get("sections") or {}).values()
+    return "".join(f"<h3>{s.get('title') or ''}</h3>{s.get('text') or ''}" for s in sections if s.get("text"))
+
+
 def ensure_description(job: Job) -> Job:
-    """Greenhouse list payloads carry no description; fetch it on first open."""
-    if job.description or job.source != "greenhouse" or not job.board_id:
+    """Greenhouse/SmartRecruiters list payloads carry no description; fetch it on first open."""
+    if job.description or job.source not in LAZY_DESCRIPTION_SOURCES or not job.board_id:
         return job
-    token, _, gh_id = job.external_id.partition(":")
     try:
-        data = httpx.get(GREENHOUSE_JOB.format(token=token, id=gh_id), timeout=TIMEOUT).raise_for_status().json()
+        content = _fetch_description_html(job)
     except Exception as exc:
-        logger.info("greenhouse description fetch failed for %s: %s", job.pk, exc)
+        logger.info("%s description fetch failed for %s: %s", job.source, job.pk, exc)
         return job
-    job.description = _clean_description(html.unescape(data.get("content") or ""))[:MAX_DESCRIPTION]
+    job.description = _clean_description(content)[:MAX_DESCRIPTION]
     job.skills = job_skills(job.title, job.tags, job.description)
     job.level = infer_level(job.title, job.description) or job.level
     job.save(update_fields=["description", "skills", "level"])
