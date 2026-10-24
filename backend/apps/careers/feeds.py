@@ -328,17 +328,31 @@ def _fetch_freshteam(board: JobBoard, client: httpx.Client) -> list[dict]:
     return rows
 
 
-def _workday_india_facet(facets) -> tuple[str, str] | None:
-    """(facetParameter, id) of the "India" country value, wherever this tenant nests it."""
-    for facet in facets or []:
-        for value in facet.get("values") or []:
-            if "values" in value:  # a facet group, e.g. locationMainGroup -> locationHierarchy1
-                found = _workday_india_facet([value])
-                if found:
-                    return found
-            elif (value.get("descriptor") or "").strip().lower() == "india":
-                return facet["facetParameter"], value["id"]
-    return None
+_INDIA_WORD_RE = re.compile(rf"\b(?:{INDIA_LOCATION_PATTERN})\b", re.I)  # "Indianapolis" is not India
+
+
+def _workday_india_facet(facets) -> tuple[str, list[str]] | None:
+    """(facetParameter, ids) selecting this tenant's India roles: its "India" country value
+    wherever it's nested, else every location value naming an Indian city."""
+    cities = None
+
+    def walk(fs):
+        nonlocal cities
+        for facet in fs or []:
+            values = facet.get("values") or []
+            for value in values:
+                if "values" in value:  # a facet group, e.g. locationMainGroup -> locationHierarchy1
+                    found = walk([value])
+                    if found:
+                        return found
+                elif (value.get("descriptor") or "").strip().lower() == "india":
+                    return facet["facetParameter"], [value["id"]]
+            ids = [v["id"] for v in values if "values" not in v and _INDIA_WORD_RE.search(v.get("descriptor") or "")]
+            if ids and cities is None and "location" in (facet.get("facetParameter") or "").lower():
+                cities = (facet["facetParameter"], ids)
+        return None
+
+    return walk(facets) or cities
 
 
 def _workday_posted(text: str) -> datetime:
@@ -364,7 +378,7 @@ def _fetch_workday(board: JobBoard, client: httpx.Client) -> list[dict]:
 
     first = page(0, {})
     india = _workday_india_facet(first.get("facets"))
-    facets = {india[0]: [india[1]]} if india else {}
+    facets = {india[0]: india[1]} if india else {}
     data = page(0, facets) if india else first
     total, postings = data.get("total") or 0, list(data.get("jobPostings") or [])
     while len(postings) < min(total, MAX_PER_BOARD) and data.get("jobPostings"):

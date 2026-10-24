@@ -472,6 +472,13 @@ class IndiaBoardTests(TestCase):
             cls.return_value.__enter__.return_value = client
             self.assertEqual(feeds.refresh_boards([board]), (1, 0))
         self.assertEqual(self.wd_bodies[1]["appliedFacets"], {"locationHierarchy1": ["in1"]})
+        # No country value: every location naming an Indian city (but not Indianapolis).
+        cities = [{"facetParameter": "locationMainGroup", "values": [{"facetParameter": "locations", "values": [
+            {"descriptor": "Bangalore, India", "id": "blr"}, {"descriptor": "Indianapolis IN US", "id": "ind"},
+            {"descriptor": "Pune", "id": "pnq"}, {"descriptor": "San Jose, CA", "id": "sjc"}]}]}]
+        self.assertEqual(feeds._workday_india_facet(cities), ("locations", ["blr", "pnq"]))
+        self.assertIsNone(feeds._workday_india_facet([{"facetParameter": "timeType", "values": [
+            {"descriptor": "Full time", "id": "ft"}]}]))
         jobs = {j.external_id: j for j in Job.objects.filter(board=board)}
         multi = jobs["nvidia:Research-Scientist_JR2"]
         self.assertEqual((multi.location, multi.in_india), ("India (3 Locations)", True))
