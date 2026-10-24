@@ -20,7 +20,7 @@ const PARTNER_HREF = "/partner";
 const ENTERPRISE_DASHBOARD_HREF = "/enterprise/dashboard";
 
 const HIRE_SECTIONS = [
-  { href: "/enterprise#product", title: "Features", sub: "Bank, invites, scores" },
+  { href: "/enterprise#product", title: "Features", sub: "Manager and candidate" },
   { href: "/enterprise#how-it-works", title: "How it works", sub: "Four steps, one decision" },
   { href: "/enterprise#pricing", title: "Pricing", sub: "Per-seat and unlimited" },
   { href: "/enterprise#faq", title: "FAQ", sub: "Hiring questions, answered" },
