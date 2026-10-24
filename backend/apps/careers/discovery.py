@@ -2,18 +2,23 @@
 Finds the public job boards of Indian companies and startups, so their roles
 show up in Live jobs next to the ~1,000 boards in data/job_boards.json.
 
-Input is data/india_companies.json: [{"company", "careers_url"?, "slugs"?}].
-For each company we
+Input is data/india_companies.json — [{"company", "careers_url"?, "slugs"?,
+"india_only"?}] — or a spreadsheet (.xlsx) with a "Company" column (see
+load_companies). Companies that already have a board in job_boards.json are
+skipped. For each of the rest we
 
-  1. read its careers page (plus a few same-site "jobs"/"openings" links) and
-     pick out links to an ATS we can fetch — Greenhouse, Lever, Ashby,
-     SmartRecruiters, Keka, Workday, Freshteam;
+  1. read its careers page — the given careers_url, or else <name>.com/.ai/.io
+     (/.in for India-only lists) + "/careers" — plus a few same-site
+     "jobs"/"openings" links, and pick out links to an ATS we can fetch:
+     Greenhouse, Lever, Ashby, SmartRecruiters, Keka, Workday, Freshteam;
   2. guess board slugs from the company name ("Urban Company" -> urbancompany,
      urban-company) on the ATSs whose boards are addressed by slug alone;
-  3. verify every candidate by running the real board fetcher (feeds.fetch_board)
-     and keep it only if it has India roles — boards linked from the company's
-     own page need at least one, guessed slugs need India to be at least half
-     of the board, so a same-named foreign company isn't picked up.
+  3. verify every candidate by running the real board fetcher (feeds.fetch_board).
+     India-only entries (the default) keep a board only if it has India roles —
+     boards linked from a careers page need at least one, guessed slugs need
+     India to be at least half of the board, so a same-named foreign company
+     isn't picked up. Other entries (e.g. US startups, shown under Live jobs'
+     "Worldwide") only need the board to have open roles.
 
 Verified boards are merged into data/job_boards.json, which every sweep reads
 (feeds.sync_boards_from_file). Run with `manage.py discover_job_boards`.
@@ -70,7 +75,7 @@ _JOB_LINK_WORDS = re.compile(r"job|career|opening|position|vacanc|join|hiring", 
 class Candidate:
     ats: str
     token: str
-    via: str  # "page" (linked from the company's site) or "probe" (guessed from its name)
+    via: str  # "page" (linked from a careers page) or "probe" (guessed from the company name)
 
 
 @dataclass
@@ -78,6 +83,7 @@ class Result:
     company: str
     found: list[dict] = field(default_factory=list)   # verified boards: {ats, token, company, jobs, india_jobs}
     notes: list[str] = field(default_factory=list)
+    skipped: bool = False  # company already had a board in job_boards.json
 
 
 def detect_boards(html: str) -> list[tuple[str, str]]:
@@ -138,16 +144,26 @@ def _page_candidates(careers_url: str, client: httpx.Client, notes: list[str]) -
     return [Candidate(ats, token, "page") for ats, token in dict.fromkeys(pairs)]
 
 
-def verify(candidate: Candidate, company: str, client: httpx.Client) -> dict | None:
-    """Fetch the board for real; keep it only if it lists India roles (see module docstring)."""
+def careers_url_guesses(company: str, india_only: bool = True) -> list[str]:
+    slug = slug_guesses(company)[:1]
+    tlds = ("com", "ai", "io", "in") if india_only else ("com", "ai", "io")
+    return [f"https://{slug[0]}.{tld}/careers" for tld in tlds] if slug else []
+
+
+def _name_key(company: str) -> str:
+    return "".join(slug_guesses(company)[:1]) or company.lower()
+
+
+def verify(candidate: Candidate, company: str, client: httpx.Client, india_only: bool = True) -> dict | None:
+    """Fetch the board for real and apply the module docstring's India rules."""
     try:
         rows = feeds.fetch_board(JobBoard(ats=candidate.ats, token=candidate.token, company=company), client)
     except Exception:
         return None
     india = sum(1 for r in rows if r["in_india"])
-    if not india:
+    if not rows or (india_only and not india):
         return None
-    if candidate.via == "probe" and india < PROBE_MIN_INDIA_SHARE * len(rows):
+    if india_only and candidate.via == "probe" and india < PROBE_MIN_INDIA_SHARE * len(rows):
         return None
     return {"ats": str(candidate.ats), "token": candidate.token, "company": company,
             "jobs": len(rows), "india_jobs": india, "via": candidate.via}
@@ -155,10 +171,17 @@ def verify(candidate: Candidate, company: str, client: httpx.Client) -> dict | N
 
 def discover_company(entry: dict, client: httpx.Client, known: set[tuple[str, str]], probe: bool = True) -> Result:
     company = entry["company"].strip()
+    india_only = entry.get("india_only", True)
     result = Result(company)
     candidates: list[Candidate] = []
     if entry.get("careers_url"):
         candidates += _page_candidates(entry["careers_url"], client, result.notes)
+    else:
+        for url in careers_url_guesses(company, india_only):
+            found = _page_candidates(url, client, [])
+            candidates += found
+            if found:
+                break
     if probe:
         slugs = list(dict.fromkeys([*(entry.get("slugs") or []), *slug_guesses(company)]))
         candidates += [Candidate(ats, slug, "probe") for slug in slugs for ats in PROBE_ATS]
@@ -171,18 +194,49 @@ def discover_company(entry: dict, client: httpx.Client, known: set[tuple[str, st
         if key in known:
             result.notes.append(f"already listed: {cand.ats}/{cand.token}")
             continue
-        board = verify(cand, company, client)
+        board = verify(cand, company, client, india_only)
         if board:
             result.found.append(board)
     return result
 
 
 def load_companies(path: Path = COMPANIES_FILE) -> list[dict]:
-    return json.loads(path.read_text())
+    """A JSON list as above, or an .xlsx: every sheet with a "Company" header row
+    is read; a "careers" column is used when it holds a real careers URL (not a
+    search-engine link), and sheets whose name doesn't mention India are read as
+    india_only=False."""
+    if path.suffix.lower() != ".xlsx":
+        return json.loads(path.read_text())
+    import openpyxl
+
+    entries = []
+    for ws in openpyxl.load_workbook(path, read_only=True, data_only=True).worksheets:
+        rows = ws.iter_rows(values_only=True)
+        header = next((r for r in rows if r and any(str(c).strip().lower() == "company" for c in r if c)), None)
+        if not header:
+            continue
+        cols = [str(c or "").strip().lower() for c in header]
+        name_col = cols.index("company")
+        url_col = next((i for i, c in enumerate(cols) if "career" in c), None)
+        india_only = "india" in ws.title.lower()
+        for row in rows:
+            name = str(row[name_col] or "").strip() if len(row) > name_col else ""
+            if not name:
+                continue
+            entry = {"company": name, "india_only": india_only}
+            url = str(row[url_col] or "").strip() if url_col is not None and len(row) > url_col else ""
+            if url.startswith("http") and not re.search(r"google\.|bing\.|duckduckgo\.", url):
+                entry["careers_url"] = url
+            entries.append(entry)
+    return entries
 
 
 def known_boards() -> set[tuple[str, str]]:
     return {(e["ats"], e["token"].lower()) for e in json.loads(feeds.BOARDS_FILE.read_text())}
+
+
+def known_companies() -> set[str]:
+    return {_name_key(e["company"]) for e in json.loads(feeds.BOARDS_FILE.read_text())}
 
 
 def add_to_boards_file(boards: list[dict]) -> int:
@@ -205,8 +259,16 @@ def add_to_boards_file(boards: list[dict]) -> int:
 
 
 def discover(companies: list[dict], probe: bool = True, workers: int = 8) -> list[Result]:
-    known = known_boards()
+    known, listed = known_boards(), known_companies()
+    todo, results = [], {}
+    for i, entry in enumerate(companies):
+        if _name_key(entry["company"]) in listed:
+            results[i] = Result(entry["company"].strip(), notes=["company already has a board"], skipped=True)
+        else:
+            todo.append((i, entry))
     headers = {"User-Agent": USER_AGENT}
     with httpx.Client(timeout=TIMEOUT, headers=headers, follow_redirects=True) as client:
         with ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
-            return list(pool.map(lambda e: discover_company(e, client, known, probe), companies))
+            for (i, _), res in zip(todo, pool.map(lambda t: discover_company(t[1], client, known, probe), todo)):
+                results[i] = res
+    return [results[i] for i in range(len(companies))]

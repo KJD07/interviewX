@@ -510,6 +510,51 @@ class IndiaBoardTests(TestCase):
         with mock.patch.object(feeds, "fetch_board", return_value=[{"in_india": False}]):
             self.assertIsNone(discovery.verify(discovery.Candidate("lever", "acme", "page"), "Acme", None))
 
+    def test_any_location_lists_keep_boards_without_india_roles(self):
+        with mock.patch.object(feeds, "fetch_board", return_value=[{"in_india": False}]):
+            found = discovery.verify(discovery.Candidate("ashby", "acme", "probe"), "Acme", None, india_only=False)
+        self.assertEqual((found["jobs"], found["india_jobs"]), (1, 0))
+        with mock.patch.object(feeds, "fetch_board", return_value=[]):
+            self.assertIsNone(discovery.verify(discovery.Candidate("ashby", "acme", "probe"), "Acme", None, False))
+
+    def test_careers_url_guesses(self):
+        self.assertEqual(discovery.careers_url_guesses("Sarvam AI"), [
+            "https://sarvamai.com/careers", "https://sarvamai.ai/careers",
+            "https://sarvamai.io/careers", "https://sarvamai.in/careers"])
+        self.assertNotIn("https://acme.in/careers", discovery.careers_url_guesses("Acme", india_only=False))
+
+    def test_load_companies_from_xlsx(self):
+        import tempfile
+        from pathlib import Path
+        import openpyxl
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "India Tech Companies"
+        ws.append(["No.", "Company", "Careers / search link"])
+        ws.append([1, "Infosys", "https://www.google.com/search?q=Infosys+careers"])
+        ws.append([2, "Jupiter", "https://jupiter.keka.com/careers/"])
+        us = wb.create_sheet("US Startup Targets")
+        us.append(["No.", "Company", "Sector"])
+        us.append([1, "Acme", "AI"])
+        wb.create_sheet("Read Me").append(["Field", "Notes"])
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "list.xlsx"
+            wb.save(path)
+            self.assertEqual(discovery.load_companies(path), [
+                {"company": "Infosys", "india_only": True},
+                {"company": "Jupiter", "india_only": True, "careers_url": "https://jupiter.keka.com/careers/"},
+                {"company": "Acme", "india_only": False},
+            ])
+
+    def test_companies_with_a_board_are_skipped(self):
+        with mock.patch.object(discovery, "known_companies", return_value={"acme"}), \
+                mock.patch.object(discovery, "known_boards", return_value=set()), \
+                mock.patch.object(discovery, "discover_company") as run:
+            run.return_value = discovery.Result("Beta")
+            results = discovery.discover([{"company": "Acme Inc"}, {"company": "Beta"}])
+        self.assertEqual([(r.company, r.skipped) for r in results], [("Acme Inc", True), ("Beta", False)])
+        self.assertEqual(run.call_count, 1)
+
     def test_add_to_boards_file_inserts_sorted_and_skips_known(self):
         import json
         import tempfile
