@@ -8,7 +8,7 @@ from rest_framework.test import APIClient
 
 from apps.companies.models import Company, InterviewQuestion, Role, Round
 
-from . import ats, feeds, skillgraph
+from . import ats, discovery, feeds, skillgraph
 from .ats import ats_check
 from .models import CandidateProfile, Job, JobApplication, JobBoard, JobFeedState, ResumeCheck, SavedJob
 from .practice import score_answer
@@ -399,6 +399,194 @@ class CompanyBoardTests(TestCase):
     def test_boards_file_seeds_once(self):
         self.assertGreaterEqual(feeds.sync_boards_from_file(), 900)
         self.assertEqual(feeds.sync_boards_from_file(), 0)
+
+
+class IndiaBoardTests(TestCase):
+    """Keka / Workday / Freshteam boards and the Indian-company board discovery."""
+
+    KEKA_PAGE = "<script>fetch('/ats/documents/b5279857-cf81-4dde-a215-fc48957ee2b5/careerportal/x.html')</script>"
+    KEKA = [{"id": 145340, "title": "Security Engineer 3", "description": "<div>AWS and Python. 5+ years.</div>",
+             "departmentName": "Engineering", "experience": "5-6 Years", "publishedOn": "2026-10-22T10:19:10.517Z",
+             "jobLocations": [{"city": "Bengaluru", "countryCode": "IN"}, {"city": "Pune", "countryCode": "IN"}]}]
+    FRESHTEAM = {"jobs": [{"id": 6000168140, "title": "Backend Engineer", "description": "<p>Go and Kafka</p>",
+                           "deleted": False, "created_at": "2026-10-20T08:38:00.000Z", "remote": False,
+                           "url": "https://haptik.freshteam.com/jobs/297x/backend", "branch_id": 7, "job_role_id": 9},
+                          {"id": 1, "title": "Sample Job Posting", "deleted": False, "created_at": "2026-10-20T08:38:00Z",
+                           "url": "https://haptik.freshteam.com/jobs/1/sample", "branch_id": 7}],
+                 "branches": [{"id": 7, "city": "Mumbai", "country_code": "IN"}],
+                 "job_roles": [{"id": 9, "name": "Engineering"}]}
+    WD_FACETS = [{"facetParameter": "locationMainGroup", "values": [
+        {"facetParameter": "locationHierarchy1", "values": [
+            {"descriptor": "United States", "id": "us1", "count": 9}, {"descriptor": "India", "id": "in1", "count": 2}]}]}]
+    WD_JOBS = [
+        {"title": "SoC Architect", "externalPath": "/job/India-Bengaluru/SoC-Architect_JR1", "locationsText": "India, Bengaluru",
+         "postedOn": "Posted Today"},
+        {"title": "Research Scientist", "externalPath": "/job/India-Pune/Research-Scientist_JR2",
+         "locationsText": "3 Locations", "postedOn": "Posted 30+ Days Ago"},
+    ]
+
+    def _client(self, keka_page=KEKA_PAGE):
+        client = mock.Mock()
+        page = mock.Mock(text=keka_page)
+        page.raise_for_status.return_value = page
+        client.get.side_effect = lambda url, **kw: (
+            page if url.endswith(".keka.com/careers/") else
+            _resp(self.KEKA) if "/embedjobs/default/active/b5279857" in url else
+            _resp(self.FRESHTEAM) if "freshteam.com/hire/widgets/jobs.json" in url else None)
+
+        def wd_post(url, json):
+            self.wd_bodies.append(json)
+            if not json["appliedFacets"]:
+                return _resp({"total": 11, "jobPostings": [], "facets": self.WD_FACETS})
+            return _resp({"total": 2, "jobPostings": self.WD_JOBS[json["offset"]:json["offset"] + 20]})
+        self.wd_bodies = []
+        client.post.side_effect = wd_post
+        return client
+
+    def test_keka(self):
+        rows = feeds.fetch_board(JobBoard(ats="keka", token="jupiter", company="Jupiter"), self._client())
+        self.assertEqual(len(rows), 1)
+        r = rows[0]
+        self.assertEqual((r["external_id"], r["location"], r["in_india"], r["level"]),
+                         ("jupiter:145340", "Bengaluru, Pune, India", True, "senior"))
+        self.assertEqual(r["url"], "https://jupiter.keka.com/careers/jobdetails/145340")
+        self.assertIn("AWS", r["description"])
+
+    def test_keka_without_org_id_fails(self):
+        with self.assertRaises(ValueError):
+            feeds.fetch_board(JobBoard(ats="keka", token="nope", company="Nope"),
+                              self._client(keka_page="<title>Invalid Tenant</title>"))
+
+    def test_freshteam(self):
+        rows = feeds.fetch_board(JobBoard(ats="freshteam", token="haptik", company="Haptik"), self._client())
+        self.assertEqual(len(rows), 1)  # the placeholder "Sample Job Posting" is dropped
+        r = rows[0]
+        self.assertEqual((r["location"], r["in_india"], r["tags"], r["work_mode"]),
+                         ("Mumbai, India", True, ["Engineering"], "onsite"))
+        self.assertEqual(r["description"], "Go and Kafka")
+
+    def test_workday_uses_india_facet_and_lazy_description(self):
+        board = JobBoard.objects.create(ats="workday", token="nvidia/wd5/NVIDIAExternalCareerSite", company="NVIDIA")
+        client = self._client()
+        with mock.patch.object(feeds.httpx, "Client") as cls:
+            cls.return_value.__enter__.return_value = client
+            self.assertEqual(feeds.refresh_boards([board]), (1, 0))
+        self.assertEqual(self.wd_bodies[1]["appliedFacets"], {"locationHierarchy1": ["in1"]})
+        jobs = {j.external_id: j for j in Job.objects.filter(board=board)}
+        multi = jobs["nvidia:Research-Scientist_JR2"]
+        self.assertEqual((multi.location, multi.in_india), ("India (3 Locations)", True))
+        self.assertLess(multi.posted_at, timezone.now() - timedelta(days=29))
+        soc = jobs["nvidia:SoC-Architect_JR1"]
+        self.assertEqual(soc.url, "https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite/job/India-Bengaluru/SoC-Architect_JR1")
+        detail = {"jobPostingInfo": {"jobDescription": "<p>Verilog and Python</p>"}}
+        with mock.patch.object(feeds.httpx, "get", return_value=_resp(detail)) as get:
+            feeds.ensure_description(soc)
+        self.assertEqual(get.call_args.args[0], "https://nvidia.wd5.myworkdayjobs.com/wday/cxs/nvidia/"
+                                                "NVIDIAExternalCareerSite/job/India-Bengaluru/SoC-Architect_JR1")
+        soc.refresh_from_db()
+        self.assertIn("python", soc.skills)
+
+    def test_detect_boards(self):
+        page = """
+          <a href="https://job-boards.greenhouse.io/razorpaysoftwareprivatelimited/jobs/1">x</a>
+          <script src="https://boards.greenhouse.io/embed/job_board/js?for=Druva"></script>
+          <a href="https://jobs.lever.co/epifi">x</a> <a href="https://jobs.ashbyhq.com/sarvam">x</a>
+          <a href="https://careers.smartrecruiters.com/Freshworks">x</a>
+          <a href="https://jupiter.keka.com/careers/">x</a> <link href="https://cdn.keka.com/careers/v/2026/">
+          <a href="https://haptik.freshteam.com/jobs">x</a>
+          <a href="https://BrowserStack.wd3.myworkdayjobs.com/en-US/External/job/1">x</a>
+          <script>{"url":"https:\\/\\/jobs.lever.co\\/dreamsports"}</script>
+          <a href="https://wd1.myworkdaysite.com/en-US/recruiting/parexel/Parexel_External_Careers">x</a>
+          fetch("https://api.ashbyhq.com/posting-api/job-board/vellum")"""
+        self.assertEqual(discovery.detect_boards(page), [
+            ("greenhouse", "razorpaysoftwareprivatelimited"), ("greenhouse", "druva"), ("lever", "epifi"),
+            ("lever", "dreamsports"), ("ashby", "sarvam"), ("ashby", "vellum"), ("smartrecruiters", "Freshworks"),
+            ("keka", "jupiter"), ("freshteam", "haptik"), ("workday", "browserstack/wd3/External"),
+            ("workday", "parexel/wd1/Parexel_External_Careers"),
+        ])
+
+    def test_slug_guesses(self):
+        self.assertEqual(discovery.slug_guesses("Urban Company"), ["urbancompany", "urban-company"])
+        self.assertEqual(discovery.slug_guesses("Zoho Technologies Pvt Ltd"), ["zoho"])
+
+    def test_guessed_slug_needs_mostly_india_roles(self):
+        rows = [{"in_india": True}, {"in_india": False}, {"in_india": False}]
+        with mock.patch.object(feeds, "fetch_board", return_value=rows):
+            self.assertIsNone(discovery.verify(discovery.Candidate("lever", "acme", "probe"), "Acme", None))
+            found = discovery.verify(discovery.Candidate("lever", "acme", "page"), "Acme", None)
+        self.assertEqual((found["jobs"], found["india_jobs"]), (3, 1))
+        with mock.patch.object(feeds, "fetch_board", return_value=[{"in_india": False}]):
+            self.assertIsNone(discovery.verify(discovery.Candidate("lever", "acme", "page"), "Acme", None))
+
+    def test_any_location_lists_keep_boards_without_india_roles(self):
+        with mock.patch.object(feeds, "fetch_board", return_value=[{"in_india": False}]):
+            found = discovery.verify(discovery.Candidate("ashby", "acme", "probe"), "Acme", None, india_only=False)
+        self.assertEqual((found["jobs"], found["india_jobs"]), (1, 0))
+        with mock.patch.object(feeds, "fetch_board", return_value=[]):
+            self.assertIsNone(discovery.verify(discovery.Candidate("ashby", "acme", "probe"), "Acme", None, False))
+
+    def test_guessed_keka_board_must_name_the_company(self):
+        rows = [{"in_india": True}]
+        client = mock.Mock()
+        with mock.patch.object(feeds, "fetch_board", return_value=rows):
+            client.get.return_value = _resp({"name": "Group Bayport"})
+            self.assertIsNone(discovery.verify(discovery.Candidate("keka", "caterpillar", "probe"), "Caterpillar India", client))
+            client.get.return_value = _resp({"name": "Workindia"})
+            self.assertIsNotNone(discovery.verify(discovery.Candidate("keka", "workindia", "probe"), "WorkIndia", client))
+
+    def test_careers_url_guesses(self):
+        self.assertEqual(discovery.careers_url_guesses("Sarvam AI"), [
+            "https://sarvamai.com/careers", "https://sarvamai.ai/careers",
+            "https://sarvamai.io/careers", "https://sarvamai.in/careers"])
+        self.assertNotIn("https://acme.in/careers", discovery.careers_url_guesses("Acme", india_only=False))
+
+    def test_load_companies_from_xlsx(self):
+        import tempfile
+        from pathlib import Path
+        import openpyxl
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "India Tech Companies"
+        ws.append(["No.", "Company", "Careers / search link"])
+        ws.append([1, "Infosys", "https://www.google.com/search?q=Infosys+careers"])
+        ws.append([2, "Jupiter", "https://jupiter.keka.com/careers/"])
+        us = wb.create_sheet("US Startup Targets")
+        us.append(["No.", "Company", "Sector"])
+        us.append([1, "Acme", "AI"])
+        wb.create_sheet("Read Me").append(["Field", "Notes"])
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "list.xlsx"
+            wb.save(path)
+            self.assertEqual(discovery.load_companies(path), [
+                {"company": "Infosys", "india_only": True},
+                {"company": "Jupiter", "india_only": True, "careers_url": "https://jupiter.keka.com/careers/"},
+                {"company": "Acme", "india_only": False},
+            ])
+
+    def test_companies_with_a_board_are_skipped(self):
+        with mock.patch.object(discovery, "known_companies", return_value={"acme"}), \
+                mock.patch.object(discovery, "known_boards", return_value=set()), \
+                mock.patch.object(discovery, "discover_company") as run:
+            run.return_value = discovery.Result("Beta")
+            results = discovery.discover([{"company": "Acme Inc"}, {"company": "Beta"}])
+        self.assertEqual([(r.company, r.skipped) for r in results], [("Acme Inc", True), ("Beta", False)])
+        self.assertEqual(run.call_count, 1)
+
+    def test_add_to_boards_file_inserts_sorted_and_skips_known(self):
+        import json
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "boards.json"
+            path.write_text('[\n{"ats": "lever", "token": "a", "company": "Alpha"},\n'
+                            '{"ats": "lever", "token": "c", "company": "Charlie"}\n]\n')
+            with mock.patch.object(feeds, "BOARDS_FILE", path):
+                added = discovery.add_to_boards_file([
+                    {"ats": "keka", "token": "bravo", "company": "Bravo", "jobs": 1},
+                    {"ats": "lever", "token": "A", "company": "Alpha again"},
+                ])
+            self.assertEqual(added, 1)
+            self.assertEqual([e["company"] for e in json.loads(path.read_text())], ["Alpha", "Bravo", "Charlie"])
 
 
 class CareersAPITests(TestCase):

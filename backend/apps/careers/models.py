@@ -4,7 +4,7 @@ from django.db import models
 
 class JobBoard(models.Model):
     """One company's public careers board on a keyless ATS API (Greenhouse,
-    Lever, Ashby). Seeded from data/job_boards.json; manageable in admin.
+    Lever, Ashby, SmartRecruiters, Keka, Workday, Freshteam). Seeded from data/job_boards.json; manageable in admin.
     A board that keeps failing (e.g. the company left that ATS) deactivates itself."""
 
     class ATS(models.TextChoices):
@@ -12,6 +12,9 @@ class JobBoard(models.Model):
         LEVER = "lever"
         ASHBY = "ashby"
         SMARTRECRUITERS = "smartrecruiters"  # fetched with country=in: India roles only
+        KEKA = "keka"            # token = <subdomain> of <subdomain>.keka.com
+        WORKDAY = "workday"      # token = <tenant>/<wdN>/<site>; India roles only when the tenant has an India facet
+        FRESHTEAM = "freshteam"  # token = <subdomain> of <subdomain>.freshteam.com
 
     ats = models.CharField(max_length=20, choices=ATS.choices)
     token = models.CharField(max_length=120)
