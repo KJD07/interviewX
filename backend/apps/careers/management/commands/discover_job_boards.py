@@ -26,16 +26,22 @@ class Command(BaseCommand):
             wanted = {c.lower() for c in opts["only"]}
             companies = [c for c in companies if c["company"].lower() in wanted]
         self.stdout.write(f"Checking {len(companies)} companies…")
-        results = discovery.discover(companies, probe=not opts["no_probe"], workers=opts["workers"])
+        done = [0]
 
-        found = [b for r in results for b in r.found]
-        skipped = sum(1 for r in results if r.skipped)
-        for r in results:
+        def report(r):  # printed as each company finishes, so long runs show progress
+            done[0] += 1
             for b in r.found:
                 self.stdout.write(self.style.SUCCESS(
-                    f"  + {r.company}: {b['ats']}/{b['token']} — {b['india_jobs']}/{b['jobs']} India roles ({b['via']})"))
+                    f"  [{done[0]}] + {r.company}: {b['ats']}/{b['token']} — "
+                    f"{b['india_jobs']}/{b['jobs']} India roles ({b['via']})"))
             if not r.found and opts["verbosity"] > 1:
-                self.stdout.write(f"  - {r.company}: nothing new{' (' + '; '.join(r.notes) + ')' if r.notes else ''}")
+                self.stdout.write(f"  [{done[0]}] - {r.company}: nothing new"
+                                  f"{' (' + '; '.join(r.notes) + ')' if r.notes else ''}")
+            self.stdout.flush()
+
+        results = discovery.discover(companies, probe=not opts["no_probe"], workers=opts["workers"], on_result=report)
+        found = [b for r in results for b in r.found]
+        skipped = sum(1 for r in results if r.skipped)
         missed = sum(1 for r in results if not r.found and not r.skipped)
         if opts["dry_run"]:
             self.stdout.write(f"{len(found)} new boards found, {skipped} companies already listed, "

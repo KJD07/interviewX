@@ -31,7 +31,7 @@ jobs API). Companies on those stay out until they're added by hand.
 import json
 import logging
 import re
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
@@ -258,7 +258,8 @@ def add_to_boards_file(boards: list[dict]) -> int:
     return added
 
 
-def discover(companies: list[dict], probe: bool = True, workers: int = 8) -> list[Result]:
+def discover(companies: list[dict], probe: bool = True, workers: int = 8, on_result=None) -> list[Result]:
+    """on_result(result), if given, is called as each company finishes (progress output)."""
     known, listed = known_boards(), known_companies()
     todo, results = [], {}
     for i, entry in enumerate(companies):
@@ -269,6 +270,9 @@ def discover(companies: list[dict], probe: bool = True, workers: int = 8) -> lis
     headers = {"User-Agent": USER_AGENT}
     with httpx.Client(timeout=TIMEOUT, headers=headers, follow_redirects=True) as client:
         with ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
-            for (i, _), res in zip(todo, pool.map(lambda t: discover_company(t[1], client, known, probe), todo)):
-                results[i] = res
+            futures = {pool.submit(discover_company, e, client, known, probe): i for i, e in todo}
+            for fut in as_completed(futures):
+                results[futures[fut]] = fut.result()
+                if on_result:
+                    on_result(fut.result())
     return [results[i] for i in range(len(companies))]
