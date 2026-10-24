@@ -4,6 +4,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import AppShell from "@/components/AppShell";
 import CompanyLogo from "@/components/CompanyLogo";
 import JobDescription from "@/components/JobDescription";
+import ApplyKit from "@/components/ApplyKit";
 import PaginationControls from "@/components/PaginationControls";
 import { Skeleton } from "@/components/Skeleton";
 import { PageContainer, PageHeader, Card, EmptyState, Notice, SearchField, ScoreBar, IconBriefcase } from "@/components/ui";
@@ -279,6 +280,8 @@ function JobCard({
   onQuota: (q: AtsQuota) => void;
 }) {
   const [copied, setCopied] = useState(false);
+  const [kitOpen, setKitOpen] = useState(false);
+  const closeKit = useCallback(() => setKitOpen(false), []);
 
   const toggleSave = async () => {
     onChange({ ...job, saved: !job.saved });
@@ -351,17 +354,12 @@ function JobCard({
           <button onClick={onToggle} className="btn btn-secondary btn-sm" aria-expanded={open}>
             {open ? "Hide details" : "Details & ATS"}
           </button>
-          <a
-            href={job.url}
-            target="_blank"
-            rel="noopener noreferrer nofollow"
-            onClick={apply}
-            className="btn btn-primary btn-sm"
-          >
+          <button onClick={() => setKitOpen(true)} className="btn btn-primary btn-sm">
             {job.application_status ? "Open posting ↗" : "Apply ↗"}
-          </a>
+          </button>
         </div>
       </div>
+      {kitOpen && <ApplyKit job={job} profile={profile} onOpenForm={apply} onClose={closeKit} />}
       {open && <JobDetails job={job} profile={profile} onQuota={onQuota} />}
     </li>
   );
