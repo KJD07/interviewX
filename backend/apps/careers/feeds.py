@@ -2,9 +2,11 @@
 Live jobs, from two kinds of free, keyless sources (no API cost):
 
   * company boards — ~1000 companies' public careers boards on Greenhouse,
-    Lever and Ashby (JobBoard rows, seeded from data/job_boards.json). These
-    are the companies' own postings, so a role disappears here as soon as the
-    company closes it.
+    Lever, Ashby, SmartRecruiters, and (mostly Indian companies) Keka, Workday
+    and Freshteam (JobBoard rows, seeded from data/job_boards.json; Indian
+    companies are found by `manage.py discover_job_boards`). These are the
+    companies' own postings, so a role disappears here as soon as the company
+    closes it.
   * aggregator feeds — Remotive and Arbeitnow (remote / EU roles).
 
 A full sweep runs at most once per JOB_REFRESH_HOURS (5h). This stack has no
@@ -43,6 +45,15 @@ ASHBY_JOBS = "https://api.ashbyhq.com/posting-api/job-board/{token}"
 # employers (Bosch, ServiceNow…) list thousands of roles worldwide.
 SMARTRECRUITERS_JOBS = "https://api.smartrecruiters.com/v1/companies/{token}/postings?country=in&limit=100&offset={offset}"
 SMARTRECRUITERS_JOB = "https://api.smartrecruiters.com/v1/companies/{token}/postings/{id}"
+KEKA_CAREERS = "https://{token}.keka.com/careers/"
+KEKA_JOBS = "https://{token}.keka.com/careers/api/embedjobs/default/active/{org}"
+KEKA_JOB_URL = "https://{token}.keka.com/careers/jobdetails/{id}"
+_KEKA_ORG_RE = re.compile(r"/ats/documents/([0-9a-f-]{36})/")
+FRESHTEAM_JOBS = "https://{token}.freshteam.com/hire/widgets/jobs.json"
+# Workday token: "<tenant>/<wdN>/<site>", e.g. "nvidia/wd5/NVIDIAExternalCareerSite".
+WORKDAY_HOST = "https://{tenant}.{wd}.myworkdayjobs.com"
+WORKDAY_PAGE = 20  # Workday's max page size
+_WORKDAY_POSTED_RE = re.compile(r"(\d+)\+?\s+days?", re.I)
 BOARDS_FILE = Path(__file__).resolve().parent / "data" / "job_boards.json"
 
 TIMEOUT = 15
@@ -64,7 +75,7 @@ OPEN_REMOTE_PATTERN = r"anywhere|worldwide|global|apac|asia"
 _INDIA_RE = re.compile(INDIA_LOCATION_PATTERN, re.I)
 _OPEN_REMOTE_RE = re.compile(OPEN_REMOTE_PATTERN, re.I)
 # Sources whose list payload has no description; it's fetched on first open.
-LAZY_DESCRIPTION_SOURCES = ("greenhouse", "smartrecruiters")
+LAZY_DESCRIPTION_SOURCES = ("greenhouse", "smartrecruiters", "workday")
 
 
 _BLOCK_BREAK_RE = re.compile(r"</(?:p|div|h[1-6]|ul|ol|tr|section)\s*>|<br\s*/?>", re.I)
@@ -266,16 +277,128 @@ def _fetch_smartrecruiters(board: JobBoard, client: httpx.Client) -> list[dict]:
     return rows
 
 
+def _india_location(cities, country_code: str) -> str:
+    cities = list(dict.fromkeys(c for c in cities if c))
+    place = ", ".join(cities[:4]) + (" +more" if len(cities) > 4 else "")
+    return ", ".join(p for p in (place, "India" if country_code.upper() == "IN" else "") if p)
+
+
+def _fetch_keka(board: JobBoard, client: httpx.Client) -> list[dict]:
+    # The jobs API is keyed by the org's GUID, which only appears on the careers page.
+    page = client.get(KEKA_CAREERS.format(token=board.token)).raise_for_status().text
+    org = _KEKA_ORG_RE.search(page)
+    if not org:
+        raise ValueError("Keka org id not found on careers page")
+    data = client.get(KEKA_JOBS.format(token=board.token, org=org.group(1))).raise_for_status().json()
+    if not isinstance(data, list):
+        raise ValueError("unexpected Keka payload")
+    rows = []
+    for j in data:
+        locs = j.get("jobLocations") or []
+        location = _india_location([loc.get("city") for loc in locs],
+                                   "IN" if any(loc.get("countryCode") == "IN" for loc in locs) else "")
+        rows.append(_row(
+            source="keka", external_id=f"{board.token}:{j['id']}", title=j.get("title"), company=board.company,
+            location=location, url=KEKA_JOB_URL.format(token=board.token, id=j["id"]),
+            description=_clean_description(j.get("description") or ""),
+            tags=[j.get("departmentName"), j.get("experience")], posted_at=_parse_dt(j.get("publishedOn")),
+        ))
+    return rows
+
+
+def _fetch_freshteam(board: JobBoard, client: httpx.Client) -> list[dict]:
+    data = client.get(FRESHTEAM_JOBS.format(token=board.token)).raise_for_status().json()
+    branches = {b["id"]: b for b in data.get("branches") or []}
+    roles = {r["id"]: r.get("name") for r in data.get("job_roles") or []}
+    rows = []
+    for j in data.get("jobs") or []:
+        if j.get("deleted") or not j.get("url"):
+            continue
+        branch = branches.get(j.get("branch_id")) or {}
+        location = _india_location([branch.get("city")], branch.get("country_code") or "")
+        rows.append(_row(
+            source="freshteam", external_id=f"{board.token}:{j['id']}", title=j.get("title"), company=board.company,
+            location=location, url=j["url"], description=_clean_description(j.get("description") or ""),
+            tags=[roles.get(j.get("job_role_id"))],
+            work_mode=Job.WorkMode.REMOTE if j.get("remote") else infer_work_mode("", location, j.get("title", "")),
+            posted_at=_parse_dt(j.get("created_at")),
+        ))
+    return rows
+
+
+def _workday_india_facet(facets) -> tuple[str, str] | None:
+    """(facetParameter, id) of the "India" country value, wherever this tenant nests it."""
+    for facet in facets or []:
+        for value in facet.get("values") or []:
+            if "values" in value:  # a facet group, e.g. locationMainGroup -> locationHierarchy1
+                found = _workday_india_facet([value])
+                if found:
+                    return found
+            elif (value.get("descriptor") or "").strip().lower() == "india":
+                return facet["facetParameter"], value["id"]
+    return None
+
+
+def _workday_posted(text: str) -> datetime:
+    # Only relative dates in the list ("Posted Today", "Posted 3 Days Ago", "Posted 30+ Days Ago").
+    text = (text or "").lower()
+    days = 0 if "today" in text else 1 if "yesterday" in text else None
+    if days is None:
+        m = _WORKDAY_POSTED_RE.search(text)
+        days = int(m.group(1)) if m else 30
+    return timezone.now() - timedelta(days=days)
+
+
+def _fetch_workday(board: JobBoard, client: httpx.Client) -> list[dict]:
+    # Big multinational tenants: only their India roles (the tenant's own India
+    # location facet). Descriptions are fetched lazily per job (ensure_description).
+    tenant, wd, site = board.token.split("/")
+    host = WORKDAY_HOST.format(tenant=tenant, wd=wd)
+    api = f"{host}/wday/cxs/{tenant}/{site}/jobs"
+
+    def page(offset: int, facets: dict) -> dict:
+        body = {"appliedFacets": facets, "limit": WORKDAY_PAGE, "offset": offset, "searchText": ""}
+        return client.post(api, json=body).raise_for_status().json()
+
+    first = page(0, {})
+    india = _workday_india_facet(first.get("facets"))
+    facets = {india[0]: [india[1]]} if india else {}
+    data = page(0, facets) if india else first
+    total, postings = data.get("total") or 0, list(data.get("jobPostings") or [])
+    while len(postings) < min(total, MAX_PER_BOARD) and data.get("jobPostings"):
+        data = page(len(postings), facets)
+        postings += data.get("jobPostings") or []
+    rows = []
+    for j in postings:
+        path = j.get("externalPath")
+        if not path:
+            continue
+        location = j.get("locationsText") or ""
+        if india and not _INDIA_RE.search(location):
+            location = f"India ({location})" if location else "India"
+        rows.append(_row(
+            source="workday", external_id=f"{tenant}:{path.rsplit('/', 1)[-1][-120:]}", title=j.get("title"),
+            company=board.company, location=location, url=f"{host}/{site}{path}",
+            posted_at=_workday_posted(j.get("postedOn")),
+        ))
+    return rows
+
+
 BOARD_FETCHERS = {
     JobBoard.ATS.GREENHOUSE: _fetch_greenhouse,
     JobBoard.ATS.LEVER: _fetch_lever,
     JobBoard.ATS.ASHBY: _fetch_ashby,
     JobBoard.ATS.SMARTRECRUITERS: _fetch_smartrecruiters,
+    JobBoard.ATS.KEKA: _fetch_keka,
+    JobBoard.ATS.WORKDAY: _fetch_workday,
+    JobBoard.ATS.FRESHTEAM: _fetch_freshteam,
 }
 
 
 def fetch_board(board: JobBoard, client: httpx.Client) -> list[dict]:
-    rows = BOARD_FETCHERS[board.ats](board, client)
+    # Paged APIs (Workday) can repeat a posting across pages; one row per id
+    # keeps the bulk upsert from touching the same row twice.
+    rows = list({r["external_id"]: r for r in BOARD_FETCHERS[board.ats](board, client)}.values())
     rows.sort(key=lambda r: r["posted_at"], reverse=True)
     return rows[:MAX_PER_BOARD]
 
@@ -479,6 +602,12 @@ def is_sweeping(state: JobFeedState | None) -> bool:
 
 def _fetch_description_html(job: Job) -> str:
     token, _, post_id = job.external_id.partition(":")
+    if job.source == "workday":
+        # https://<tenant>.<wdN>.myworkdayjobs.com/<site>/job/... -> .../wday/cxs/<tenant>/<site>/job/...
+        host, _, path = job.url.partition(".myworkdayjobs.com/")
+        api = f"{host}.myworkdayjobs.com/wday/cxs/{token}/{path}"
+        data = httpx.get(api, timeout=TIMEOUT).raise_for_status().json()
+        return (data.get("jobPostingInfo") or {}).get("jobDescription") or ""
     if job.source == "greenhouse":
         data = httpx.get(GREENHOUSE_JOB.format(token=token, id=post_id), timeout=TIMEOUT).raise_for_status().json()
         return html.unescape(data.get("content") or "")
@@ -488,7 +617,7 @@ def _fetch_description_html(job: Job) -> str:
 
 
 def ensure_description(job: Job) -> Job:
-    """Greenhouse/SmartRecruiters list payloads carry no description; fetch it on first open."""
+    """Greenhouse/SmartRecruiters/Workday list payloads carry no description; fetch it on first open."""
     if job.description or job.source not in LAZY_DESCRIPTION_SOURCES or not job.board_id:
         return job
     try:
