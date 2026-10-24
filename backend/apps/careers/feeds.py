@@ -48,6 +48,7 @@ SMARTRECRUITERS_JOB = "https://api.smartrecruiters.com/v1/companies/{token}/post
 KEKA_CAREERS = "https://{token}.keka.com/careers/"
 KEKA_JOBS = "https://{token}.keka.com/careers/api/embedjobs/default/active/{org}"
 KEKA_JOB_URL = "https://{token}.keka.com/careers/jobdetails/{id}"
+KEKA_ORG_INFO = "https://{token}.keka.com/careers/api/organization/default/careerportalinfo"
 _KEKA_ORG_RE = re.compile(r"/ats/documents/([0-9a-f-]{36})/")
 FRESHTEAM_JOBS = "https://{token}.freshteam.com/hire/widgets/jobs.json"
 # Workday token: "<tenant>/<wdN>/<site>", e.g. "nvidia/wd5/NVIDIAExternalCareerSite".
@@ -312,7 +313,8 @@ def _fetch_freshteam(board: JobBoard, client: httpx.Client) -> list[dict]:
     roles = {r["id"]: r.get("name") for r in data.get("job_roles") or []}
     rows = []
     for j in data.get("jobs") or []:
-        if j.get("deleted") or not j.get("url"):
+        # New accounts come with a placeholder posting.
+        if j.get("deleted") or not j.get("url") or (j.get("title") or "").strip().lower() == "sample job posting":
             continue
         branch = branches.get(j.get("branch_id")) or {}
         location = _india_location([branch.get("city")], branch.get("country_code") or "")

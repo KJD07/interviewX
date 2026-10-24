@@ -410,7 +410,9 @@ class IndiaBoardTests(TestCase):
              "jobLocations": [{"city": "Bengaluru", "countryCode": "IN"}, {"city": "Pune", "countryCode": "IN"}]}]
     FRESHTEAM = {"jobs": [{"id": 6000168140, "title": "Backend Engineer", "description": "<p>Go and Kafka</p>",
                            "deleted": False, "created_at": "2026-10-20T08:38:00.000Z", "remote": False,
-                           "url": "https://haptik.freshteam.com/jobs/297x/backend", "branch_id": 7, "job_role_id": 9}],
+                           "url": "https://haptik.freshteam.com/jobs/297x/backend", "branch_id": 7, "job_role_id": 9},
+                          {"id": 1, "title": "Sample Job Posting", "deleted": False, "created_at": "2026-10-20T08:38:00Z",
+                           "url": "https://haptik.freshteam.com/jobs/1/sample", "branch_id": 7}],
                  "branches": [{"id": 7, "city": "Mumbai", "country_code": "IN"}],
                  "job_roles": [{"id": 9, "name": "Engineering"}]}
     WD_FACETS = [{"facetParameter": "locationMainGroup", "values": [
@@ -456,7 +458,9 @@ class IndiaBoardTests(TestCase):
                               self._client(keka_page="<title>Invalid Tenant</title>"))
 
     def test_freshteam(self):
-        r = feeds.fetch_board(JobBoard(ats="freshteam", token="haptik", company="Haptik"), self._client())[0]
+        rows = feeds.fetch_board(JobBoard(ats="freshteam", token="haptik", company="Haptik"), self._client())
+        self.assertEqual(len(rows), 1)  # the placeholder "Sample Job Posting" is dropped
+        r = rows[0]
         self.assertEqual((r["location"], r["in_india"], r["tags"], r["work_mode"]),
                          ("Mumbai, India", True, ["Engineering"], "onsite"))
         self.assertEqual(r["description"], "Go and Kafka")
@@ -490,11 +494,15 @@ class IndiaBoardTests(TestCase):
           <a href="https://careers.smartrecruiters.com/Freshworks">x</a>
           <a href="https://jupiter.keka.com/careers/">x</a> <link href="https://cdn.keka.com/careers/v/2026/">
           <a href="https://haptik.freshteam.com/jobs">x</a>
-          <a href="https://BrowserStack.wd3.myworkdayjobs.com/en-US/External/job/1">x</a>"""
+          <a href="https://BrowserStack.wd3.myworkdayjobs.com/en-US/External/job/1">x</a>
+          <script>{"url":"https:\\/\\/jobs.lever.co\\/dreamsports"}</script>
+          <a href="https://wd1.myworkdaysite.com/en-US/recruiting/parexel/Parexel_External_Careers">x</a>
+          fetch("https://api.ashbyhq.com/posting-api/job-board/vellum")"""
         self.assertEqual(discovery.detect_boards(page), [
             ("greenhouse", "razorpaysoftwareprivatelimited"), ("greenhouse", "druva"), ("lever", "epifi"),
-            ("ashby", "sarvam"), ("smartrecruiters", "Freshworks"), ("keka", "jupiter"),
-            ("freshteam", "haptik"), ("workday", "browserstack/wd3/External"),
+            ("lever", "dreamsports"), ("ashby", "sarvam"), ("ashby", "vellum"), ("smartrecruiters", "Freshworks"),
+            ("keka", "jupiter"), ("freshteam", "haptik"), ("workday", "browserstack/wd3/External"),
+            ("workday", "parexel/wd1/Parexel_External_Careers"),
         ])
 
     def test_slug_guesses(self):
@@ -516,6 +524,15 @@ class IndiaBoardTests(TestCase):
         self.assertEqual((found["jobs"], found["india_jobs"]), (1, 0))
         with mock.patch.object(feeds, "fetch_board", return_value=[]):
             self.assertIsNone(discovery.verify(discovery.Candidate("ashby", "acme", "probe"), "Acme", None, False))
+
+    def test_guessed_keka_board_must_name_the_company(self):
+        rows = [{"in_india": True}]
+        client = mock.Mock()
+        with mock.patch.object(feeds, "fetch_board", return_value=rows):
+            client.get.return_value = _resp({"name": "Group Bayport"})
+            self.assertIsNone(discovery.verify(discovery.Candidate("keka", "caterpillar", "probe"), "Caterpillar India", client))
+            client.get.return_value = _resp({"name": "Workindia"})
+            self.assertIsNotNone(discovery.verify(discovery.Candidate("keka", "workindia", "probe"), "WorkIndia", client))
 
     def test_careers_url_guesses(self):
         self.assertEqual(discovery.careers_url_guesses("Sarvam AI"), [

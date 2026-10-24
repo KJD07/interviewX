@@ -54,13 +54,17 @@ DETECTORS = [
     (JobBoard.ATS.GREENHOUSE, re.compile(
         r"(?:boards|job-boards)\.greenhouse\.io/(?:embed/job_board(?:/js)?\?for=)?([a-z0-9_-]+)", re.I)),
     (JobBoard.ATS.GREENHOUSE, re.compile(r"boards-api\.greenhouse\.io/v1/boards/([a-z0-9_-]+)", re.I)),
-    (JobBoard.ATS.LEVER, re.compile(r"jobs\.lever\.co/([a-z0-9_.-]+)", re.I)),
-    (JobBoard.ATS.ASHBY, re.compile(r"jobs\.ashbyhq\.com/([a-z0-9_.%-]+)", re.I)),
+    (JobBoard.ATS.LEVER, re.compile(r"(?:jobs\.lever\.co|api\.lever\.co/v0/postings)/([a-z0-9_.-]+)", re.I)),
+    (JobBoard.ATS.ASHBY, re.compile(
+        r"(?:jobs\.ashbyhq\.com|api\.ashbyhq\.com/posting-api/job-board)/([a-z0-9_.%-]+)", re.I)),
     (JobBoard.ATS.SMARTRECRUITERS, re.compile(r"(?:careers|jobs)\.smartrecruiters\.com/([a-z0-9_-]+)", re.I)),
     (JobBoard.ATS.KEKA, re.compile(r"([a-z0-9-]+)\.keka\.com/careers", re.I)),
     (JobBoard.ATS.FRESHTEAM, re.compile(r"([a-z0-9-]+)\.freshteam\.com", re.I)),
     (JobBoard.ATS.WORKDAY, re.compile(
         r"([a-z0-9-]+)\.(wd\d+)\.myworkdayjobs\.com/(?:[a-z]{2}-[A-Z]{2}/)?([a-z0-9_-]+)", re.I)),
+    # wdN.myworkdaysite.com/recruiting/<tenant>/<site> — same tenant, served at <tenant>.wdN.myworkdayjobs.com too.
+    (JobBoard.ATS.WORKDAY, re.compile(
+        r"(wd\d+)\.myworkdaysite\.com/(?:[a-z]{2}-[A-Z]{2}/)?recruiting/([a-z0-9_-]+)/([a-z0-9_-]+)", re.I)),
 ]
 # Path segments the patterns above can capture that aren't board tokens.
 NOT_TOKENS = {"embed", "v1", "api", "static", "assets", "cdn", "js", "css", "www", "jobs", "wday", "job", "widgets", "hire"}
@@ -89,10 +93,14 @@ class Result:
 def detect_boards(html: str) -> list[tuple[str, str]]:
     """(ats, token) pairs for every fetchable ATS board linked from a page."""
     found = []
+    html = html.replace("\\/", "/")  # links inside embedded JSON are written jobs.lever.co\/acme
     for ats, pattern in DETECTORS:
         for m in pattern.finditer(html):
             if ats == JobBoard.ATS.WORKDAY:
-                tenant, wd, site = (g.lower() if i < 2 else g for i, g in enumerate(m.groups()))
+                groups = m.groups()
+                if "myworkdaysite" in m.group(0).lower():
+                    groups = (groups[1], groups[0], groups[2])
+                tenant, wd, site = (g.lower() if i < 2 else g for i, g in enumerate(groups))
                 if site.lower() in NOT_TOKENS:
                     continue
                 token = f"{tenant}/{wd}/{site}"
@@ -154,11 +162,24 @@ def _name_key(company: str) -> str:
     return "".join(slug_guesses(company)[:1]) or company.lower()
 
 
+def _keka_name_matches(token: str, company: str, client: httpx.Client) -> bool:
+    try:
+        name = client.get(feeds.KEKA_ORG_INFO.format(token=token)).raise_for_status().json().get("name") or ""
+    except Exception:
+        return False
+    ours, theirs = _name_key(company), _name_key(name)
+    return bool(ours and theirs) and (ours in theirs or theirs in ours)
+
+
 def verify(candidate: Candidate, company: str, client: httpx.Client, india_only: bool = True) -> dict | None:
     """Fetch the board for real and apply the module docstring's India rules."""
     try:
         rows = feeds.fetch_board(JobBoard(ats=candidate.ats, token=candidate.token, company=company), client)
     except Exception:
+        return None
+    # A guessed Keka subdomain can belong to anyone; Keka reports the org's name, so check it.
+    if candidate.via == "probe" and candidate.ats == JobBoard.ATS.KEKA and not _keka_name_matches(
+            candidate.token, company, client):
         return None
     india = sum(1 for r in rows if r["in_india"])
     if not rows or (india_only and not india):
