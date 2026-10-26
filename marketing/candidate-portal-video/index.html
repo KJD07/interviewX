@@ -1,0 +1,545 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link href="fonts.local.css" rel="stylesheet">
+<style>
+:root{--page:#F2F0EA;--surface:#fff;--surface-2:#EBE9E1;--ink:#0C0C0B;--dim:#54534B;--faint:#8B8A81;--lime:#D8FA4B;--olive:#6F7A1F;--ok:#3F8F5E;--okbg:rgba(63,143,94,.12);--warn:#B4731E;--bad:#B3402A;--border:rgba(12,12,11,.09);--bmid:rgba(12,12,11,.16)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1920px;height:1080px;overflow:hidden;background:var(--ink)}
+body{font-family:'Instrument Sans',sans-serif;color:var(--ink)}
+#stage{position:relative;width:1920px;height:1080px;overflow:hidden}
+.layer{position:absolute;inset:0}
+.scene{position:absolute;inset:0;will-change:transform,opacity}
+.disp{font-family:'Bricolage Grotesque',sans-serif;letter-spacing:-.035em}
+.mono{font-family:'JetBrains Mono',monospace}
+#dark1,#dark2{background:var(--ink);color:var(--page)}
+#dark1::before,#dark2::before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(242,240,234,.07) 1.5px,transparent 1.5px);background-size:40px 40px}
+#light{background:var(--page)}
+#lightgrid{position:absolute;inset:-80px;background-image:radial-gradient(rgba(12,12,11,.075) 1.5px,transparent 1.5px);background-size:40px 40px}
+.blob{position:absolute;border-radius:50%;filter:blur(90px);opacity:.55}
+
+/* S1 */
+.ghost{position:absolute;width:300px;height:150px;border-radius:20px;background:#191917;border:1px solid rgba(242,240,234,.08);padding:22px}
+.ghost i{display:block;height:12px;border-radius:6px;background:rgba(242,240,234,.12);margin-bottom:12px}
+.ghost b{position:absolute;right:20px;top:14px;font:800 54px 'Bricolage Grotesque';color:var(--lime);opacity:.85}
+#s1 h1{position:absolute;left:0;right:0;top:395px;text-align:center;font-size:118px;line-height:1.05;font-weight:800}
+#s1 h1 span{display:inline-block;margin:0 .13em}
+#guess{color:var(--lime);position:relative}
+#strike{position:absolute;left:-2%;top:54%;height:10px;background:var(--page);border-radius:5px;width:0}
+
+/* S2 */
+#s2logo{position:absolute;left:50%;top:330px;width:150px;height:150px;margin-left:-75px;border-radius:34px}
+#s2word{position:absolute;left:0;right:0;top:500px;text-align:center;font-size:140px;font-weight:800}
+#s2pill{position:absolute;left:50%;top:688px;transform:translateX(-50%);background:var(--lime);color:var(--ink);font:700 40px 'Instrument Sans';padding:16px 40px;border-radius:999px;white-space:nowrap}
+
+/* light chrome */
+#brand{position:absolute;left:120px;top:64px;display:flex;align-items:center;gap:14px;font:700 30px 'Bricolage Grotesque';letter-spacing:-.025em}
+#brand img{width:42px;height:42px;border-radius:10px}
+#brand .tag{font:600 18px 'Instrument Sans';letter-spacing:0;background:var(--ink);color:var(--page);padding:7px 14px;border-radius:999px;margin-left:6px}
+#steps{position:absolute;right:120px;top:70px;display:flex;gap:10px}
+#steps div{font:700 17px 'JetBrains Mono';padding:8px 14px;border-radius:999px;border:1.5px solid var(--bmid);color:var(--faint);background:rgba(255,255,255,.5)}
+#steps div.on{background:var(--ink);color:var(--lime);border-color:var(--ink)}
+#prog{position:absolute;left:0;bottom:0;height:8px;background:var(--ink)}
+
+.left{position:absolute;left:120px;top:250px;width:760px}
+.kicker{display:inline-flex;align-items:center;gap:14px;font:700 22px 'JetBrains Mono';text-transform:uppercase;letter-spacing:.06em;color:var(--olive)}
+.kicker .n{background:var(--lime);color:var(--ink);padding:6px 12px;border-radius:10px}
+.left h2{font:800 96px/1.02 'Bricolage Grotesque';letter-spacing:-.04em;margin-top:30px}
+.left h2 .ln{display:block}
+.left h2 em{font-style:normal;background:linear-gradient(transparent 58%,var(--lime) 58%,var(--lime) 92%,transparent 92%);padding:0 .06em}
+.left p{font:500 32px/1.4 'Instrument Sans';color:var(--dim);margin-top:34px;width:700px}
+.right{position:absolute;left:960px;top:170px;width:860px;height:800px}
+.card{position:absolute;background:var(--surface);border:1px solid var(--border);border-radius:28px;box-shadow:0 30px 70px -30px rgba(12,12,11,.28),0 2px 6px rgba(12,12,11,.04)}
+.lbl{font:700 15px 'JetBrains Mono';text-transform:uppercase;letter-spacing:.08em;color:var(--faint)}
+.chip{display:inline-flex;align-items:center;gap:8px;font:600 22px 'Instrument Sans';padding:10px 18px;border-radius:999px;background:var(--surface-2);margin:0 10px 12px 0}
+.chip.ok{background:var(--okbg);color:var(--ok)}
+.chip.miss{background:rgba(180,115,30,.13);color:var(--warn);border:2px solid rgba(180,115,30,.45)}
+.chip.lime{background:var(--lime)}
+.line{height:12px;border-radius:6px;background:var(--surface-2);margin-bottom:12px}
+
+/* S3 */
+#resume{left:0;top:200px;width:310px;height:410px;padding:34px 30px;overflow:hidden}
+#resume .hd{height:22px;width:60%;background:var(--ink);border-radius:6px;margin-bottom:12px}
+#resume .tagp{position:absolute;left:24px;bottom:22px;font:700 17px 'JetBrains Mono';background:var(--ink);color:var(--page);padding:7px 12px;border-radius:8px}
+#beam{position:absolute;left:0;right:0;height:70px;background:linear-gradient(transparent,rgba(216,250,75,.85),transparent)}
+#arrow{position:absolute;left:40px;top:650px;z-index:3;font:700 20px 'JetBrains Mono';background:var(--ink);color:var(--lime);padding:10px 16px;border-radius:999px;white-space:nowrap}
+#profile{left:370px;top:20px;width:490px;height:740px;padding:38px}
+.av{width:96px;height:96px;border-radius:50%;background:var(--lime);display:flex;align-items:center;justify-content:center;font:800 38px 'Bricolage Grotesque'}
+.pname{font:800 42px 'Bricolage Grotesque';letter-spacing:-.03em;margin-top:22px;min-height:52px}
+.prole{font:500 23px 'Instrument Sans';color:var(--dim);margin-top:4px}
+.sec{margin-top:30px}
+.sec .lbl{margin-bottom:14px}
+.xrow{display:flex;gap:16px;align-items:center;margin-bottom:16px}
+.xrow .sq{width:52px;height:52px;border-radius:14px;background:var(--surface-2);flex:none;display:flex;align-items:center;justify-content:center;font:800 22px 'Bricolage Grotesque'}
+.xrow .t{font:700 23px 'Instrument Sans'}
+.xrow .s{font:500 19px 'Instrument Sans';color:var(--faint)}
+
+/* S4 */
+#jobs{left:0;top:0;width:860px;height:780px;padding:34px}
+.jhead{display:flex;align-items:center;justify-content:space-between}
+.jhead .ttl{font:800 34px 'Bricolage Grotesque';letter-spacing:-.03em}
+.tgls{display:flex;gap:14px;margin-top:22px}
+.tgl{display:flex;align-items:center;gap:12px;font:600 21px 'Instrument Sans';padding:10px 16px 10px 12px;border-radius:999px;border:1.5px solid var(--bmid)}
+.sw{width:54px;height:30px;border-radius:15px;background:var(--surface-2);position:relative}
+.sw i{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+#jlist{position:absolute;left:34px;right:34px;top:190px}
+.job{position:absolute;left:0;right:0;height:122px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface-alt,#FBFAF7);display:flex;align-items:center;padding:0 24px;gap:20px}
+.job .lg{width:66px;height:66px;border-radius:16px;display:flex;align-items:center;justify-content:center;font:800 28px 'Bricolage Grotesque';flex:none}
+.job .t{font:700 27px 'Instrument Sans'}
+.job .s{font:500 20px 'Instrument Sans';color:var(--faint);margin-top:4px}
+.job .m{margin-left:auto;font:800 26px 'Bricolage Grotesque';padding:10px 18px;border-radius:14px;background:var(--surface-2);white-space:nowrap}
+.job.top .m{background:var(--lime)}
+#cnt{font-variant-numeric:tabular-nums}
+.stats{display:flex;gap:12px;margin-top:30px}
+.stats .chip{font-size:22px;background:#fff;border:1.5px solid var(--bmid)}
+
+/* S5 */
+#ats{left:0;top:20px;width:860px;height:720px;padding:36px}
+#ring{position:absolute;left:40px;top:120px;width:270px;height:270px}
+#ringnum{position:absolute;left:40px;top:120px;width:270px;height:270px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+#ringnum b{font:800 92px/1 'Bricolage Grotesque';letter-spacing:-.04em}
+#ringnum span{font:600 19px 'Instrument Sans';color:var(--faint);margin-top:6px}
+#bars{position:absolute;left:360px;top:132px;width:460px}
+.bar{margin-bottom:26px}
+.bar .r{display:flex;justify-content:space-between;font:600 21px 'Instrument Sans';margin-bottom:9px}
+.bar .r span{font-family:'JetBrains Mono';font-weight:700;font-size:19px;color:var(--dim)}
+.bar .tr{height:14px;border-radius:7px;background:var(--surface-2);overflow:hidden}
+.bar .tr i{display:block;height:100%;background:var(--ink);border-radius:7px;width:0}
+#kw{position:absolute;left:40px;top:450px;right:36px}
+#tip{position:absolute;left:40px;right:36px;bottom:34px;font:600 22px 'Instrument Sans';background:var(--ink);color:var(--page);padding:18px 22px;border-radius:16px}
+#tip b{color:var(--lime)}
+#free{position:absolute;right:34px;top:30px;background:var(--lime);font:800 24px 'Bricolage Grotesque';padding:10px 20px;border-radius:12px;transform:rotate(4deg)}
+
+/* S6 */
+#kit{left:0;top:70px;width:410px;height:560px;padding:30px}
+.frow{border:1.5px solid var(--border);border-radius:16px;padding:12px 14px 12px 18px;margin-top:14px;display:flex;align-items:center;justify-content:space-between;background:#FBFAF7}
+.frow .k{font:700 14px 'JetBrains Mono';color:var(--faint);text-transform:uppercase;letter-spacing:.06em}
+.frow .v{font:600 21px 'Instrument Sans';margin-top:3px}
+.cp{font:700 17px 'Instrument Sans';padding:9px 14px;border-radius:10px;background:var(--surface-2);white-space:nowrap;min-width:104px;text-align:center}
+.cp.done{background:var(--lime)}
+#openbtn{margin-top:22px;background:var(--ink);color:var(--page);font:700 22px 'Instrument Sans';padding:18px;border-radius:16px;text-align:center}
+#trk{left:440px;top:120px;width:420px;height:560px;padding:30px}
+.trow{position:absolute;left:24px;right:24px;height:92px;border-radius:16px;border:1.5px solid var(--border);display:flex;align-items:center;padding:0 18px;justify-content:space-between;background:#FBFAF7}
+.trow .t{font:700 21px 'Instrument Sans'}
+.trow .s{font:500 17px 'Instrument Sans';color:var(--faint);margin-top:2px}
+.st{font:700 16px 'Instrument Sans';padding:7px 12px;border-radius:999px;white-space:nowrap}
+.st.ap{background:rgba(12,12,11,.08)}
+.st.iv{background:var(--lime)}
+.st.sv{background:var(--surface-2);color:var(--dim)}
+#cursor{position:absolute;width:44px;height:44px;left:0;top:0;z-index:5}
+#ripple{position:absolute;width:60px;height:60px;border-radius:50%;border:4px solid var(--ink);z-index:4}
+
+/* S7 */
+#prac{left:0;top:0;width:860px;height:350px;padding:30px}
+#mock{left:0;top:378px;width:860px;height:330px;padding:30px}
+.q{font:800 34px/1.15 'Bricolage Grotesque';letter-spacing:-.025em;margin-top:16px;padding-right:120px}
+#ans{margin-top:18px;border:1.5px solid var(--border);background:#FBFAF7;border-radius:16px;padding:16px 18px;font:500 21px/1.45 'JetBrains Mono';color:var(--dim);height:104px}
+#score{position:absolute;right:30px;top:26px;background:var(--lime);font:800 26px 'Bricolage Grotesque';padding:10px 18px;border-radius:14px}
+.live{display:inline-flex;align-items:center;gap:10px}
+.live i{width:14px;height:14px;border-radius:50%;background:var(--bad)}
+.bub{position:absolute;font:600 22px/1.35 'Instrument Sans';padding:16px 20px;border-radius:20px;max-width:440px}
+#b1{left:30px;top:80px;background:var(--ink);color:var(--page);border-bottom-left-radius:6px}
+#b2{left:30px;top:200px;background:var(--surface-2);display:flex;gap:6px;align-items:center;height:64px;padding:0 22px;border-bottom-left-radius:6px}
+#b2 i{display:block;width:7px;border-radius:4px;background:var(--ink)}
+#mscores{position:absolute;left:520px;top:84px;width:310px}
+#mscores .bar{margin-bottom:22px}
+#mscores .tr i{background:var(--olive)}
+
+/* S8 */
+#s8logo{position:absolute;left:50%;top:250px;width:120px;height:120px;margin-left:-60px;border-radius:28px}
+#s8word{position:absolute;left:0;right:0;top:395px;text-align:center;font-size:96px;font-weight:800}
+#s8a,#s8b{position:absolute;left:0;right:0;text-align:center;font:800 130px/1 'Bricolage Grotesque';letter-spacing:-.045em}
+#s8a{top:540px}
+#s8b{top:680px;color:var(--lime)}
+#s8url{position:absolute;left:0;right:0;top:880px;text-align:center;font:700 34px 'JetBrains Mono';color:rgba(242,240,234,.75);letter-spacing:.02em}
+</style>
+</head>
+<body>
+<div id="stage">
+  <!-- ===== DARK 1: hook + intro ===== -->
+  <div class="layer" id="dark1">
+    <div class="blob" id="d1blob" style="width:700px;height:700px;background:#D8FA4B;opacity:.10;left:610px;top:190px"></div>
+    <div class="scene" id="s1">
+      <div id="ghosts"></div>
+      <h1 class="disp"><span>Job</span><span>hunting</span><span>shouldn't</span><br><span>feel</span><span>like</span><span id="guess">guesswork.<i id="strike"></i></span></h1>
+    </div>
+    <div class="scene" id="s2">
+      <img id="s2logo" src="icon.png">
+      <div id="s2word" class="disp">EvaluLabs</div>
+      <div id="s2pill">Candidate Portal</div>
+    </div>
+  </div>
+
+  <!-- ===== LIGHT: features ===== -->
+  <div class="layer" id="light">
+    <div id="lightgrid"></div>
+    <div class="blob" style="width:620px;height:620px;background:#D8FA4B;left:1300px;top:420px;opacity:.35"></div>
+    <div class="blob" style="width:520px;height:520px;background:#fff;left:-120px;top:-80px;opacity:.9"></div>
+    <div id="brand"><img src="icon.png">EvaluLabs<span class="tag">Candidate Portal</span></div>
+    <div id="steps"><div>01</div><div>02</div><div>03</div><div>04</div><div>05</div></div>
+
+    <!-- S3 profile -->
+    <div class="scene" id="s3">
+      <div class="left">
+        <div class="kicker"><span class="n">01</span>Smart profile</div>
+        <h2><span class="ln">Your resume</span><span class="ln">becomes your</span><span class="ln"><em>profile.</em></span></h2>
+        <p>Upload once. Skills, experience and education fill themselves in.</p>
+      </div>
+      <div class="right">
+        <div class="card" id="resume">
+          <div class="hd"></div><div class="line" style="width:40%"></div>
+          <div style="height:18px"></div>
+          <div class="line"></div><div class="line" style="width:85%"></div><div class="line" style="width:92%"></div>
+          <div style="height:12px"></div>
+          <div class="line" style="width:50%;background:#d9d7cf"></div><div class="line"></div><div class="line" style="width:78%"></div><div class="line" style="width:88%"></div>
+          <div class="tagp">resume.pdf</div>
+          <div id="beam"></div>
+        </div>
+        <div id="arrow">auto-filled ↗</div>
+        <div class="card" id="profile">
+          <div class="av" id="pav">AS</div>
+          <div class="pname" id="pname"></div>
+          <div class="prole" id="prole">Software Engineer · 3 yrs experience</div>
+          <div class="sec" id="psk"><div class="lbl">Skills</div>
+            <span class="chip lime">React</span><span class="chip">Python</span><span class="chip">SQL</span><span class="chip">Node.js</span><span class="chip">AWS</span><span class="chip">Docker</span>
+          </div>
+          <div class="sec"><div class="lbl" id="pexl">Experience</div>
+            <div class="xrow"><div class="sq">K</div><div><div class="t">SDE · Kite Labs</div><div class="s">2023 – Present · Bengaluru</div></div></div>
+            <div class="xrow"><div class="sq">O</div><div><div class="t">Intern · Orbit Analytics</div><div class="s">2022 · Pune</div></div></div>
+          </div>
+          <div class="sec"><div class="lbl" id="pedl">Education</div>
+            <div class="xrow"><div class="sq">🎓</div><div><div class="t">B.Tech, Computer Science</div><div class="s">2019 – 2023</div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S4 live jobs -->
+    <div class="scene" id="s4">
+      <div class="left">
+        <div class="kicker"><span class="n">02</span>Live jobs</div>
+        <h2><span class="ln"><span id="cnt">45,000</span>+</span><span class="ln">live jobs, ranked</span><span class="ln">for <em>you.</em></span></h2>
+        <div class="stats">
+          <span class="chip">1,100+ company boards</span><span class="chip">India-first</span><span class="chip">Match score</span>
+        </div>
+      </div>
+      <div class="right">
+        <div class="card" id="jobs">
+          <div class="jhead"><div class="ttl">Live jobs</div><div class="lbl">Updated every few hours</div></div>
+          <div class="tgls">
+            <div class="tgl" id="tg1"><div class="sw"><i></i></div>India &amp; remote-friendly</div>
+            <div class="tgl" id="tg2"><div class="sw"><i></i></div>Best match</div>
+          </div>
+          <div id="jlist">
+            <div class="job" id="jA"><div class="lg" style="background:#E7EFC8">N</div><div><div class="t">Backend Engineer</div><div class="s">Nimbus Pay · Bengaluru · Hybrid</div></div><div class="m">94% match</div></div>
+            <div class="job" id="jB"><div class="lg" style="background:#E9E3F5">C</div><div><div class="t">Full-Stack Developer</div><div class="s">Cloudnine · Remote, India</div></div><div class="m">88% match</div></div>
+            <div class="job" id="jD"><div class="lg" style="background:#F6E4D2">K</div><div><div class="t">SDE II</div><div class="s">Kite Labs · Hyderabad · Hybrid</div></div><div class="m">81% match</div></div>
+            <div class="job" id="jC"><div class="lg" style="background:#DCEBF2">O</div><div><div class="t">Data Analyst</div><div class="s">Orbit Analytics · Pune · Onsite</div></div><div class="m">72% match</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S5 ATS -->
+    <div class="scene" id="s5">
+      <div class="left">
+        <div class="kicker"><span class="n">03</span>ATS resume check</div>
+        <h2><span class="ln">Beat the ATS</span><span class="ln">before you</span><span class="ln"><em>apply.</em></span></h2>
+        <p>A free, instant check against any job — showing exactly what's missing.</p>
+      </div>
+      <div class="right">
+        <div class="card" id="ats">
+          <div class="lbl">ATS check</div>
+          <div style="font:800 32px 'Bricolage Grotesque';letter-spacing:-.03em;margin-top:8px">Backend Engineer · Nimbus Pay</div>
+          <div id="free">FREE</div>
+          <svg id="ring" viewBox="0 0 270 270"><circle cx="135" cy="135" r="112" fill="none" stroke="#EBE9E1" stroke-width="24"/><circle id="arc" cx="135" cy="135" r="112" fill="none" stroke="#0C0C0B" stroke-width="24" stroke-linecap="round" transform="rotate(-90 135 135)" stroke-dasharray="703.7" stroke-dashoffset="703.7"/></svg>
+          <div id="ringnum"><b id="atsn">0</b><span>ATS score</span></div>
+          <div id="bars">
+            <div class="bar"><div class="r">Skills &amp; keywords<span data-v="52/60">0/60</span></div><div class="tr"><i data-w="86.7"></i></div></div>
+            <div class="bar"><div class="r">Experience<span data-v="15/15">0/15</span></div><div class="tr"><i data-w="100"></i></div></div>
+            <div class="bar"><div class="r">Job title<span data-v="8/10">0/10</span></div><div class="tr"><i data-w="80"></i></div></div>
+            <div class="bar"><div class="r">Resume structure<span data-v="9/10">0/10</span></div><div class="tr"><i data-w="90"></i></div></div>
+          </div>
+          <div id="kw">
+            <div class="lbl" style="margin-bottom:14px">Keywords</div>
+            <span class="chip ok">✓ Python</span><span class="chip ok">✓ Django</span><span class="chip ok">✓ REST APIs</span><span class="chip ok">✓ PostgreSQL</span><span class="chip miss">✕ Kubernetes</span><span class="chip miss">✕ CI/CD</span>
+          </div>
+          <div id="tip">Tip: <b>add Kubernetes and CI/CD</b> to your experience bullets</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S6 apply kit + tracker -->
+    <div class="scene" id="s6">
+      <div class="left">
+        <div class="kicker"><span class="n">04</span>Apply kit + tracker</div>
+        <h2><span class="ln">Apply faster.</span><span class="ln">Track</span><span class="ln"><em>everything.</em></span></h2>
+        <p>Your details copy-ready for any form, and every application in one place.</p>
+      </div>
+      <div class="right">
+        <div class="card" id="kit">
+          <div class="lbl">Apply kit</div>
+          <div style="font:800 28px 'Bricolage Grotesque';letter-spacing:-.03em;margin-top:6px">Backend Engineer</div>
+          <div class="frow"><div><div class="k">Full name</div><div class="v">Aarav Sharma</div></div><div class="cp" id="cp1">Copy</div></div>
+          <div class="frow"><div><div class="k">Email</div><div class="v">aarav@mail.com</div></div><div class="cp" id="cp2">Copy</div></div>
+          <div class="frow"><div><div class="k">LinkedIn</div><div class="v">/in/aarav-sharma</div></div><div class="cp" id="cp3">Copy</div></div>
+          <div class="frow"><div><div class="k">Skills</div><div class="v">React, Python, SQL…</div></div><div class="cp" id="cp4">Copy</div></div>
+          <div id="openbtn">Open application form ↗</div>
+        </div>
+        <div class="card" id="trk">
+          <div class="lbl">My applications</div>
+          <div style="font:800 28px 'Bricolage Grotesque';letter-spacing:-.03em;margin-top:6px"><span id="tcount">3</span> tracked</div>
+          <div class="trow" id="tr0"><div><div class="t">Backend Engineer</div><div class="s">Nimbus Pay</div></div><span class="st ap">Applied</span></div>
+          <div class="trow" id="tr1"><div><div class="t">SDE II</div><div class="s">Kite Labs</div></div><span class="st ap" id="st1">Applied</span></div>
+          <div class="trow" id="tr2"><div><div class="t">Full-Stack Dev</div><div class="s">Cloudnine</div></div><span class="st iv">Interview</span></div>
+          <div class="trow" id="tr3"><div><div class="t">Data Analyst</div><div class="s">Orbit Analytics</div></div><span class="st sv">Saved</span></div>
+        </div>
+        <div id="ripple"></div>
+        <svg id="cursor" viewBox="0 0 24 24"><path d="M4 2l15 10-6.5 1.4L9.8 20z" fill="#0C0C0B" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      </div>
+    </div>
+
+    <!-- S7 practice + mock -->
+    <div class="scene" id="s7">
+      <div class="left">
+        <div class="kicker"><span class="n">05</span>Practice + mock interviews</div>
+        <h2><span class="ln">Practice for</span><span class="ln">the exact</span><span class="ln"><em>role.</em></span></h2>
+        <p>Questions tailored to every job you track, plus AI mock interviews with honest scores.</p>
+      </div>
+      <div class="right">
+        <div class="card" id="prac">
+          <div class="lbl">Role practice · Backend Engineer</div>
+          <div id="score">8/10</div>
+          <div class="q">How would you design a rate limiter for a public API?</div>
+          <div id="ans"></div>
+        </div>
+        <div class="card" id="mock">
+          <div class="lbl live"><i id="ldot"></i>AI mock interview</div>
+          <div class="bub" id="b1">Walk me through a trade-off you made on a recent project.</div>
+          <div class="bub" id="b2"></div>
+          <div id="mscores">
+            <div class="bar"><div class="r">Communication<span data-v="8.2">0.0</span></div><div class="tr"><i data-w="82"></i></div></div>
+            <div class="bar"><div class="r">Technical<span data-v="7.6">0.0</span></div><div class="tr"><i data-w="76"></i></div></div>
+            <div class="bar"><div class="r">Problem solving<span data-v="8.0">0.0</span></div><div class="tr"><i data-w="80"></i></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="prog"></div>
+  </div>
+
+  <!-- ===== DARK 2: outro ===== -->
+  <div class="layer" id="dark2">
+    <div class="blob" id="d2blob" style="width:800px;height:800px;background:#D8FA4B;opacity:.12;left:560px;top:300px"></div>
+    <img id="s8logo" src="icon.png">
+    <div id="s8word" class="disp">EvaluLabs</div>
+    <div id="s8a">Get prepared.</div>
+    <div id="s8b">Get hired.</div>
+    <div id="s8url">www.evalulabs.com</div>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const P=(t,a,b)=>clamp((t-a)/(b-a));
+const eo=x=>1-Math.pow(1-x,3);
+const eio=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
+const back=x=>{const c1=1.6,c3=c1+1;return x<=0?0:x>=1?1:1+c3*Math.pow(x-1,3)+c1*Math.pow(x-1,2);};
+const L=(a,b,x)=>a+(b-a)*x;
+function tf(el,{o=1,x=0,y=0,s=1,r=0}={}){el.style.opacity=o;el.style.transform=`translate(${x}px,${y}px) scale(${s}) rotate(${r}deg)`;}
+// fade + rise in starting at t0
+function rise(el,t,t0,d=.55,dy=36){const e=eo(P(t,t0,t0+d));tf(el,{o:e,y:(1-e)*dy});}
+function pop(el,t,t0,d=.45){const e=back(P(t,t0,t0+d));tf(el,{o:clamp(e*1.5),s:L(.6,1,e)});}
+const fmt=n=>Math.round(n).toLocaleString('en-US');
+
+// ghost job cards for the hook
+const G=[[120,140,-8],[1480,110,7],[260,760,6],[1560,720,-6],[700,90,3],[1080,860,-4],[40,450,-3],[1640,420,5],[540,880,8],[1250,60,-7]];
+G.forEach(([x,y,r],i)=>{const d=document.createElement('div');d.className='ghost';d.dataset.x=x;d.dataset.y=y;d.dataset.r=r;d.innerHTML='<i style="width:55%"></i><i style="width:80%"></i><i style="width:40%"></i><b>?</b>';$('ghosts').appendChild(d);});
+
+function scene(el,t,tin,tout,{fin=.4,fout=.35}={}){
+  if(t<tin-.01||t>tout+.01){el.style.display='none';return false;}
+  el.style.display='block';
+  const a=eo(P(t,tin,tin+fin)), b=eio(P(t,tout-fout,tout));
+  tf(el,{o:a*(1-b),y:-40*b});
+  return true;
+}
+function left(sc,t,t0){
+  const k=sc.querySelector('.kicker'),lns=sc.querySelectorAll('h2 .ln'),p=sc.querySelector('.left p'),st=sc.querySelector('.stats');
+  rise(k,t,t0);lns.forEach((l,i)=>rise(l,t,t0+.12+i*.11,.6,50));
+  if(p)rise(p,t,t0+.5);
+  if(st)st.querySelectorAll('.chip').forEach((c,i)=>pop(c,t,[11.4,13.0,14.4][i]));
+}
+function bars(root,t,t0,step,fmtv){
+  root.querySelectorAll('.bar').forEach((b,i)=>{
+    const e=eio(P(t,t0+i*step,t0+i*step+.8));const fill=b.querySelector('i'),lab=b.querySelector('span');
+    fill.style.width=(parseFloat(fill.dataset.w)*e)+'%';
+    const v=lab.dataset.v;
+    if(v.includes('/')){const [n,d]=v.split('/');lab.textContent=Math.round(n*e)+'/'+d;}
+    else lab.textContent=(parseFloat(v)*e).toFixed(1);
+  });
+}
+
+function seek(t){
+  /* ---------- DARK 1 ---------- */
+  $('d1blob').style.transform=`translate(${Math.sin(t*.7)*60}px,${Math.cos(t*.5)*40}px) scale(${1+.1*Math.sin(t)})`;
+  if(scene($('s1'),t,0,3.15,{fin:.01,fout:.4})){
+    const out=eio(P(t,2.75,3.15));
+    document.querySelectorAll('.ghost').forEach((g,i)=>{
+      const x=+g.dataset.x,y=+g.dataset.y,r=+g.dataset.r;const e=eo(P(t,.05*i,.05*i+.8));
+      const dx=Math.sin(t*.8+i)*18,dy=Math.cos(t*.6+i*1.3)*14;
+      const cx=960-150,cy=540-75;
+      tf(g,{o:e*.9*(1-out),x:x+dx+(x-cx)*out*.6,y:y+dy+(y-cy)*out*.6+(1-e)*40,r:r+Math.sin(t+i)*2,s:L(.85,1,e)});
+      g.style.left='0';g.style.top='0';
+    });
+    const ws=document.querySelectorAll('#s1 h1 span');
+    const wt=[.4,.62,.9,1.35,1.55,1.78];
+    ws.forEach((w,i)=>{const e=back(P(t,wt[i],wt[i]+.45));w.style.opacity=clamp(e*1.4);w.style.transform=`translateY(${(1-e)*60}px) scale(${L(.85,1,e)})`;});
+    $('strike').style.width=(eio(P(t,2.35,2.7))*104)+'%';
+    $('s1').querySelector('h1').style.transform=`scale(${1+out*.15})`;
+  }
+  if(scene($('s2'),t,3.05,5.8,{fin:.2,fout:.01})){
+    const e=back(P(t,3.1,3.65));tf($('s2logo'),{o:clamp(e*1.5),s:L(.3,1,e),r:L(-25,0,e)});
+    rise($('s2word'),t,3.3,.6,60);
+    const pe=back(P(t,3.95,4.45));$('s2pill').style.opacity=clamp(pe*1.5);$('s2pill').style.transform=`translateX(-50%) scale(${L(.5,1,pe)})`;
+    $('s2').style.transform=`scale(${1+P(t,4.8,5.8)*.12})`;
+  }
+  $('dark1').style.display=t<5.9?'block':'none';
+
+  /* ---------- LIGHT ---------- */
+  const lr=eio(P(t,5.2,5.85))*1250;
+  const light=$('light');
+  if(t<5.2||t>33.6){light.style.display='none';}
+  else{
+    light.style.display='block';
+    light.style.clipPath=t<5.85?`circle(${lr}px at 960px 540px)`:'none';
+    $('lightgrid').style.transform=`translate(${(t*6)%40}px,${(t*4)%40}px)`;
+    $('prog').style.width=(P(t,5.5,33.2)*1920)+'px';
+    rise($('brand'),t,5.6,.5,-20);
+    const stepT=[5.55,9.05,16.6,21.5,26.9];
+    document.querySelectorAll('#steps div').forEach((d,i)=>{d.classList.toggle('on',t>=stepT[i]&&(i==4||t<stepT[i+1]));rise(d,t,5.65+i*.06,.5,-20);});
+
+    // S3 — profile (VO 5.58–8.76)
+    if(scene($('s3'),t,5.55,9.05)){
+      left($('s3'),t,5.7);
+      const re=back(P(t,5.9,6.45));tf($('resume'),{o:clamp(re*1.5),y:(1-re)*200,r:L(-14,-5,re)});
+      const bp=P(t,6.4,7.4);$('beam').style.top=(L(-70,410,bp))+'px';$('beam').style.opacity=bp>0&&bp<1?1:0;
+      pop($('arrow'),t,6.85);
+      const pe=eo(P(t,6.55,7.05));tf($('profile'),{o:pe,x:(1-pe)*60,s:L(.94,1,pe)});
+      pop($('pav'),t,6.8);
+      const nm='Aarav Sharma';$('pname').textContent=nm.slice(0,Math.round(nm.length*P(t,6.95,7.4)));
+      rise($('prole'),t,7.3,.4,14);
+      rise($('psk').querySelector('.lbl'),t,7.4,.4,10);
+      $('psk').querySelectorAll('.chip').forEach((c,i)=>pop(c,t,7.5+i*.09,.4));
+      rise($('pexl'),t,7.85,.4,10);
+      document.querySelectorAll('#s3 .xrow').forEach((x,i)=>{const e=eo(P(t,7.95+i*.14,8.45+i*.14));tf(x,{o:e,x:(1-e)*-30});});
+      rise($('pedl'),t,8.1,.4,10);
+    }
+
+    // S4 — live jobs (VO 9.1–16.36)
+    if(scene($('s4'),t,9.05,16.65)){
+      left($('s4'),t,9.15);
+      $('cnt').textContent=fmt(45000*eo(P(t,9.35,11.0)));
+      const je=eo(P(t,9.3,9.9));tf($('jobs'),{o:je,x:(1-je)*80});
+      const on1=eio(P(t,12.9,13.15)),on2=eio(P(t,14.3,14.55));
+      [[ 'tg1',on1],['tg2',on2]].forEach(([id,v])=>{const sw=$(id).querySelector('.sw');sw.style.background=`rgba(12,12,11,${v})`;sw.querySelector('i').style.transform=`translateX(${v*24}px)`;sw.querySelector('i').style.background=v>.5?'#D8FA4B':'#fff';$(id).style.borderColor=v>.5?'#0C0C0B':'rgba(12,12,11,.16)';});
+      // initial order "most recent": C, A, D, B → best match: A, B, D, C
+      const init={jC:0,jA:1,jD:2,jB:3},fin={jA:0,jB:1,jD:2,jC:3};
+      const so=eio(P(t,14.6,15.35));
+      Object.keys(init).forEach((id,i)=>{
+        const el=$(id);const y=L(init[id],fin[id],so)*140;
+        const e=eo(P(t,9.7+init[id]*.14,10.3+init[id]*.14));
+        const arc=Math.sin(Math.PI*so);
+        const dx=id==='jC'?arc*70:id==='jD'?arc*30:0;
+        const sx=id==='jC'?1-arc*.1:id==='jD'?1-arc*.05:1+arc*.03;
+        el.style.opacity=e*(id==='jC'?L(1,.5,so)*(1-arc*.4):1);
+        el.style.transform=`translate(${(1-e)*60+dx}px,${y}px) scale(${sx})`;
+        el.style.zIndex={jA:4,jB:3,jD:2,jC:1}[id];
+        el.classList.toggle('top',id==='jA'&&so>.5);
+        el.style.boxShadow=id==='jA'&&so>.5?'0 18px 40px -18px rgba(12,12,11,.35)':'none';
+        el.style.borderColor=id==='jA'&&so>.5?'#0C0C0B':'rgba(12,12,11,.09)';
+      });
+    }
+
+    // S5 — ATS (VO 16.74–21.27)
+    if(scene($('s5'),t,16.6,21.55)){
+      left($('s5'),t,16.7);
+      const ae=eo(P(t,16.85,17.4));tf($('ats'),{o:ae,x:(1-ae)*80});
+      pop($('free'),t,17.2);$('free').style.transform+=' rotate(4deg)';
+      const se=eo(P(t,17.3,19.0));$('arc').setAttribute('stroke-dashoffset',703.7*(1-.84*se));$('atsn').textContent=Math.round(84*se);
+      bars($('bars'),t,17.4,.18);
+      rise($('kw').querySelector('.lbl'),t,18.5,.4,10);
+      $('kw').querySelectorAll('.chip').forEach((c,i)=>{
+        const t0=i<4?18.6+i*.14:19.55+(i-4)*.22;pop(c,t,t0);
+        if(i>=4){const pulse=P(t,t0+.4,t0+1.2);if(pulse>0&&pulse<1)c.style.transform+=` scale(${1+Math.sin(pulse*Math.PI*2)*.06})`;}
+      });
+      rise($('tip'),t,20.2,.5,20);
+    }
+
+    // S6 — apply kit + tracker (VO 21.67–26.69)
+    if(scene($('s6'),t,21.5,26.95)){
+      left($('s6'),t,21.6);
+      const ke=eo(P(t,21.7,22.25));tf($('kit'),{o:ke,x:(1-ke)*80});
+      const te=eo(P(t,21.9,22.45));tf($('trk'),{o:te,x:(1-te)*80});
+      // cursor path: right-container coordinates
+      const pts=[[650,760,21.9],[340,245,22.45],[340,335,22.95],[340,425,23.45],[200,615,24.0],[790,330,25.0],[790,330,26.9]];
+      let cx=pts[0][0],cy=pts[0][1];
+      for(let i=0;i<pts.length-1;i++){const [x0,y0,t0]=pts[i],[x1,y1,t1]=pts[i+1];if(t>=t0){const e=eio(P(t,t0,t0+(t1-t0)*.75));cx=L(x0,x1,e);cy=L(y0,y1,e);}}
+      const ce=P(t,21.85,22.1);tf($('cursor'),{o:ce,x:cx,y:cy});
+      const clicks=[22.75,23.25,23.75,24.3,25.35];
+      let rp=0,rx=0,ry=0;clicks.forEach((c,i)=>{const q=P(t,c,c+.45);if(q>0&&q<1){rp=q;}});
+      const ci=clicks.findIndex(c=>t>=c&&t<c+.45);
+      if(ci>=0){const [x,y]=[[340,245],[340,335],[340,425],[200,615],[790,330]][ci];$('ripple').style.opacity=1-rp;$('ripple').style.transform=`translate(${x-22}px,${y-20}px) scale(${L(.3,1.4,rp)})`;}else $('ripple').style.opacity=0;
+      ['cp1','cp2','cp3'].forEach((id,i)=>{const on=t>=clicks[i];$(id).classList.toggle('done',on);$(id).textContent=on?'Copied ✓':'Copy';});
+      $('cp4').classList.remove('done');$('cp4').textContent='Copy';
+      const ob=t>=clicks[3]&&t<clicks[3]+.25;$('openbtn').style.transform=`scale(${ob?.96:1})`;
+      // tracker rows: new Backend Engineer row lands on top at 24.5
+      const ne=back(P(t,24.45,24.95));
+      const shift=eio(P(t,24.35,24.75));
+      tf($('tr0'),{o:clamp(ne*1.5),y:0,s:L(.7,1,ne)});$('tr0').style.top='112px';
+      ['tr1','tr2','tr3'].forEach((id,i)=>{$(id).style.top='112px';const e=eo(P(t,22.1+i*.12,22.6+i*.12));tf($(id),{o:e,y:(i+shift)*106,x:(1-e)*30});});
+      $('tr0').style.boxShadow=t>24.45&&t<25.3?'0 0 0 3px #D8FA4B':'none';
+      $('tcount').textContent=t>=24.5?'4':'3';
+      const s1=t>=25.4;$('st1').textContent=s1?'Interview':'Applied';$('st1').className='st '+(s1?'iv':'ap');
+      if(t>=25.4){const q=back(P(t,25.4,25.8));$('st1').style.transform=`scale(${L(.6,1,q)})`;}else $('st1').style.transform='none';
+    }
+
+    // S7 — practice + mock (VO 27.03–32.82)
+    if(scene($('s7'),t,26.9,33.6,{fout:.01})){
+      left($('s7'),t,27.0);
+      const pe=eo(P(t,27.15,27.7));tf($('prac'),{o:pe,x:(1-pe)*80});
+      const ans="I'd use a token bucket per API key, kept in Redis, so limits hold across every server. Return 429 with Retry-After…";
+      const tp=P(t,27.8,29.6);$('ans').textContent=ans.slice(0,Math.round(ans.length*tp))+(tp>0&&tp<1&&Math.floor(t*3)%2?'▍':'');
+      pop($('score'),t,29.7,.5);
+      const me=eo(P(t,29.9,30.4));tf($('mock'),{o:me,y:(1-me)*60});
+      $('ldot').style.opacity=.4+.6*Math.abs(Math.sin(t*3));
+      pop($('b1'),t,30.25);
+      pop($('b2'),t,30.75);
+      const b2=$('b2');if(!b2.children.length){for(let i=0;i<22;i++)b2.appendChild(document.createElement('i'));}
+      [...b2.children].forEach((w,i)=>{w.style.height=(8+Math.abs(Math.sin(t*9+i*.9))*30*(.5+.5*Math.sin(i*1.7)))+'px';});
+      bars($('mscores'),t,31.2,.22);
+    }
+  }
+
+  /* ---------- DARK 2 ---------- */
+  const d2=$('dark2');
+  if(t<32.95){d2.style.display='none';}
+  else{
+    d2.style.display='block';
+    const r=eio(P(t,32.95,33.6))*1250;
+    d2.style.clipPath=t<33.6?`circle(${r}px at 1390px 570px)`:'none';
+    $('d2blob').style.transform=`translate(${Math.sin(t*.7)*60}px,${Math.cos(t*.5)*40}px) scale(${1+.1*Math.sin(t)})`;
+    const le=back(P(t,33.25,33.8));tf($('s8logo'),{o:clamp(le*1.5),s:L(.3,1,le),r:L(-20,0,le)});
+    rise($('s8word'),t,33.35,.55,40);
+    const a=back(P(t,34.35,34.85));tf($('s8a'),{o:clamp(a*1.5),y:(1-a)*70,s:L(.85,1,a)});
+    const b=back(P(t,35.35,35.85));tf($('s8b'),{o:clamp(b*1.5),y:(1-b)*70,s:L(.85,1,b)});
+    rise($('s8url'),t,36.1,.6,20);
+  }
+}
+window.seek=seek;
+seek(0);
+</script>
+</body>
+</html>
