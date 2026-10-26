@@ -980,26 +980,36 @@ class JobFilterAndMatchTests(TestCase):
         self.assertEqual(self._ids("?exp_min=6&exp_max=15"), [self.chef.id])  # open-ended job, 15 = no cap
         self.assertEqual(len(self._ids("?exp_min=0&exp_max=15")), 3)
 
-    def test_company_cap_and_see_all(self):
-        for i in range(5):
-            make_job(title=f"AI Native Engineer {i}", company="Accenture", skills=[],
+    def test_same_role_stacks_but_different_roles_list_separately(self):
+        for i in range(4):
+            make_job(title="AI Native Engineer", company="Accenture", skills=[], location=f"City {i}",
                      posted_at=timezone.now() - timedelta(days=i + 1))
+        make_job(title="Custom Software Engineer", company="Accenture", skills=[],
+                 posted_at=timezone.now() - timedelta(days=9))
         r = self.c.get("/api/careers/jobs/").data
         accenture = [j for j in r["results"] if j["company"] == "Accenture"]
-        self.assertEqual(len(accenture), 3)
-        self.assertEqual(accenture[0]["company_more"], 2)
-        self.assertEqual(r["count"], 6)
-        r = self.c.get("/api/careers/jobs/?company=Accenture").data
+        self.assertEqual(sorted(j["title"] for j in accenture), ["AI Native Engineer", "Custom Software Engineer"])
+        self.assertEqual({j["title"]: j["stack_more"] for j in accenture},
+                         {"AI Native Engineer": 3, "Custom Software Engineer": 0})
         self.assertEqual(r["count"], 5)
+        r = self.c.get("/api/careers/jobs/?exact_title=ai native engineer").data
+        self.assertEqual(r["count"], 4)
 
-    def test_best_match_is_a_filter_and_keeps_recency_order(self):
+    def test_best_match_drops_weak_fits_and_sort_orders_the_rest(self):
         CandidateProfile.objects.create(user=self.user, skills=["Python", "Django"], target_roles=["Engineer"],
                                         experience_level="mid")
-        r = self.c.get("/api/careers/jobs/?best_match=1")
+        fresh = make_job(title="Engineer", skills=["python", "aws"], level="mid",
+                         posted_at=timezone.now() - timedelta(hours=1))
+        # Shares only the title word "engineer" with the profile and a different level: a weak fit.
+        r = self.c.get("/api/careers/jobs/?best_match=1&sort=match")
+        ids = [j["id"] for j in r.data["results"]]
         self.assertTrue(r.data["best_match"])
-        self.assertEqual(r.data["sort"], "recent")
-        self.assertNotIn(self.chef.id, [j["id"] for j in r.data["results"]])
-        self.assertEqual([j["id"] for j in r.data["results"]], [self.fe.id, self.backend.id])  # newest first
+        self.assertEqual(ids, [self.backend.id, fresh.id])  # highest match % first
+        self.assertGreaterEqual(r.data["results"][0]["match"], r.data["results"][1]["match"])
+        self.assertNotIn(self.fe.id, ids)    # title overlap alone is below MIN_MATCH
+        self.assertNotIn(self.chef.id, ids)
+        r = self.c.get("/api/careers/jobs/?best_match=1&sort=recent")
+        self.assertEqual([j["id"] for j in r.data["results"]], [fresh.id, self.backend.id])  # newest of the matches
 
     def test_best_match_ranks_by_profile(self):
         r = self.c.get("/api/careers/jobs/?sort=match")

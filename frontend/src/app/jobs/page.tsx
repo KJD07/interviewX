@@ -344,7 +344,7 @@ function JobCard({
   onChange: (j: Job) => void;
   profile: CandidateProfile | null;
   onQuota: (q: AtsQuota) => void;
-  onSeeAll?: (company: string) => void; // set on the last card of a company that has more openings than the cap shows
+  onSeeAll?: (job: Job) => void; // opens every posting of this role (shown when more are stacked behind the card)
 }) {
   const [copied, setCopied] = useState(false);
   const [kitOpen, setKitOpen] = useState(false);
@@ -428,13 +428,13 @@ function JobCard({
       </div>
       {kitOpen && <ApplyKit job={job} profile={profile} onOpenForm={apply} onClose={closeKit} />}
       {open && <JobDetails job={job} profile={profile} onQuota={onQuota} />}
-      {onSeeAll && job.company_more > 0 && (
+      {onSeeAll && job.stack_more > 0 && (
         <button
-          onClick={() => onSeeAll(job.company)}
+          onClick={() => onSeeAll(job)}
           className="mt-4 pt-3 border-t w-full text-left text-[13px] font-semibold hover:underline"
           style={{ borderColor: "var(--border)", color: "var(--ink)" }}
         >
-          See {job.company_more} more {job.company} {job.company_more === 1 ? "opening" : "openings"} →
+          +{job.stack_more} more {job.stack_more === 1 ? "opening" : "openings"} for this role (other locations) →
         </button>
       )}
     </li>
@@ -462,10 +462,10 @@ export default function JobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [shared, setShared] = useState<Job | null>(null);
   const [count, setCount] = useState(0);
-  const [filters, setFilters] = useState<JobFilters>({ page: 1, sort: "recent", region: "india", best_match: true });
+  const [filters, setFilters] = useState<JobFilters>({ page: 1, sort: "match", region: "india", best_match: true });
   const [quota, setQuota] = useState<AtsQuota | null>(null);
   const [meta, setMeta] = useState<{ refreshed: string | null; refreshing: boolean; jobs: number; companies: number; hasProfile: boolean; sort: string }>(
-    { refreshed: null, refreshing: false, jobs: 0, companies: 0, hasProfile: true, sort: "recent" }
+    { refreshed: null, refreshing: false, jobs: 0, companies: 0, hasProfile: true, sort: "match" }
   );
   const [profile, setProfile] = useState<CandidateProfile | null>(null);
   const [open, setOpen] = useState<number | null>(null);
@@ -525,7 +525,7 @@ export default function JobsPage() {
   const expMin = filters.exp_min ?? 0;
   const expMax = filters.exp_max ?? EXP_TOP;
   const anyFilter = !!(
-    filters.q?.length || filters.location?.length || filters.company || filters.work_mode?.length ||
+    filters.q?.length || filters.location?.length || filters.company || filters.exact_title || filters.work_mode?.length ||
     expMin > 0 || expMax < EXP_TOP || filters.posted
   );
   const clearFilters = () => setFilters({ page: 1, sort: filters.sort, region: filters.region, best_match: filters.best_match });
@@ -534,8 +534,6 @@ export default function JobsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
-  const lastOfCompany = new Map<string, number>();
-  listed.forEach((j) => lastOfCompany.set(j.company, j.id));
 
   return (
     <ProtectedRoute>
@@ -634,7 +632,7 @@ export default function JobsPage() {
                       {POSTED.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
                     </select>
                   </label>
-                  <Toggle on={!!filters.best_match && meta.hasProfile} onClick={() => meta.hasProfile && set({ best_match: !filters.best_match })}>
+                  <Toggle on={!!filters.best_match && meta.hasProfile} onClick={() => meta.hasProfile && set({ best_match: !filters.best_match, sort: filters.best_match ? "recent" : "match" })}>
                     Best match{meta.hasProfile ? "" : " (needs profile)"}
                   </Toggle>
                   <label className="flex items-center gap-2">
@@ -648,9 +646,9 @@ export default function JobsPage() {
                       <option value="match" disabled={!meta.hasProfile}>Highest match %{meta.hasProfile ? "" : " (needs profile)"}</option>
                     </select>
                   </label>
-                  {filters.company && (
-                    <button className="chip" onClick={() => set({ company: undefined })} aria-label={`Remove ${filters.company} filter`}>
-                      {filters.company} ×
+                  {(filters.company || filters.exact_title) && (
+                    <button className="chip" onClick={() => set({ company: undefined, exact_title: undefined })} aria-label="Remove role filter">
+                      {[filters.company, filters.exact_title].filter(Boolean).join(" · ")} ×
                     </button>
                   )}
                   {anyFilter && (
@@ -708,7 +706,7 @@ export default function JobsPage() {
               {listed.map((j) => (
                 <JobCard key={j.id} job={j} open={open === j.id} onToggle={() => setOpen(open === j.id ? null : j.id)}
                   onChange={replace} profile={profile} onQuota={setQuota}
-                  onSeeAll={lastOfCompany.get(j.company) === j.id ? (company) => set({ company }) : undefined} />
+                  onSeeAll={(job) => set({ company: job.company, exact_title: job.title })} />
               ))}
             </ul>
 
