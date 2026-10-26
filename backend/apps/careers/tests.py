@@ -995,14 +995,21 @@ class JobFilterAndMatchTests(TestCase):
         r = self.c.get("/api/careers/jobs/?exact_title=ai native engineer").data
         self.assertEqual(r["count"], 4)
 
-    def test_best_match_is_a_filter_and_keeps_recency_order(self):
+    def test_best_match_drops_weak_fits_and_sort_orders_the_rest(self):
         CandidateProfile.objects.create(user=self.user, skills=["Python", "Django"], target_roles=["Engineer"],
                                         experience_level="mid")
-        r = self.c.get("/api/careers/jobs/?best_match=1")
+        fresh = make_job(title="Engineer", skills=["python", "aws"], level="mid",
+                         posted_at=timezone.now() - timedelta(hours=1))
+        # Shares only the title word "engineer" with the profile and a different level: a weak fit.
+        r = self.c.get("/api/careers/jobs/?best_match=1&sort=match")
+        ids = [j["id"] for j in r.data["results"]]
         self.assertTrue(r.data["best_match"])
-        self.assertEqual(r.data["sort"], "recent")
-        self.assertNotIn(self.chef.id, [j["id"] for j in r.data["results"]])
-        self.assertEqual([j["id"] for j in r.data["results"]], [self.fe.id, self.backend.id])  # newest first
+        self.assertEqual(ids, [self.backend.id, fresh.id])  # highest match % first
+        self.assertGreaterEqual(r.data["results"][0]["match"], r.data["results"][1]["match"])
+        self.assertNotIn(self.fe.id, ids)    # title overlap alone is below MIN_MATCH
+        self.assertNotIn(self.chef.id, ids)
+        r = self.c.get("/api/careers/jobs/?best_match=1&sort=recent")
+        self.assertEqual([j["id"] for j in r.data["results"]], [fresh.id, self.backend.id])  # newest of the matches
 
     def test_best_match_ranks_by_profile(self):
         r = self.c.get("/api/careers/jobs/?sort=match")

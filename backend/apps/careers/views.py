@@ -27,6 +27,7 @@ from .serializers import (
 )
 
 PAGE_SIZE = 20
+MIN_MATCH = 45     # "Best match" drops jobs scoring below this (title-word overlap alone isn't a match)
 MATCH_POOL = 2000  # newest candidate jobs scored in Python for "Best match"
 POSTED_WITHIN = {"1", "3", "7", "30"}
 # Postings of the same role at the same company (same title, usually many locations) are stacked
@@ -131,7 +132,8 @@ class JobListView(APIView):
         start, end = (page - 1) * PAGE_SIZE, page * PAGE_SIZE
         sig = signals_for(_profile(request.user))
         sort = "match" if params.get("sort") == "match" and sig.usable else "recent"
-        # "Best match" is a filter (jobs relevant to the profile), independent of the sort order.
+        # "Best match" keeps only jobs that actually fit the profile (score >= MIN_MATCH); Sort then orders
+        # them: by match % (ties newest first) or by recency (so: newest of the good matches).
         best_match = params.get("best_match") == "1" and sig.usable
         if best_match or sort == "match":
             qs = qs.filter(candidate_filter(sig))
@@ -140,14 +142,23 @@ class JobListView(APIView):
             qs = qs.filter(title__iexact=exact_title)
         stacked = not exact_title
 
-        if sort == "match":
-            pool = list(qs[:MATCH_POOL])
-            scored = sorted(((match_score(j, sig), j) for j in pool), key=lambda p: (-p[0], -p[1].posted_at.timestamp()))
+        if best_match or sort == "match":
+            scored = [(match_score(j, sig), j) for j in qs[:MATCH_POOL]]
+            if best_match:
+                scored = [row for row in scored if row[0] >= MIN_MATCH]
+            if sort == "match":
+                scored.sort(key=lambda p: (-p[0], -p[1].posted_at.timestamp()))
+            else:
+                scored.sort(key=lambda p: (-p[1].posted_at.timestamp(), -p[0]))
+            more = {}
             if stacked:
                 seen, kept = set(), []
                 for row in scored:
-                    if _stack_key(row[1]) not in seen:
-                        seen.add(_stack_key(row[1]))
+                    key = _stack_key(row[1])
+                    if key in seen:
+                        more[key] = more.get(key, 0) + 1
+                    else:
+                        seen.add(key)
                         kept.append(row)
                 scored = kept
             total = len(scored)
@@ -156,7 +167,7 @@ class JobListView(APIView):
             listing = _stack_same_role(qs) if stacked else qs
             total = listing.count()
             page_rows = [(match_score(j, sig), j) for j in listing[start:end]]
-        more = _stacked_counts(qs, page_rows) if stacked else {}
+            more = _stacked_counts(qs, page_rows) if stacked else {}
 
         saved, applied = _tracking(request.user, [j.id for _, j in page_rows])
         state = JobFeedState.objects.filter(pk=1).first()

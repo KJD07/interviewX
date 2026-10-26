@@ -462,10 +462,10 @@ export default function JobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [shared, setShared] = useState<Job | null>(null);
   const [count, setCount] = useState(0);
-  const [filters, setFilters] = useState<JobFilters>({ page: 1, sort: "recent", region: "india", best_match: true });
+  const [filters, setFilters] = useState<JobFilters>({ page: 1, sort: "match", region: "india", best_match: true });
   const [quota, setQuota] = useState<AtsQuota | null>(null);
   const [meta, setMeta] = useState<{ refreshed: string | null; refreshing: boolean; jobs: number; companies: number; hasProfile: boolean; sort: string }>(
-    { refreshed: null, refreshing: false, jobs: 0, companies: 0, hasProfile: true, sort: "recent" }
+    { refreshed: null, refreshing: false, jobs: 0, companies: 0, hasProfile: true, sort: "match" }
   );
   const [profile, setProfile] = useState<CandidateProfile | null>(null);
   const [open, setOpen] = useState<number | null>(null);
@@ -632,7 +632,7 @@ export default function JobsPage() {
                       {POSTED.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
                     </select>
                   </label>
-                  <Toggle on={!!filters.best_match && meta.hasProfile} onClick={() => meta.hasProfile && set({ best_match: !filters.best_match })}>
+                  <Toggle on={!!filters.best_match && meta.hasProfile} onClick={() => meta.hasProfile && set({ best_match: !filters.best_match, sort: filters.best_match ? "recent" : "match" })}>
                     Best match{meta.hasProfile ? "" : " (needs profile)"}
                   </Toggle>
                   <label className="flex items-center gap-2">
