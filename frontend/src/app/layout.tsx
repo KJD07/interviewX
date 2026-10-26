@@ -20,13 +20,17 @@ export const metadata: Metadata = {
   title: {
     // Every page keeps the brand in the title — the strongest single signal
     // for the "evalulabs" query.
-    default: "EvaluLabs | AI Interview and Candidate Assessment Platform",
+    default: "EvaluLabs | Free Candidate Portal and AI Interview Platform",
     template: "%s | EvaluLabs",
   },
   description: BRAND_DESCRIPTION,
   applicationName: SITE_NAME,
   keywords: [
     "EvaluLabs",
+    "candidate portal",
+    "live jobs India",
+    "ATS resume checker",
+    "job application tracker",
     "AI interview platform",
     "AI interviewer",
     "AI mock interview",
@@ -56,7 +60,7 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     locale: "en_US",
     url: `${SITE_URL}/`,
-    title: "EvaluLabs | AI Interview and Candidate Assessment Platform",
+    title: "EvaluLabs | Free Candidate Portal and AI Interview Platform",
     description: BRAND_DESCRIPTION,
     images: [{ url: `${SITE_URL}/og.png`, width: 1200, height: 630, alt: SITE_NAME }],
   },
@@ -64,7 +68,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     site: TWITTER_HANDLE,
     creator: TWITTER_HANDLE,
-    title: "EvaluLabs | AI Interview and Candidate Assessment Platform",
+    title: "EvaluLabs | Free Candidate Portal and AI Interview Platform",
     description: BRAND_DESCRIPTION,
     images: [`${SITE_URL}/og.png`],
   },

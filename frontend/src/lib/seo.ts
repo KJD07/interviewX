@@ -17,7 +17,7 @@ export const LINKEDIN_URL = "https://www.linkedin.com/company/evalulabs/";
  * Covers both audiences: candidate practice and enterprise screening.
  */
 export const BRAND_DESCRIPTION =
-  "EvaluLabs is an AI interview and candidate assessment platform. Candidates practise with verified question banks, voice, and coding rounds. Hiring teams screen with invites, scored reports, and optional camera proctoring.";
+  "EvaluLabs is a free candidate portal and AI interview platform. Candidates find live jobs ranked for their profile, check resumes against any job with an ATS check, track applications, and practise with AI mock interviews on verified questions. Hiring teams screen with invites, scored reports, and optional camera proctoring.";
 
 const OG_IMAGE = `${SITE_URL}/og.png`;
 
@@ -137,7 +137,7 @@ export function softwareApplicationSchema() {
     "@id": `${SITE_URL}/#software`,
     name: SITE_NAME,
     applicationCategory: "BusinessApplication",
-    applicationSubCategory: "Interview Preparation and Candidate Assessment",
+    applicationSubCategory: "Job Search, Interview Preparation and Candidate Assessment",
     operatingSystem: "Web",
     url: SITE_URL,
     description: BRAND_DESCRIPTION,
