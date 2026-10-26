@@ -1,18 +1,37 @@
 # EvaluLabs
 
-> EvaluLabs (https://www.evalulabs.com) is an AI interview and candidate
-> assessment platform. Candidates practise mock interviews against verified
-> company and skill question banks. Hiring teams screen applicants with their
-> own banks, invite links, rubric scores, and optional camera proctoring.
+> EvaluLabs (https://www.evalulabs.com) is a free candidate portal and AI
+> interview platform. Candidates get live jobs ranked for their profile, an ATS
+> resume check, an apply kit and application tracker, role-based practice, and
+> AI mock interviews against verified company and skill question banks. Hiring
+> teams screen applicants with their own banks, invite links, rubric scores, and
+> optional camera proctoring.
 
 Not to be confused with Evalulab (evalulab.com), an unrelated clinical testing
 company for cosmetics based in Montreal.
 
 ## Who it is for
 
-- Candidates preparing for company or skill interviews.
+- Job seekers (India-first) finding roles, applying, and preparing for interviews.
 - Hiring teams running structured first-round screening.
 - Colleges sponsoring a plan for an email domain.
+
+## Candidate portal
+
+- Profile filled in from an uploaded resume, then editable.
+- Live jobs from 1,100+ companies' own public career boards (Greenhouse, Lever,
+  Ashby, SmartRecruiters, Workday, Keka, Freshteam) plus two remote-job feeds.
+  Refreshed every few hours; postings older than 60 days are removed. Roles in
+  or open to India are shown first, with a Worldwide option. Filters for skills,
+  location, work mode, experience and a profile match score.
+- ATS resume check against any job: score breakdown (skills and keywords,
+  experience, job title, education, structure), matched, implied and missing
+  keywords, and suggestions. 15 checks a day free.
+- Apply kit: profile details as copy-ready fields beside the company's own
+  application form. EvaluLabs does not submit applications.
+- Application tracker with status and notes, saved jobs, and manual entries.
+- Role practice: questions for each tracked application from the company bank,
+  skill tracks and HR questions, scored instantly. Code is not executed.
 
 ## Practice interviews
 
@@ -28,7 +47,7 @@ company for cosmetics based in Montreal.
   hidden unit-test runner.
 - Scoring uses an anchored 0-10 rubric across communication, technical depth,
   problem solving, and overall. Vague or blank answers score low by design.
-  Paid plans also get topic-level insights.
+  Sessions also get topic-level insights.
 - A progress view tracks scores across companies and roles.
 
 ## Enterprise hiring
@@ -47,10 +66,11 @@ company for cosmetics based in Montreal.
 
 ## Plans
 
-- Free: a monthly allowance of AI mock interviews with scoring and feedback. No
-  card required.
-- Paid tiers: detailed insights, topic-level breakdowns, higher monthly limits.
-- Top-up packs: extra interviews that roll over and do not reset on renewal.
+- Free for candidates, no card required: live jobs, profile, tracker, role
+  practice, 50 AI mock interviews a month with scoring and topic insights, and
+  15 ATS resume checks a day.
+- ATS Unlimited (₹199 per month) removes the daily ATS check limit. It is the
+  only paid candidate option.
 - Institutional sponsorships: colleges and companies can grant a plan to
   everyone on their email domain, with a per-cycle interview limit they set.
 

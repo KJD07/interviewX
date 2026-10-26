@@ -143,6 +143,11 @@ export function softwareApplicationSchema() {
     description: BRAND_DESCRIPTION,
     publisher: { "@id": `${SITE_URL}/#organization` },
     featureList: [
+      "Candidate profile filled in from an uploaded resume",
+      "Live jobs from 1,100+ company career boards, ranked by profile match",
+      "ATS resume check against any job, with matched and missing keywords",
+      "Copy-ready apply kit and application tracker",
+      "Role-based interview practice for each tracked application",
       "AI mock interviews with a company-specific interviewer persona",
       "Interview questions verified by current employees and recent candidates",
       "Voice mode with real-time transcription",
@@ -156,8 +161,39 @@ export function softwareApplicationSchema() {
       "@type": "Offer",
       price: "0",
       priceCurrency: "INR",
-      description: "Free plan with a monthly allowance of AI mock interviews.",
+      description: "Free for candidates: live jobs, daily ATS checks, application tracking, practice and monthly AI mock interviews.",
     },
+  };
+}
+
+/** VideoObject for a self-hosted marketing video under /public. */
+export function videoSchema({
+  name,
+  description,
+  path,
+  thumbnailPath,
+  uploadDate,
+  duration,
+}: {
+  name: string;
+  description: string;
+  path: string;
+  thumbnailPath: string;
+  uploadDate: string;
+  /** ISO 8601 duration, e.g. "PT38S". */
+  duration: string;
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "VideoObject",
+    name,
+    description,
+    contentUrl: `${SITE_URL}${path}`,
+    thumbnailUrl: `${SITE_URL}${thumbnailPath}`,
+    uploadDate,
+    duration,
+    publisher: { "@id": `${SITE_URL}/#organization` },
+    inLanguage: "en",
   };
 }
 
