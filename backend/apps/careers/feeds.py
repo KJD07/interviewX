@@ -133,6 +133,34 @@ def infer_level(title: str, description: str = "") -> str:
     return Job.Level.MID  # no seniority marker in the title: the common case is mid-level
 
 
+_YEARS_RANGE_RE = re.compile(r"(\d{1,2})\s*(?:-|–|to)\s*(\d{1,2})\s*\+?\s*(?:years?|yrs?)")
+_YEARS_PLUS_RE = re.compile(r"(\d{1,2})\s*\+?\s*(?:years?|yrs?)")
+LEVEL_YEARS = {Job.Level.ENTRY: (0, 1), Job.Level.MID: (2, 5), Job.Level.SENIOR: (5, None)}
+OPEN_ENDED_YEARS = 15  # the slider's top stop means "15+"; also the cap on parsed values
+
+
+def infer_years(title: str, description: str = "", level: str = "") -> tuple[int, int | None]:
+    """(min, max) years of experience a posting asks for; max None = open-ended.
+    Intern/fresher titles are always 0–1. Otherwise the first "N-M years" / "N+ years"
+    near the word "experience" in the description wins, else the level's typical range."""
+    level = level or infer_level(title, description)
+    if level == Job.Level.ENTRY and _ENTRY_RE.search(title.lower()):
+        return LEVEL_YEARS[Job.Level.ENTRY]
+    text = (description or "").lower()[:6000]
+    for rx in (_YEARS_RANGE_RE, _YEARS_PLUS_RE):
+        for m in rx.finditer(text):
+            if "experience" not in text[max(0, m.start() - 50):m.end() + 50]:
+                continue
+            lo = min(int(m.group(1)), OPEN_ENDED_YEARS)
+            if rx is _YEARS_RANGE_RE:
+                hi = int(m.group(2))
+                if hi >= lo:
+                    return lo, min(hi, OPEN_ENDED_YEARS)
+            else:
+                return lo, None
+    return LEVEL_YEARS.get(level, LEVEL_YEARS[Job.Level.MID])
+
+
 def infer_work_mode(explicit: str = "", *texts: str) -> str:
     e = (explicit or "").lower().replace("-", "").replace("_", "")
     if "remote" in e:
@@ -167,6 +195,7 @@ def _row(**kw) -> dict:
     kw["tags"] = [str(t)[:60] for t in (kw.get("tags") or []) if t][:20]
     kw.setdefault("work_mode", infer_work_mode("", kw["location"], kw["title"]))
     kw["level"] = infer_level(kw["title"], kw["description"])
+    kw["exp_min"], kw["exp_max"] = infer_years(kw["title"], kw["description"], kw["level"])
     kw["in_india"] = is_india_job(kw["location"], kw["work_mode"])
     return kw
 
@@ -446,7 +475,7 @@ def _upsert(rows: list[dict], board: JobBoard | None = None) -> set[str]:
     ids = [r["external_id"] for r in rows]
     # Lazy-description rows carry none in the list payload, so don't wipe the
     # description and what was derived from it once filled in.
-    fields = UPDATE_FIELDS + ([] if source in LAZY_DESCRIPTION_SOURCES else ["description", "skills", "level"])
+    fields = UPDATE_FIELDS + ([] if source in LAZY_DESCRIPTION_SOURCES else ["description", "skills", "level", "exp_min", "exp_max"])
     compared = [f for f in fields if f not in ("fetched_at", "board", "skills")]
     known = {eid: (board_id, skills, dict(zip(compared, vals))) for eid, board_id, skills, *vals in
              Job.objects.filter(source=source, external_id__in=ids)
@@ -630,5 +659,6 @@ def ensure_description(job: Job) -> Job:
     job.description = _clean_description(content)[:MAX_DESCRIPTION]
     job.skills = job_skills(job.title, job.tags, job.description)
     job.level = infer_level(job.title, job.description) or job.level
-    job.save(update_fields=["description", "skills", "level"])
+    job.exp_min, job.exp_max = infer_years(job.title, job.description, job.level)
+    job.save(update_fields=["description", "skills", "level", "exp_min", "exp_max"])
     return job

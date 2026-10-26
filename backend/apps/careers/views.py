@@ -1,7 +1,8 @@
 from datetime import timedelta
 
 from django.db import IntegrityError, transaction
-from django.db.models import Q
+from django.db.models import Count, F, Q, Window
+from django.db.models.functions import RowNumber
 from django.http import FileResponse
 from django.utils import timezone
 from rest_framework import status
@@ -28,6 +29,9 @@ from .serializers import (
 PAGE_SIZE = 20
 MATCH_POOL = 2000  # newest candidate jobs scored in Python for "Best match"
 POSTED_WITHIN = {"1", "3", "7", "30"}
+COMPANY_CAP = 3  # jobs per company per list, so one big employer can't fill whole pages
+MAX_TERMS = 10   # roles / locations accepted per search
+EXP_TOP = 15     # the experience slider's last stop means "15+" (no upper bound)
 
 
 def _profile(user):
@@ -40,16 +44,36 @@ def _tracking(user, job_ids):
     return saved, applied
 
 
+def _terms(params, key):
+    """Repeated (?q=a&q=b) or comma-free multi-value param -> cleaned, de-duplicated terms."""
+    seen, out = set(), []
+    for raw in params.getlist(key):
+        t = raw.strip()
+        if t and t.lower() not in seen:
+            seen.add(t.lower())
+            out.append(t)
+    return out[:MAX_TERMS]
+
+
+def _int_param(params, key, lo, hi):
+    try:
+        return max(lo, min(hi, int(params.get(key))))
+    except (TypeError, ValueError):
+        return None
+
+
 def _filtered_jobs(params):
     qs = Job.objects.defer("description")  # list views never show it; it's most of each row
     if params.get("region") == "india":
         qs = qs.filter(in_india=True)
-    q = params.get("q", "").strip()
-    if q:
-        qs = qs.filter(Q(title__icontains=q) | Q(company__icontains=q) | Q(skills__contains=[q.lower()]))
-    location = params.get("location", "").strip()
-    if location:
-        qs = qs.filter(location__icontains=location)
+    roles = Q()  # any of the roles / skills / companies
+    for t in _terms(params, "q"):
+        roles |= Q(title__icontains=t) | Q(company__icontains=t) | Q(skills__contains=[t.lower()])
+    qs = qs.filter(roles)
+    places = Q()  # any of the locations
+    for t in _terms(params, "location"):
+        places |= Q(location__icontains=t)
+    qs = qs.filter(places)
     company = params.get("company", "").strip()
     if company:
         qs = qs.filter(company__iexact=company)
@@ -59,10 +83,31 @@ def _filtered_jobs(params):
     levels = [lv for lv in params.get("level", "").split(",") if lv in Job.Level.values]
     if levels:
         qs = qs.filter(level__in=levels)
+    # Experience range in years: keep jobs whose asked-for range overlaps it.
+    lo, hi = _int_param(params, "exp_min", 0, EXP_TOP), _int_param(params, "exp_max", 0, EXP_TOP)
+    if lo is not None and hi is not None and lo > hi:
+        lo, hi = hi, lo
+    if lo:
+        qs = qs.filter(Q(exp_max__isnull=True) | Q(exp_max__gte=lo))
+    if hi is not None and hi < EXP_TOP:
+        qs = qs.filter(Q(exp_min__isnull=True) | Q(exp_min__lte=hi))
     posted = params.get("posted", "")
     if posted in POSTED_WITHIN:
         qs = qs.filter(posted_at__gte=timezone.now() - timedelta(days=int(posted)))
     return qs
+
+
+def _cap_per_company(qs):
+    """Newest COMPANY_CAP jobs of each company, still newest-first overall."""
+    ranked = qs.annotate(rn=Window(RowNumber(), partition_by=F("company"), order_by=F("posted_at").desc()))
+    return qs.model.objects.filter(pk__in=ranked.filter(rn__lte=COMPANY_CAP).values("pk")).defer("description")
+
+
+def _more_by_company(qs, rows):
+    """{company: jobs beyond the cap} for the companies on this page (the "see all" count)."""
+    names = {j.company for _, j in rows}
+    totals = dict(qs.filter(company__in=names).order_by().values_list("company").annotate(n=Count("pk")))
+    return {c: max(0, n - COMPANY_CAP) for c, n in totals.items()}
 
 
 class JobListView(APIView):
@@ -79,22 +124,38 @@ class JobListView(APIView):
         start, end = (page - 1) * PAGE_SIZE, page * PAGE_SIZE
         sig = signals_for(_profile(request.user))
         sort = "match" if params.get("sort") == "match" and sig.usable else "recent"
+        # "Best match" is a filter (jobs relevant to the profile), independent of the sort order.
+        best_match = params.get("best_match") == "1" and sig.usable
+        if best_match or sort == "match":
+            qs = qs.filter(candidate_filter(sig))
+        capped = not params.get("company", "").strip()  # drilling into one company lifts the cap
 
         if sort == "match":
-            pool = list(qs.filter(candidate_filter(sig))[:MATCH_POOL])
+            pool = list(qs[:MATCH_POOL])
             scored = sorted(((match_score(j, sig), j) for j in pool), key=lambda p: (-p[0], -p[1].posted_at.timestamp()))
+            if capped:
+                kept, per_company = [], {}
+                for row in scored:
+                    per_company[row[1].company] = per_company.get(row[1].company, 0) + 1
+                    if per_company[row[1].company] <= COMPANY_CAP:
+                        kept.append(row)
+                scored = kept
             total = len(scored)
             page_rows = scored[start:end]
         else:
-            total = qs.count()
-            page_rows = [(match_score(j, sig), j) for j in qs[start:end]]
+            listing = _cap_per_company(qs) if capped else qs
+            total = listing.count()
+            page_rows = [(match_score(j, sig), j) for j in listing[start:end]]
+        more = _more_by_company(qs, page_rows) if capped else {}
 
         saved, applied = _tracking(request.user, [j.id for _, j in page_rows])
         state = JobFeedState.objects.filter(pk=1).first()
         limit, used = quota(request.user)
         return Response({
-            "results": [job_dict(j, saved=j.id in saved, application=applied.get(j.id), match=m) for m, j in page_rows],
-            "count": total, "page": page, "page_size": PAGE_SIZE, "sort": sort,
+            "results": [job_dict(j, saved=j.id in saved, application=applied.get(j.id), match=m, company_more=more.get(j.company, 0))
+                        for m, j in page_rows],
+            "count": total, "page": page, "page_size": PAGE_SIZE, "sort": sort, "best_match": best_match,
+            "company_cap": COMPANY_CAP if capped else None,
             "last_refreshed_at": (state.last_finished_at or state.last_refreshed_at) if state else None,
             "refreshing": feeds.is_sweeping(state),
             "stats": {"jobs": state.jobs_count if state else 0, "companies": state.companies_count if state else 0,

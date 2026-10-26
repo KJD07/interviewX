@@ -1093,7 +1093,10 @@ export interface Job {
   source: string;
   work_mode: WorkMode | "";
   level: JobLevel | "";
+  exp_min: number | null; // years of experience asked for
+  exp_max: number | null; // null = open-ended ("5+ years")
   skills: string[];
+  company_more: number; // this company's further openings hidden by the per-company cap
   saved: boolean;
   application_status: ApplicationStatus | null;
   match: number | null; // 0-100 vs the candidate profile; null without a profile
@@ -1102,11 +1105,14 @@ export interface Job {
 
 export interface JobFilters {
   region?: "india" | ""; // "india": located in India or remote-open to India
-  q?: string;
-  location?: string;
+  q?: string[]; // roles / skills / companies — a job matches any of them
+  location?: string[]; // a job matches any of them
   company?: string;
   work_mode?: WorkMode[];
   level?: JobLevel[];
+  exp_min?: number; // years range; exp_max === 15 means "15+"
+  exp_max?: number;
+  best_match?: boolean; // only jobs relevant to the profile (a filter, independent of sort)
   posted?: "" | "1" | "3" | "7" | "30";
   sort?: "recent" | "match";
   page?: number;
@@ -1118,6 +1124,8 @@ export interface JobListResponse {
   page: number;
   page_size: number;
   sort: "recent" | "match";
+  best_match: boolean;
+  company_cap: number | null; // max jobs shown per company; null when filtered to one company
   last_refreshed_at: string | null;
   refreshing: boolean;
   stats: { jobs: number; companies: number; india_jobs: number; india_companies: number };
@@ -1240,11 +1248,14 @@ function jobQuery(f: JobFilters): string {
   const p = new URLSearchParams();
   p.set("page", String(f.page ?? 1));
   if (f.region) p.set("region", f.region);
-  if (f.q) p.set("q", f.q);
-  if (f.location) p.set("location", f.location);
+  f.q?.forEach((t) => p.append("q", t));
+  f.location?.forEach((t) => p.append("location", t));
   if (f.company) p.set("company", f.company);
   if (f.work_mode?.length) p.set("work_mode", f.work_mode.join(","));
   if (f.level?.length) p.set("level", f.level.join(","));
+  if (f.exp_min !== undefined) p.set("exp_min", String(f.exp_min));
+  if (f.exp_max !== undefined) p.set("exp_max", String(f.exp_max));
+  if (f.best_match) p.set("best_match", "1");
   if (f.posted) p.set("posted", f.posted);
   if (f.sort) p.set("sort", f.sort);
   return p.toString();

@@ -7,21 +7,17 @@ import JobDescription from "@/components/JobDescription";
 import ApplyKit from "@/components/ApplyKit";
 import PaginationControls from "@/components/PaginationControls";
 import { Skeleton } from "@/components/Skeleton";
-import { PageContainer, PageHeader, Card, EmptyState, Notice, SearchField, ScoreBar, IconBriefcase } from "@/components/ui";
+import { PageContainer, PageHeader, Card, EmptyState, Notice, ScoreBar, IconBriefcase, IconSearch } from "@/components/ui";
 import Link from "next/link";
 import { careers, ApiError } from "@/lib/api";
-import type { AtsKeyword, AtsQuota, CandidateProfile, Job, JobFilters, JobLevel, ResumeCheckResult, WorkMode } from "@/lib/api";
+import type { AtsKeyword, AtsQuota, CandidateProfile, Job, JobFilters, ResumeCheckResult, WorkMode } from "@/lib/api";
 
 const WORK_MODES: { id: WorkMode; label: string }[] = [
   { id: "remote", label: "Remote" },
   { id: "hybrid", label: "Hybrid" },
   { id: "onsite", label: "On-site" },
 ];
-const LEVELS: { id: JobLevel; label: string }[] = [
-  { id: "entry", label: "Fresher / Entry (0–1 yr)" },
-  { id: "mid", label: "Mid (1–5 yrs)" },
-  { id: "senior", label: "Senior (5+ yrs)" },
-];
+const EXP_TOP = 15; // slider's last stop means "15+ years"
 const REGIONS: { id: NonNullable<JobFilters["region"]>; label: string }[] = [
   { id: "india", label: "India & remote-friendly" },
   { id: "", label: "Worldwide" },
@@ -34,7 +30,12 @@ const POSTED: { id: NonNullable<JobFilters["posted"]>; label: string }[] = [
   { id: "30", label: "Past month" },
 ];
 const MODE_LABEL: Record<string, string> = { remote: "Remote", hybrid: "Hybrid", onsite: "On-site" };
-const LEVEL_LABEL: Record<string, string> = { entry: "Entry level", mid: "Mid level", senior: "Senior" };
+
+function expLabel(min: number | null, max: number | null) {
+  if (min === null) return "";
+  if (max === null) return `${min}+ yrs`;
+  return min === max ? `${min} yrs` : min === 0 && max <= 1 ? "Fresher" : `${min}–${max} yrs`;
+}
 
 function timeAgo(iso: string) {
   const h = Math.floor((Date.now() - new Date(iso).getTime()) / 3_600_000);
@@ -85,6 +86,70 @@ function FilterRow({ label, children }: { label: string; children: React.ReactNo
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
       <span className="font-label sm:w-24 shrink-0">{label}</span>
       <div className="flex flex-wrap gap-1.5">{children}</div>
+    </div>
+  );
+}
+
+// Free-text multi-select: Enter or comma adds the typed text as a chip.
+function TagInput({
+  values, onChange, placeholder, className = "",
+}: { values: string[]; onChange: (v: string[]) => void; placeholder: string; className?: string }) {
+  const [text, setText] = useState("");
+  const add = () => {
+    const t = text.trim();
+    setText("");
+    if (t && !values.some((v) => v.toLowerCase() === t.toLowerCase())) onChange([...values, t]);
+  };
+  return (
+    <label className={`ui-search flex flex-wrap items-center gap-1.5 rounded-[22px] px-4 py-1.5 min-h-11 ${className}`}>
+      <span style={{ color: "var(--ink-faint)" }}><IconSearch /></span>
+      {values.map((v) => (
+        <span key={v} className="tag inline-flex items-center gap-1">
+          {v}
+          <button type="button" aria-label={`Remove ${v}`} onClick={() => onChange(values.filter((x) => x !== v))}>×</button>
+        </span>
+      ))}
+      <input
+        type="text"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if ((e.key === "Enter" || e.key === ",") && text.trim()) { e.preventDefault(); add(); }
+          else if (e.key === "Backspace" && !text && values.length) onChange(values.slice(0, -1));
+        }}
+        onBlur={add}
+        placeholder={values.length ? "Add another…" : placeholder}
+        className="flex-1 min-w-[8rem] h-8 bg-transparent text-sm border-0 outline-none"
+        style={{ color: "var(--ink)" }}
+      />
+    </label>
+  );
+}
+
+// Dual-thumb years-of-experience slider. Drags update locally; the filter is committed once the thumb settles.
+function ExperienceRange({ min, max, onCommit }: { min: number; max: number; onCommit: (min: number, max: number) => void }) {
+  const [range, setRange] = useState<[number, number]>([min, max]);
+  useEffect(() => setRange([min, max]), [min, max]);
+  useEffect(() => {
+    if (range[0] === min && range[1] === max) return;
+    const t = setTimeout(() => onCommit(range[0], range[1]), 350);
+    return () => clearTimeout(t);
+  }, [range, min, max, onCommit]);
+
+  const [lo, hi] = range;
+  const pct = (v: number) => `${(v / EXP_TOP) * 100}%`;
+  const text = lo === 0 && hi === EXP_TOP ? "Any experience" : `${lo} – ${hi >= EXP_TOP ? `${EXP_TOP}+` : hi} years`;
+  return (
+    <div className="w-full sm:max-w-sm">
+      <div className="text-[13px] font-semibold mb-1.5 tabular-nums" style={{ color: "var(--ink)" }}>{text}</div>
+      <div className="range-dual">
+        <div className="range-track" />
+        <div className="range-fill" style={{ left: pct(lo), right: `calc(100% - ${pct(hi)})` }} />
+        <input type="range" min={0} max={EXP_TOP} step={1} value={lo} aria-label="Minimum years of experience"
+          onChange={(e) => setRange([Math.min(Number(e.target.value), hi), hi])} />
+        <input type="range" min={0} max={EXP_TOP} step={1} value={hi} aria-label="Maximum years of experience"
+          onChange={(e) => setRange([lo, Math.max(Number(e.target.value), lo)])} />
+      </div>
     </div>
   );
 }
@@ -271,6 +336,7 @@ function JobCard({
   onChange,
   profile,
   onQuota,
+  onSeeAll,
 }: {
   job: Job;
   open: boolean;
@@ -278,6 +344,7 @@ function JobCard({
   onChange: (j: Job) => void;
   profile: CandidateProfile | null;
   onQuota: (q: AtsQuota) => void;
+  onSeeAll?: (company: string) => void; // set on the last card of a company that has more openings than the cap shows
 }) {
   const [copied, setCopied] = useState(false);
   const [kitOpen, setKitOpen] = useState(false);
@@ -331,7 +398,7 @@ function JobCard({
             <div className="flex flex-wrap gap-1.5 mt-2.5">
               {job.match !== null && <Badge strong={job.match >= 60}>{job.match}% match</Badge>}
               {job.work_mode && <Badge>{MODE_LABEL[job.work_mode]}</Badge>}
-              {job.level && <Badge>{LEVEL_LABEL[job.level]}</Badge>}
+              {job.exp_min !== null && <Badge>{expLabel(job.exp_min, job.exp_max)}</Badge>}
               {job.application_status && <Badge strong>Applied ✓</Badge>}
               {job.skills.slice(0, 5).map((s) => (
                 <span key={s} className="tag tag-outline">{s}</span>
@@ -361,6 +428,15 @@ function JobCard({
       </div>
       {kitOpen && <ApplyKit job={job} profile={profile} onOpenForm={apply} onClose={closeKit} />}
       {open && <JobDetails job={job} profile={profile} onQuota={onQuota} />}
+      {onSeeAll && job.company_more > 0 && (
+        <button
+          onClick={() => onSeeAll(job.company)}
+          className="mt-4 pt-3 border-t w-full text-left text-[13px] font-semibold hover:underline"
+          style={{ borderColor: "var(--border)", color: "var(--ink)" }}
+        >
+          See {job.company_more} more {job.company} {job.company_more === 1 ? "opening" : "openings"} →
+        </button>
+      )}
     </li>
   );
 }
@@ -386,12 +462,10 @@ export default function JobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [shared, setShared] = useState<Job | null>(null);
   const [count, setCount] = useState(0);
-  const [q, setQ] = useState("");
-  const [loc, setLoc] = useState("");
-  const [filters, setFilters] = useState<JobFilters>({ page: 1, sort: "match", region: "india" });
+  const [filters, setFilters] = useState<JobFilters>({ page: 1, sort: "recent", region: "india", best_match: true });
   const [quota, setQuota] = useState<AtsQuota | null>(null);
   const [meta, setMeta] = useState<{ refreshed: string | null; refreshing: boolean; jobs: number; companies: number; hasProfile: boolean; sort: string }>(
-    { refreshed: null, refreshing: false, jobs: 0, companies: 0, hasProfile: true, sort: "match" }
+    { refreshed: null, refreshing: false, jobs: 0, companies: 0, hasProfile: true, sort: "recent" }
   );
   const [profile, setProfile] = useState<CandidateProfile | null>(null);
   const [open, setOpen] = useState<number | null>(null);
@@ -448,7 +522,20 @@ export default function JobsPage() {
   const page = filters.page ?? 1;
   const pages = Math.max(1, Math.ceil(count / 20));
   const listed = shared ? jobs.filter((j) => j.id !== shared.id) : jobs;
-  const anyFilter = !!(filters.q || filters.location || filters.work_mode?.length || filters.level?.length || filters.posted);
+  const expMin = filters.exp_min ?? 0;
+  const expMax = filters.exp_max ?? EXP_TOP;
+  const anyFilter = !!(
+    filters.q?.length || filters.location?.length || filters.company || filters.work_mode?.length ||
+    expMin > 0 || expMax < EXP_TOP || filters.posted
+  );
+  const clearFilters = () => setFilters({ page: 1, sort: filters.sort, region: filters.region, best_match: filters.best_match });
+  const setExperience = useCallback(
+    (lo: number, hi: number) => set({ exp_min: lo > 0 ? lo : undefined, exp_max: hi < EXP_TOP ? hi : undefined }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+  const lastOfCompany = new Map<string, number>();
+  listed.forEach((j) => lastOfCompany.set(j.company, j.id));
 
   return (
     <ProtectedRoute>
@@ -512,14 +599,10 @@ export default function JobsPage() {
             )}
 
             <Card className="mb-5">
-              <form
-                className="flex flex-col sm:flex-row gap-2.5"
-                onSubmit={(e) => { e.preventDefault(); set({ q: q.trim(), location: loc.trim() }); }}
-              >
-                <SearchField value={q} onChange={setQ} placeholder="Job title, skill or company" className="w-full sm:flex-1" />
-                <SearchField value={loc} onChange={setLoc} placeholder="Location (e.g. Bengaluru)" className="sm:w-64" />
-                <button className="btn btn-primary !h-11">Search</button>
-              </form>
+              <div className="flex flex-col sm:flex-row gap-2.5">
+                <TagInput values={filters.q ?? []} onChange={(v) => set({ q: v })} placeholder="Job titles, skills or companies — press Enter to add" className="w-full sm:flex-1" />
+                <TagInput values={filters.location ?? []} onChange={(v) => set({ location: v })} placeholder="Locations (e.g. Bengaluru)" className="w-full sm:w-80" />
+              </div>
 
               <div className="mt-5 pt-5 border-t space-y-3.5" style={{ borderColor: "var(--border)" }}>
                 <FilterRow label="Region">
@@ -536,13 +619,10 @@ export default function JobsPage() {
                     </Toggle>
                   ))}
                 </FilterRow>
-                <FilterRow label="Experience">
-                  {LEVELS.map((l) => (
-                    <Toggle key={l.id} on={!!filters.level?.includes(l.id)} onClick={() => set({ level: toggleIn(filters.level, l.id) })}>
-                      {l.label}
-                    </Toggle>
-                  ))}
-                </FilterRow>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                  <span className="font-label sm:w-24 shrink-0">Experience</span>
+                  <ExperienceRange min={expMin} max={expMax} onCommit={setExperience} />
+                </div>
                 <div className="flex flex-wrap items-center gap-3 pt-1">
                   <label className="flex items-center gap-2">
                     <span className="font-label sm:w-24">Posted</span>
@@ -554,6 +634,9 @@ export default function JobsPage() {
                       {POSTED.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
                     </select>
                   </label>
+                  <Toggle on={!!filters.best_match && meta.hasProfile} onClick={() => meta.hasProfile && set({ best_match: !filters.best_match })}>
+                    Best match{meta.hasProfile ? "" : " (needs profile)"}
+                  </Toggle>
                   <label className="flex items-center gap-2">
                     <span className="font-label">Sort</span>
                     <select
@@ -561,14 +644,19 @@ export default function JobsPage() {
                       onChange={(e) => set({ sort: e.target.value as JobFilters["sort"] })}
                       className="ui-input !h-8 !w-auto !rounded-full !px-3 !text-[13px]"
                     >
-                      <option value="match" disabled={!meta.hasProfile}>Best match{meta.hasProfile ? "" : " (needs profile)"}</option>
                       <option value="recent">Most recent</option>
+                      <option value="match" disabled={!meta.hasProfile}>Highest match %{meta.hasProfile ? "" : " (needs profile)"}</option>
                     </select>
                   </label>
+                  {filters.company && (
+                    <button className="chip" onClick={() => set({ company: undefined })} aria-label={`Remove ${filters.company} filter`}>
+                      {filters.company} ×
+                    </button>
+                  )}
                   {anyFilter && (
                     <button
                       className="btn btn-ghost btn-sm"
-                      onClick={() => { setQ(""); setLoc(""); setFilters({ page: 1, sort: filters.sort, region: filters.region }); }}
+                      onClick={clearFilters}
                     >
                       Clear filters
                     </button>
@@ -579,11 +667,11 @@ export default function JobsPage() {
 
             <div className="flex items-baseline justify-between gap-3 mb-3">
               <h2 className="font-display text-[19px] font-bold tracking-[-0.02em]" style={{ color: "var(--ink)" }}>
-                {meta.sort === "match" ? "Top matches" : "Latest openings"}
+                {filters.best_match && meta.hasProfile ? "Best matches" : "Latest openings"}
               </h2>
               {!loading && (
                 <span className="font-mono text-[11px]" style={{ color: "var(--ink-faint)" }}>
-                  {count.toLocaleString()} {meta.sort === "match" ? "top matches" : "jobs"}
+                  {count.toLocaleString()} {filters.best_match && meta.hasProfile ? "matching jobs" : "jobs"}
                 </span>
               )}
             </div>
@@ -602,7 +690,7 @@ export default function JobsPage() {
                   anyFilter ? (
                     <button
                       className="btn btn-secondary"
-                      onClick={() => { setQ(""); setLoc(""); setFilters({ page: 1, sort: filters.sort, region: filters.region }); }}
+                      onClick={clearFilters}
                     >
                       Clear filters
                     </button>
@@ -619,7 +707,8 @@ export default function JobsPage() {
               )}
               {listed.map((j) => (
                 <JobCard key={j.id} job={j} open={open === j.id} onToggle={() => setOpen(open === j.id ? null : j.id)}
-                  onChange={replace} profile={profile} onQuota={setQuota} />
+                  onChange={replace} profile={profile} onQuota={setQuota}
+                  onSeeAll={lastOfCompany.get(j.company) === j.id ? (company) => set({ company }) : undefined} />
               ))}
             </ul>
 
