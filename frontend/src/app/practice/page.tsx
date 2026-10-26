@@ -1,219 +1,226 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AppShell from "@/components/AppShell";
 import { careers, ApiError } from "@/lib/api";
-import type { PracticeQuestion, PracticeResult } from "@/lib/api";
+import type { JobApplication, PracticeQuestion, RolePracticeSet } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
-import {
-  PageContainer, PageHeader, Card, StatTile, EmptyState, Notice, Segmented, ScoreBar, IconChat, scoreColor,
-} from "@/components/ui";
+import { PageContainer, PageHeader, Card, EmptyState, Notice, IconBriefcase, IconArrowRight } from "@/components/ui";
+import PracticeRunner from "@/components/practice/PracticeRunner";
 
-const TYPES = [
-  { id: "", label: "All" },
-  { id: "behavioral", label: "Behavioral" },
-  { id: "coding", label: "Coding" },
-  { id: "system_design", label: "System design" },
-];
+// The picker lists every tracked application; "general" is the old mixed bank.
+type Selection = { kind: "pick" } | { kind: "role"; id: number } | { kind: "general" };
 
-const TIPS = [
-  "Answer the way you would out loud — structure first, then detail.",
-  "Behavioral: situation, task, action, result.",
-  "Technical: name the approach, its trade-offs and its complexity.",
-  "Compare with the ideal answer to spot the ideas you missed.",
-];
+const STATUS_LABEL: Record<string, string> = {
+  applied: "Applied",
+  interviewing: "Interviewing",
+  offer: "Offer",
+  rejected: "Rejected",
+  withdrawn: "Withdrawn",
+};
 
-export default function PracticePage() {
-  const [type, setType] = useState("");
-  const [questions, setQuestions] = useState<PracticeQuestion[]>([]);
-  const [idx, setIdx] = useState(0);
-  const [answer, setAnswer] = useState("");
-  const [result, setResult] = useState<PracticeResult | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
+function readSelection(): Selection {
+  const p = new URLSearchParams(window.location.search);
+  const app = Number(p.get("app"));
+  if (app > 0) return { kind: "role", id: app };
+  if (p.get("mode") === "general") return { kind: "general" };
+  return { kind: "pick" };
+}
+
+function LoadingCard() {
+  return (
+    <Card>
+      <Skeleton className="h-3 w-48 rounded mb-5" />
+      <Skeleton className="h-5 w-full rounded mb-2" />
+      <Skeleton className="h-5 w-3/4 rounded mb-6" />
+      <Skeleton className="h-48 w-full !rounded-[12px]" />
+    </Card>
+  );
+}
+
+function RolePicker({ onPick }: { onPick: (s: Selection) => void }) {
+  const [apps, setApps] = useState<JobApplication[] | null>(null);
   const [error, setError] = useState("");
-  // Scores from this visit only — a running tally, not persisted.
-  const [scores, setScores] = useState<number[]>([]);
 
   useEffect(() => {
-    setLoading(true);
+    careers
+      .applications()
+      .then(setApps)
+      .catch((e) => setError(e instanceof ApiError ? e.detail : "Could not load your applications."));
+  }, []);
+
+  if (error) return <Notice tone="error">{error}</Notice>;
+  if (!apps) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-[92px] w-full !rounded-[16px]" />)}
+      </div>
+    );
+  }
+
+  const general = (
+    <button onClick={() => onPick({ kind: "general" })} className="btn btn-secondary">
+      Practise general questions
+    </button>
+  );
+
+  if (!apps.length) {
+    return (
+      <EmptyState
+        icon={<IconBriefcase />}
+        title="No applications yet"
+        body="Apply to a role from Jobs (or add one you applied to elsewhere in your profile) and its interview questions show up here — coding, technical and behavioral."
+        action={
+          <>
+            <Link href="/jobs" className="btn btn-primary">Browse jobs</Link>
+            {general}
+          </>
+        }
+      />
+    );
+  }
+
+  return (
+    <>
+      <div className="font-label mb-3">Roles you&apos;ve applied for</div>
+      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {apps.map((a) => (
+          <li key={a.id}>
+            <button
+              onClick={() => onPick({ kind: "role", id: a.id })}
+              className="ui-card w-full text-left p-4 sm:p-5 flex items-center gap-4 transition-transform hover:-translate-y-0.5"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="font-display text-[16px] font-semibold leading-snug truncate" style={{ color: "var(--ink)" }}>
+                  {a.title}
+                </p>
+                <p className="text-[13px] mt-0.5 truncate" style={{ color: "var(--ink-dim)" }}>
+                  {a.company}{a.location ? ` · ${a.location}` : ""}
+                </p>
+                <span className="tag tag-outline mt-2.5 inline-block">{STATUS_LABEL[a.status] ?? a.status}</span>
+              </div>
+              <span className="shrink-0" style={{ color: "var(--ink-faint)" }}><IconArrowRight /></span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <span className="text-sm" style={{ color: "var(--ink-dim)" }}>Not preparing for a specific role?</span>
+        {general}
+      </div>
+    </>
+  );
+}
+
+function RolePractice({ id, onBack }: { id: number; onBack: () => void }) {
+  const [set, setSet] = useState<RolePracticeSet | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    setSet(null);
     setError("");
     careers
-      .practiceQuestions(type)
-      .then((qs) => { setQuestions(qs); setIdx(0); setAnswer(""); setResult(null); })
-      .catch((e) => setError(e instanceof ApiError ? e.detail : "Could not load questions."))
-      .finally(() => setLoading(false));
-  }, [type]);
+      .rolePractice(id)
+      .then(setSet)
+      .catch((e) => setError(e instanceof ApiError ? e.detail : "Could not load questions for this role."));
+  }, [id]);
 
-  const q = questions[idx];
+  const back = <button onClick={onBack} className="btn btn-ghost">← All roles</button>;
 
-  const validate = async () => {
-    if (!q) return;
-    setBusy(true);
-    setError("");
-    try {
-      const r = await careers.validateAnswer(q.id, answer);
-      setResult(r);
-      setScores((s) => [...s, r.score]);
-    } catch (e) {
-      setError(e instanceof ApiError ? e.detail : "Something went wrong.");
-    } finally {
-      setBusy(false);
-    }
+  return (
+    <>
+      <PageHeader
+        eyebrow="Practice"
+        title={set ? set.application.title : "Role practice"}
+        subtitle={
+          set ? (
+            <>
+              {set.application.company} — every kind of question this role is likely to ask.{" "}
+              {set.company_bank
+                ? `Includes questions reported for ${set.application.company}.`
+                : "Built from the role's skills and common questions for this kind of role."}
+            </>
+          ) : undefined
+        }
+        actions={back}
+      />
+      {error ? (
+        <Notice tone="error">{error}</Notice>
+      ) : !set ? (
+        <LoadingCard />
+      ) : (
+        <>
+          {set.sources.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 mb-4">
+              <span className="text-xs mr-1" style={{ color: "var(--ink-faint)" }}>Covers</span>
+              {set.sources.map((s) => <span key={s} className="tag">{s}</span>)}
+            </div>
+          )}
+          <PracticeRunner key={id} questions={set.questions} />
+        </>
+      )}
+    </>
+  );
+}
+
+function GeneralPractice({ onBack }: { onBack: () => void }) {
+  const [questions, setQuestions] = useState<PracticeQuestion[] | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    careers
+      .practiceQuestions()
+      .then(setQuestions)
+      .catch((e) => setError(e instanceof ApiError ? e.detail : "Could not load questions."));
+  }, []);
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="Practice"
+        title="General practice"
+        subtitle="A random mix from the question bank. Type your answer, then validate it to get a score."
+        actions={<button onClick={onBack} className="btn btn-ghost">← Your roles</button>}
+      />
+      {error ? <Notice tone="error">{error}</Notice> : !questions ? <LoadingCard /> : <PracticeRunner questions={questions} />}
+    </>
+  );
+}
+
+export default function PracticePage() {
+  const router = useRouter();
+  const [sel, setSel] = useState<Selection | null>(null);
+
+  useEffect(() => { setSel(readSelection()); }, []);
+
+  const pick = (s: Selection) => {
+    setSel(s);
+    const qs = s.kind === "role" ? `?app=${s.id}` : s.kind === "general" ? "?mode=general" : "";
+    router.replace(`/practice${qs}`, { scroll: false });
+    window.scrollTo({ top: 0 });
   };
-
-  const next = () => { setIdx((i) => (i + 1) % questions.length); setAnswer(""); setResult(null); };
-
-  const words = answer.trim() ? answer.trim().split(/\s+/).length : 0;
-  const sessionAvg = scores.length ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10 : undefined;
 
   return (
     <ProtectedRoute>
       <AppShell>
         <div className="min-h-screen" style={{ background: "var(--page)" }}>
           <PageContainer>
-            <PageHeader
-              eyebrow="Practice"
-              title="Typed practice"
-              subtitle="Type your answer, then validate it to get a score. Free and unlimited."
-              actions={<Segmented options={TYPES} value={type} onChange={setType} />}
-            />
-
-            {error && <Notice tone="error" className="mb-4">{error}</Notice>}
-
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 lg:items-start">
-              <div className="min-w-0">
-                {loading ? (
-                  <Card>
-                    <Skeleton className="h-3 w-48 rounded mb-5" />
-                    <Skeleton className="h-5 w-full rounded mb-2" />
-                    <Skeleton className="h-5 w-3/4 rounded mb-6" />
-                    <Skeleton className="h-48 w-full !rounded-[12px]" />
-                  </Card>
-                ) : !q ? (
-                  !error && (
-                    <EmptyState
-                      icon={<IconChat />}
-                      title="No practice questions yet"
-                      body="Questions for this category haven't been added yet — try another type."
-                    />
-                  )
-                ) : (
-                  <Card>
-                    <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                      <div className="flex flex-wrap gap-1.5">
-                        {q.company && <span className="tag">{q.company}</span>}
-                        {q.role && <span className="tag">{q.role}</span>}
-                        <span className="tag tag-outline capitalize">{q.question_type.replace("_", " ")}</span>
-                      </div>
-                      <span className="font-mono text-[11px]" style={{ color: "var(--ink-faint)" }}>
-                        Question {idx + 1} of {questions.length}
-                      </span>
-                    </div>
-                    <span className="block h-1 rounded-full overflow-hidden mb-5" style={{ background: "var(--surface-2)" }}>
-                      <span
-                        className="block h-full rounded-full transition-[width] duration-300"
-                        style={{ width: `${((idx + 1) / questions.length) * 100}%`, background: "var(--ink)" }}
-                      />
-                    </span>
-
-                    <p className="font-display text-[19px] sm:text-[21px] font-semibold leading-snug tracking-[-0.015em]" style={{ color: "var(--ink)" }}>
-                      {q.question_text}
-                    </p>
-
-                    <textarea
-                      value={answer}
-                      onChange={(e) => setAnswer(e.target.value)}
-                      disabled={!!result}
-                      rows={9}
-                      placeholder="Type your answer…"
-                      className="ui-input mt-5"
-                    />
-
-                    <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                      <span className="font-mono text-[11px]" style={{ color: "var(--ink-faint)" }}>
-                        {words} word{words === 1 ? "" : "s"}
-                      </span>
-                      <div className="flex gap-2">
-                        {!result ? (
-                          <>
-                            {questions.length > 1 && (
-                              <button onClick={next} disabled={busy} className="btn btn-ghost">
-                                Skip
-                              </button>
-                            )}
-                            <button onClick={validate} disabled={busy || !answer.trim()} className="btn btn-primary">
-                              {busy ? "Validating…" : "Validate answer"}
-                            </button>
-                          </>
-                        ) : (
-                          <button onClick={next} className="btn btn-primary">
-                            Next question →
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {result && (
-                      <div className="mt-5 pt-5 border-t space-y-4" style={{ borderColor: "var(--border)" }}>
-                        <div className="rounded-[14px] p-4" style={{ background: "var(--surface-alt)", border: "1px solid var(--border)" }}>
-                          <div className="flex items-baseline justify-between gap-3 mb-2.5">
-                            <span
-                              className="font-display text-[36px] font-bold leading-none tracking-[-0.035em] tabular-nums"
-                              style={{ color: scoreColor(result.score) }}
-                            >
-                              {result.score}
-                              <span className="text-[16px] font-medium" style={{ color: "var(--ink-faint)" }}>/10</span>
-                            </span>
-                            <span className="font-mono text-[10px] uppercase tracking-[0.16em]" style={{ color: "var(--ink-faint)" }}>
-                              Your score
-                            </span>
-                          </div>
-                          <ScoreBar value={result.score} />
-                        </div>
-                        {result.missing.length > 0 && (
-                          <div>
-                            <p className="text-xs mb-1.5" style={{ color: "var(--ink-dim)" }}>Ideas you didn&apos;t cover</p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {result.missing.map((m) => <span key={m} className="tag tag-warn">{m}</span>)}
-                            </div>
-                          </div>
-                        )}
-                        <details className="rounded-[14px] px-4 py-3 group" style={{ border: "1px solid var(--border-mid)" }}>
-                          <summary className="text-sm font-semibold cursor-pointer select-none" style={{ color: "var(--ink)" }}>
-                            Show ideal answer
-                          </summary>
-                          <p className="text-sm mt-3 whitespace-pre-wrap leading-relaxed" style={{ color: "var(--ink-dim)" }}>
-                            {result.ideal_answer}
-                          </p>
-                        </details>
-                      </div>
-                    )}
-                  </Card>
-                )}
-              </div>
-
-              <aside className="grid grid-cols-2 lg:grid-cols-1 gap-4">
-                <StatTile label="Answered" value={scores.length} hint="This visit" />
-                <StatTile
-                  label="Avg. score"
-                  value={sessionAvg ?? "—"}
-                  suffix={sessionAvg !== undefined ? "/10" : undefined}
-                  hint="This visit"
+            {sel?.kind === "role" ? (
+              <RolePractice id={sel.id} onBack={() => pick({ kind: "pick" })} />
+            ) : sel?.kind === "general" ? (
+              <GeneralPractice onBack={() => pick({ kind: "pick" })} />
+            ) : (
+              <>
+                <PageHeader
+                  eyebrow="Practice"
+                  title="Practice for your roles"
+                  subtitle="Pick a role you've applied for to practise the questions that company and role are likely to ask — coding (in a code editor), technical, system design and behavioral. Free and unlimited."
                 />
-                <Card className="col-span-2 lg:col-span-1 !p-5">
-                  <div className="font-label mb-3">How to score well</div>
-                  <ul className="space-y-2.5">
-                    {TIPS.map((t) => (
-                      <li key={t} className="flex gap-2.5 text-[13px] leading-relaxed" style={{ color: "var(--ink-dim)" }}>
-                        <span className="mt-[7px] w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "var(--olive)" }} />
-                        {t}
-                      </li>
-                    ))}
-                  </ul>
-                </Card>
-              </aside>
-            </div>
+                {sel && <RolePicker onPick={pick} />}
+              </>
+            )}
           </PageContainer>
         </div>
       </AppShell>

@@ -3,7 +3,7 @@ import { pageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = pageMetadata({
   title: "Practice",
-  description: "Type your answer to interview questions and get a score.",
+  description: "Practise the interview questions for the roles you have applied for and get a score.",
   path: "/practice",
   noIndex: true,
 });

@@ -1215,12 +1215,24 @@ export interface ResumeCheckResult {
   ats_quota: AtsQuota;
 }
 
+export type PracticeCategory = "coding" | "technical" | "system_design" | "behavioral";
+
 export interface PracticeQuestion {
-  id: number;
+  id: number | string; // bank questions are numeric; static library ones are "lib:<key>"
   question_text: string;
   question_type: string;
-  company: string;
-  role: string;
+  category: PracticeCategory;
+  source: string; // "Google · Software Engineer", a skill track ("React"), "Role fit", ...
+  language: string; // coding questions only
+  starter_code: string;
+}
+
+export interface RolePracticeSet {
+  application: { id: number; title: string; company: string; status: ApplicationStatus };
+  family: string;
+  company_bank: boolean; // questions from this company's own bank are included
+  sources: string[];
+  questions: PracticeQuestion[];
 }
 
 export interface PracticeResult {
@@ -1318,7 +1330,9 @@ export const careers = {
   },
   practiceQuestions: (type = "") =>
     request<PracticeQuestion[]>(`/api/careers/practice/questions/${type ? `?type=${type}` : ""}`),
-  validateAnswer: (questionId: number, answer: string) =>
+  rolePractice: (applicationId: number) =>
+    request<RolePracticeSet>(`/api/careers/practice/applications/${applicationId}/`),
+  validateAnswer: (questionId: number | string, answer: string) =>
     request<PracticeResult>("/api/careers/practice/validate/", {
       method: "POST",
       body: JSON.stringify({ question_id: questionId, answer }),
