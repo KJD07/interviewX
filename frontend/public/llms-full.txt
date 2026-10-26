@@ -2,10 +2,45 @@
 
 Canonical site: https://www.evalulabs.com
 
-EvaluLabs is an AI interview and candidate assessment platform operated as a
+EvaluLabs is a free candidate portal and AI interview platform operated as a
 web app. It is not Evalulab (evalulab.com), a cosmetics testing lab in Montreal.
 
-## Candidate practice
+## Candidate portal
+
+Free for candidates while the platform-free setting is on (the default). The
+only paid candidate option is ATS Unlimited, 199 INR per month, which removes
+the daily ATS check limit.
+
+- Profile: built once from an uploaded resume (one model call when configured,
+  deterministic parsing otherwise), then edited by hand. Tabs for profile,
+  applications, saved jobs and job preferences.
+- Live jobs: read from 1,100+ companies' own public career boards (Greenhouse,
+  Lever, Ashby, SmartRecruiters, Workday, Keka, Freshteam) plus the Remotive and
+  Arbeitnow feeds. Swept every 5 hours; closed roles disappear and postings
+  older than 60 days are removed. Jobs located in or open to India are shown
+  first, with a Worldwide toggle. Filters: roles/skills/companies, locations,
+  work mode, an experience range, posted-within. A best-match toggle and sort
+  use a profile match score (skills, target role, level, work mode, location).
+  Same-title openings at one company are stacked into one card.
+- ATS resume check: deterministic scoring against a job description, no model
+  required. Skills and keywords 60, experience 15, job title 10, education 5,
+  resume structure 10 (parts a posting does not mention are dropped and the
+  rest re-weighted). Returns matched, implied and missing keywords and
+  suggestions. 15 checks per day free. An optional second-opinion model may
+  run when configured; any failure falls back to the keyword result.
+- Apply kit: profile details as copy-ready fields next to the company's own
+  application form, optionally in an always-on-top floating panel. EvaluLabs
+  does not fill or submit forms on other sites. Opening the form records the
+  application in the tracker.
+- Application tracker: status and notes per application, saved jobs, and
+  manual entries for roles found elsewhere. Saved rows keep a snapshot if the
+  posting closes.
+- Role practice: for each tracked application, questions from the matching
+  company's bank, skill tracks from the posting, role-family defaults, HR and
+  behavioural questions, and a static library. Typed answers are keyword-scored
+  instantly. Coding questions open an editor; code is not executed.
+
+## Candidate practice (AI mock interviews)
 
 1. The candidate picks a company and role, or a skill, then a round.
 2. POST start creates an interview session. Duration is randomized between 45
@@ -19,8 +54,9 @@ web app. It is not Evalulab (evalulab.com), a cosmetics testing lab in Montreal.
    Code is not executed against hidden tests.
 6. Ending the session grades the transcript: communication, technical depth,
    problem solving, overall, on 0-10. The rubric is strict; empty answers score
-   at the bottom of the scale. Paid plans request an additional insights pass
-   (topic breakdown and improvement areas). Free sessions do not.
+   at the bottom of the scale. Sessions on plans with insights (every
+   candidate while the platform is free) also get a topic breakdown and
+   improvement areas.
 
 Public question banks are filled by contributors who verify with a company
 email or an offer letter. A separate admin pipeline can research
@@ -52,6 +88,7 @@ convert those amounts for readers outside India.
 ## Do not infer
 
 - No claim of a pass rate, placement rate, or number of candidates assessed.
+- No claim that EvaluLabs applies to jobs on a candidate's behalf.
 - No automated test-suite grading.
 - No gaze or low-light proctoring.
 - Practice catalog pages (/companies, /skills) describe the banks; opening a
@@ -76,5 +113,5 @@ convert those amounts for readers outside India.
 - https://www.evalulabs.com/refund
 - https://www.evalulabs.com/cancellation
 
-Private app routes (dashboard, interview room, enterprise workspace, analytics)
-are noindex and disallowed in robots.txt.
+Private app routes (dashboard, live jobs, profile, practice, interview room,
+enterprise workspace, analytics) are noindex; most are also disallowed in robots.txt.

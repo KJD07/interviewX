@@ -45,7 +45,7 @@ export function GET() {
               letterSpacing: "-0.02em",
             }}
           >
-            Practice with questions
+            Find the job. Beat the ATS.
           </div>
           <div
             style={{
@@ -56,10 +56,10 @@ export function GET() {
               letterSpacing: "-0.02em",
             }}
           >
-            people were actually asked.
+            Ace the interview.
           </div>
           <div style={{ fontSize: "30px", color: "#5c5b54", marginTop: "26px" }}>
-            AI mock interviews · Verified questions · Instant scoring
+            Free candidate portal · Live jobs · ATS check · AI mock interviews
           </div>
         </div>
       </div>
