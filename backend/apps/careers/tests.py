@@ -965,6 +965,42 @@ class JobFilterAndMatchTests(TestCase):
         self.assertEqual(self._ids("?location=bengaluru"), [self.fe.id])
         self.assertEqual(self._ids("?q=django"), [self.backend.id])
 
+    def test_multi_value_roles_and_locations(self):
+        Job.objects.filter(pk=self.backend.pk).update(location="Pune")
+        self.assertEqual(sorted(self._ids("?q=backend&q=frontend")), sorted([self.backend.id, self.fe.id]))
+        self.assertEqual(sorted(self._ids("?location=pune&location=bengaluru")), sorted([self.backend.id, self.fe.id]))
+        self.assertEqual(self._ids("?q=backend&q=frontend&location=bengaluru"), [self.fe.id])  # AND across groups
+
+    def test_experience_range_overlaps(self):
+        Job.objects.filter(pk=self.fe.pk).update(exp_min=0, exp_max=1)
+        Job.objects.filter(pk=self.backend.pk).update(exp_min=3, exp_max=5)
+        Job.objects.filter(pk=self.chef.pk).update(exp_min=8, exp_max=None)
+        self.assertEqual(self._ids("?exp_min=0&exp_max=1"), [self.fe.id])
+        self.assertEqual(self._ids("?exp_min=4&exp_max=6"), [self.backend.id])
+        self.assertEqual(self._ids("?exp_min=6&exp_max=15"), [self.chef.id])  # open-ended job, 15 = no cap
+        self.assertEqual(len(self._ids("?exp_min=0&exp_max=15")), 3)
+
+    def test_company_cap_and_see_all(self):
+        for i in range(5):
+            make_job(title=f"AI Native Engineer {i}", company="Accenture", skills=[],
+                     posted_at=timezone.now() - timedelta(days=i + 1))
+        r = self.c.get("/api/careers/jobs/").data
+        accenture = [j for j in r["results"] if j["company"] == "Accenture"]
+        self.assertEqual(len(accenture), 3)
+        self.assertEqual(accenture[0]["company_more"], 2)
+        self.assertEqual(r["count"], 6)
+        r = self.c.get("/api/careers/jobs/?company=Accenture").data
+        self.assertEqual(r["count"], 5)
+
+    def test_best_match_is_a_filter_and_keeps_recency_order(self):
+        CandidateProfile.objects.create(user=self.user, skills=["Python", "Django"], target_roles=["Engineer"],
+                                        experience_level="mid")
+        r = self.c.get("/api/careers/jobs/?best_match=1")
+        self.assertTrue(r.data["best_match"])
+        self.assertEqual(r.data["sort"], "recent")
+        self.assertNotIn(self.chef.id, [j["id"] for j in r.data["results"]])
+        self.assertEqual([j["id"] for j in r.data["results"]], [self.fe.id, self.backend.id])  # newest first
+
     def test_best_match_ranks_by_profile(self):
         r = self.c.get("/api/careers/jobs/?sort=match")
         self.assertEqual(r.data["sort"], "recent")  # no profile yet -> falls back
@@ -976,3 +1012,13 @@ class JobFilterAndMatchTests(TestCase):
         self.assertEqual(r.data["results"][0]["id"], self.backend.id)
         self.assertGreater(r.data["results"][0]["match"], 70)
         self.assertNotIn(self.chef.id, [j["id"] for j in r.data["results"]])  # nothing in common
+
+
+class InferYearsTests(TestCase):
+    def test_years(self):
+        from apps.careers.feeds import infer_years
+        self.assertEqual(infer_years("Software Intern", "anything"), (0, 1))
+        self.assertEqual(infer_years("Engineer", "You have 3-5 years of experience in Python."), (3, 5))
+        self.assertEqual(infer_years("Engineer", "Minimum 7+ years experience required."), (7, None))
+        self.assertEqual(infer_years("Engineer", "Great team, great perks."), (2, 5))  # no marker: mid default
+        self.assertEqual(infer_years("Senior Engineer", ""), (5, None))

@@ -60,6 +60,10 @@ class Job(models.Model):
     skills = models.JSONField(default=list, blank=True)
     work_mode = models.CharField(max_length=10, choices=WorkMode.choices, blank=True, db_index=True)
     level = models.CharField(max_length=10, choices=Level.choices, blank=True, db_index=True)
+    # Years of experience asked for, for the jobs page's range slider. exp_max
+    # is null when open-ended ("5+ years"); both are derived at ingest (feeds.infer_years).
+    exp_min = models.PositiveSmallIntegerField(null=True, blank=True)
+    exp_max = models.PositiveSmallIntegerField(null=True, blank=True)
     # Located in India, or remote and open to India/APAC/anywhere (feeds.is_india_job).
     # The jobs page shows only these by default.
     in_india = models.BooleanField(default=False, db_index=True)
