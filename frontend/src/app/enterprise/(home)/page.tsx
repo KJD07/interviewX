@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import MarketingNav from "@/components/MarketingNav";
@@ -14,45 +15,23 @@ import EnterprisePricingCard, {
 import { useCurrency, formatPrice } from "@/lib/currency";
 import { ENTERPRISE_FAQS } from "./faqs";
 
-const PILLARS = [
-  { label: "You bring", value: "Your roles and rounds" },
-  { label: "Candidates face", value: "Your question bank" },
-  { label: "You receive", value: "Scored reports" },
-  { label: "You decide", value: "Who advances" },
-];
-
-const FEATURES = [
+const POVS = [
   {
-    title: "Your question bank",
-    body: "Upload .csv, .xlsx or .json. Roles, rounds, question type and ideal answers — all in one workspace.",
-    icon: "▤",
+    id: "manager",
+    kicker: "01  ·  Hiring manager",
+    title: "From the desk",
+    body: "The workspace you run: the bank, the invites, who is live, and the scored report when the round ends.",
+    src: "/enterprise/Evalulabs3.mp4",
   },
   {
-    title: "Invite with a link",
-    body: "Send an expiring invite. The candidate sits the round on their own time. You watch progress from the dashboard.",
-    icon: "◎",
+    id: "candidate",
+    kicker: "02  ·  Candidate",
+    title: "From the seat",
+    body: "What they open: the email, consent, a spoken answer, the code editor, and the proctoring flags.",
+    src: "/enterprise/candidate.mp4",
+    poster: "/enterprise/candidate.jpg",
   },
-  {
-    title: "Interview-grade pressure",
-    body: "The AI interviewer paces, probes and pushes back the way a real panel does — not a quiz with a timer.",
-    icon: "◆",
-  },
-  {
-    title: "Dimension-level scores",
-    body: "Every finished session is graded 0–10 on communication, technical depth, problem solving and overall readiness.",
-    icon: "△",
-  },
-  {
-    title: "Proctoring",
-    body: "Camera-on rounds flag no face, extra people, a phone in frame, and tab switches — and keep a short clip of each violation. Watch live while the candidate is in the room.",
-    icon: "◉",
-  },
-  {
-    title: "Campus sponsorships",
-    body: "Grant a full plan to everyone on a college domain, with a per-cycle interview cap you control.",
-    icon: "◇",
-  },
-];
+] as const;
 
 const STEPS = [
   { n: "01", title: "Upload the bank", body: "Map roles and rounds the way your hiring process already works." },
@@ -177,6 +156,108 @@ function WorkspacePreview() {
   );
 }
 
+function PointOfView() {
+  const [activeId, setActiveId] = useState<(typeof POVS)[number]["id"]>("manager");
+  const [visible, setVisible] = useState(false);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const warmed = useRef(new Set<string>());
+  const active = POVS.find((item) => item.id === activeId) ?? POVS[0];
+
+  useEffect(() => {
+    const node = stageRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        setVisible(true);
+        observer.disconnect();
+      },
+      { rootMargin: "240px" },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  // The other film is fetched only after the one on screen can play.
+  function warmTheOther() {
+    const other = POVS.find((item) => item.id !== active.id);
+    if (!other || warmed.current.has(other.src)) return;
+    warmed.current.add(other.src);
+    const link = document.createElement("link");
+    link.rel = "prefetch";
+    link.as = "video";
+    link.href = other.src;
+    document.head.appendChild(link);
+  }
+
+  function showNext() {
+    const index = POVS.findIndex((item) => item.id === active.id);
+    setActiveId(POVS[(index + 1) % POVS.length].id);
+  }
+
+  return (
+    <div className="mt-6 flex flex-col gap-3 sm:mt-8 lg:grid lg:grid-cols-[300px_minmax(0,1fr)] lg:items-stretch">
+      <div className="order-2 grid grid-cols-2 gap-2 lg:order-1 lg:grid-cols-1 lg:gap-3">
+        {POVS.map((item) => {
+          const on = item.id === active.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              aria-pressed={on}
+              onClick={() => setActiveId(item.id)}
+              className={`flex min-h-11 h-full flex-col justify-center rounded-2xl px-3.5 py-3 text-left transition duration-200 lg:justify-start lg:rounded-[22px] lg:p-6 ${
+                on
+                  ? "bg-[var(--ink)] text-[var(--page)]"
+                  : "border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--ink-faint)]"
+              }`}
+            >
+              <span
+                className="hidden font-mono text-[10px] tracking-[0.16em] lg:inline"
+                style={{ color: on ? "var(--lime)" : "var(--ink-faint)" }}
+              >
+                {item.kicker}
+              </span>
+              <span className="font-display text-[15px] font-semibold leading-tight tracking-[-0.02em] lg:mt-8 lg:text-[32px] lg:font-bold lg:leading-none lg:tracking-[-0.03em]">
+                {item.title}
+              </span>
+              <span
+                className="mt-3 hidden text-sm leading-[1.55] lg:block"
+                style={{ color: on ? "#A3A29A" : "var(--ink-dim)" }}
+              >
+                {item.body}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div
+        ref={stageRef}
+        className="relative order-1 overflow-hidden rounded-[20px] bg-[var(--ink)] shadow-[0_16px_40px_rgba(12,12,11,0.1)] sm:rounded-[28px] lg:order-2"
+      >
+        <div className="pointer-events-none absolute left-3 top-3 z-10 hidden rounded-full bg-black/55 px-3 py-1.5 backdrop-blur-sm sm:left-4 sm:top-4 sm:block">
+          <span className="font-mono text-[11px] tracking-[0.08em] text-white">{active.kicker}</span>
+        </div>
+        <video
+          key={active.src}
+          poster={"poster" in active ? active.poster : undefined}
+          src={visible ? active.src : undefined}
+          autoPlay
+          muted
+          playsInline
+          preload="none"
+          onCanPlay={warmTheOther}
+          onEnded={showNext}
+          className="aspect-video w-full bg-black object-contain"
+        />
+      </div>
+
+      <p className="order-3 text-sm leading-relaxed text-[var(--ink-dim)] lg:hidden">{active.body}</p>
+    </div>
+  );
+}
+
 export default function EnterpriseHomePage() {
   const currency = useCurrency();
   const price = formatPrice(ENTERPRISE_PRICE_PER_SEAT_RUPEES, currency);
@@ -247,77 +328,21 @@ export default function EnterpriseHomePage() {
           </motion.div>
         </div>
 
-        <div className="mt-[70px] grid grid-cols-1 border-y border-[var(--border-mid)] lg:grid-cols-4">
-          {PILLARS.map((item, i) => (
-            <div
-              key={item.value}
-              className={`px-6 py-[22px] first:pl-0 last:pr-0 ${
-                i > 0 ? "border-t border-[var(--border-mid)] lg:border-l lg:border-t-0" : ""
-              }`}
-            >
-              <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--ink-faint)]">
-                {item.label}
-              </div>
-              <div className="font-display mt-2 text-[19px] font-semibold tracking-[-0.02em] text-[var(--ink)]">
-                {item.value}
-              </div>
-            </div>
-          ))}
-        </div>
       </section>
 
       <section id="product" className="scroll-mt-24 mx-auto max-w-[1180px] px-6 pt-[88px] sm:px-8">
-        <ScrollReveal className="flex flex-wrap items-end justify-between gap-10">
-          <h2 className="font-display max-w-[600px] text-[34px] font-bold leading-[1.02] tracking-[-0.032em] text-[var(--ink)] sm:text-[46px]">
-            One workspace. Bank, invites, scores.
-          </h2>
+        <ScrollReveal className="flex flex-wrap items-end justify-between gap-4 sm:gap-10">
+          <div>
+            <div className="font-label mb-3.5">The round</div>
+            <h2 className="font-display max-w-[640px] text-[32px] font-bold leading-[1.05] tracking-[-0.032em] text-[var(--ink)] sm:text-[46px] sm:leading-[1.02]">
+              Watch it from the desk, then from the seat.
+            </h2>
+          </div>
           <p className="max-w-[320px] text-[15px] leading-relaxed text-[var(--ink-dim)]">
-            Built for hiring teams that already know the rounds — and need a
-            consistent first screen, not another calendar.
+            Two films of the same screen. Switch between the hiring manager and the candidate.
           </p>
         </ScrollReveal>
-
-        <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map((f, i) => (
-            <ScrollReveal key={f.title} delay={(i % 3) * 0.08}>
-              <div
-                className={`card-hover flex h-full flex-col rounded-[20px] p-6 ${
-                  i === 1
-                    ? "bg-[var(--lime)] hover:brightness-95"
-                    : i === 0
-                      ? "bg-[var(--ink)] text-[var(--page)]"
-                      : "border border-[var(--border)] bg-[var(--surface)]"
-                }`}
-              >
-                <div
-                  className="grid h-[27px] w-[27px] place-items-center rounded-lg text-xs"
-                  style={{
-                    background:
-                      i === 0 ? "rgba(255,255,255,0.1)" : i === 1 ? "rgba(12,12,11,0.1)" : "var(--page)",
-                    color: i === 0 ? "var(--lime)" : "var(--ink)",
-                  }}
-                >
-                  {f.icon}
-                </div>
-                <h3
-                  className={`font-display mt-12 text-xl font-semibold tracking-[-0.02em] ${
-                    i === 0 ? "text-[var(--page)]" : "text-[var(--ink)]"
-                  }`}
-                >
-                  {f.title}
-                </h3>
-                <p
-                  className="mt-2 text-sm leading-[1.55]"
-                  style={{
-                    color: i === 0 ? "#A3A29A" : i === 1 ? "#3C4118" : "var(--ink-dim)",
-                  }}
-                >
-                  {f.body}
-                </p>
-              </div>
-            </ScrollReveal>
-          ))}
-        </div>
+        <PointOfView />
       </section>
 
       <section id="how-it-works" className="scroll-mt-24 mx-auto max-w-[1180px] px-6 pt-[88px] sm:px-8">
