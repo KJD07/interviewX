@@ -20,6 +20,7 @@ from .graphs import quota, run_ats_check
 from .matching import candidate_filter, match_score, signals_for
 from .models import CandidateProfile, Job, JobApplication, JobFeedState, JobSnapshot, SavedJob
 from .practice import score_answer
+from .role_practice import build_practice_set, library_question, question_dict
 from .profile_parser import parse_resume
 from .resume_parser import ResumeParseError, extract_text
 from .serializers import (
@@ -386,12 +387,25 @@ class PracticeQuestionListView(APIView):
             company = item.round.role.company
             if not company.is_accessible_by(plan):
                 continue
-            out.append({"id": item.id, "question_text": item.question_text,
-                        "question_type": item.question_type, "company": company.name,
+            source = company.name if company.kind == company.Kind.SKILL else f"{company.name} · {item.round.role.title}"
+            out.append({**question_dict(item, source, company.name), "company": company.name,
                         "role": item.round.role.title})
             if len(out) == 20:
                 break
         return Response(out)
+
+
+class RolePracticeView(APIView):
+    """GET: every practice question for one tracked application — the
+    company's bank, matching skill tracks and the static library. No LLM call."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        app = JobApplication.objects.filter(user=request.user, pk=pk).select_related("job").first()
+        if not app:
+            return Response({"detail": "Application not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(build_practice_set(app, request.user))
 
 
 class PracticeValidateView(APIView):
@@ -401,10 +415,20 @@ class PracticeValidateView(APIView):
 
     def post(self, request):
         answer = (request.data.get("answer") or "").strip()
-        if len(answer) > 10_000:
+        if len(answer) > 20_000:
             return Response({"detail": "Answer is too long."}, status=status.HTTP_400_BAD_REQUEST)
+        qid = request.data.get("question_id")
+        if isinstance(qid, str) and qid.startswith("lib:"):  # static library (careers/practice_library.py)
+            item = library_question(qid[4:])
+            if not item:
+                return Response({"detail": "Question not found."}, status=status.HTTP_404_NOT_FOUND)
+            result = score_answer(answer, item["ideal_answer"])
+            result["ideal_answer"] = item["ideal_answer"]
+            return Response(result)
+        if not str(qid or "").isdigit():
+            return Response({"detail": "Question not found."}, status=status.HTTP_404_NOT_FOUND)
         question = (InterviewQuestion.objects
-                    .filter(pk=request.data.get("question_id"), status=InterviewQuestion.Status.APPROVED)
+                    .filter(pk=int(qid), status=InterviewQuestion.Status.APPROVED)
                     .exclude(ideal_answer="").select_related("round__role__company").first())
         if not question or not question.round_id or \
                 not question.round.role.company.is_accessible_by(effective_plan(request.user)):

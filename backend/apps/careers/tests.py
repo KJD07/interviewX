@@ -10,7 +10,7 @@ from apps.companies.models import Company, InterviewQuestion, Role, Round
 
 from . import ats, discovery, feeds, skillgraph
 from .ats import ats_check
-from .models import CandidateProfile, Job, JobApplication, JobBoard, JobFeedState, ResumeCheck, SavedJob
+from .models import CandidateProfile, Job, JobApplication, JobBoard, JobFeedState, JobSnapshot, ResumeCheck, SavedJob
 from .practice import score_answer
 
 User = get_user_model()
@@ -1032,3 +1032,79 @@ class InferYearsTests(TestCase):
         self.assertEqual(infer_years("Engineer", "Minimum 7+ years experience required."), (7, None))
         self.assertEqual(infer_years("Engineer", "Great team, great perks."), (2, 5))  # no marker: mid default
         self.assertEqual(infer_years("Senior Engineer", ""), (5, None))
+
+
+class RolePracticeTests(TestCase):
+    """Practice set per tracked application: company bank + skill tracks + library, no LLM."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="rp", email="rp@ex.com", password="pw12345!")
+        self.c = APIClient()
+        self.c.force_authenticate(self.user)
+
+    def test_company_key_strips_suffixes(self):
+        from .role_practice import company_key
+        self.assertEqual(company_key("Microsoft India Pvt. Ltd."), "microsoft")
+        self.assertEqual(company_key("Google LLC"), company_key("google"))
+        self.assertEqual(company_key("Tech Labs"), "tech labs")  # nothing but suffixes: keep them
+
+    def test_role_family(self):
+        from .role_practice import role_family
+        self.assertEqual(role_family("SDE-1")[0], "engineering")
+        self.assertEqual(role_family("Senior Frontend Engineer")[0], "frontend")
+        self.assertEqual(role_family("Data Analyst")[0], "data_analyst")
+        self.assertEqual(role_family("Associate Product Manager")[0], "product")
+        self.assertEqual(role_family("Inside Sales Executive")[0], "sales")
+        self.assertEqual(role_family("Chef")[0], "general")
+
+    def test_practice_set_for_application(self):
+        co = Company.objects.create(name="Acme", tone_style="formal_strict")
+        sde = Role.objects.create(company=co, title="Software Engineer")
+        other = Role.objects.create(company=co, title="Sales Manager")
+        q = InterviewQuestion.objects.create(round=Round.objects.create(role=sde, title="DSA"),
+                                             question_text="Reverse a string in place.", question_type="coding",
+                                             ideal_answer="two pointers swap", language="python")
+        InterviewQuestion.objects.create(round=Round.objects.create(role=other, title="R1"),
+                                         question_text="Sell me this.", question_type="other", ideal_answer="x y")
+        job = make_job(title="Software Engineer, Backend", company="Acme Technologies Pvt Ltd",
+                       skills=["python", "django", "postgresql"])
+        app = JobApplication.objects.create(user=self.user, job=job, **JobSnapshot.snapshot_of(job))
+
+        r = self.c.get(f"/api/careers/practice/applications/{app.id}/")
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r.data["company_bank"])
+        self.assertEqual(r.data["sources"][0], "Acme · Software Engineer")
+        self.assertEqual(r.data["questions"][0]["id"], q.id)
+        texts = [x["question_text"] for x in r.data["questions"]]
+        self.assertNotIn("Sell me this.", texts)  # other role at the same company
+        for track in ("Python", "Django", "SQL", "HR & Behavioral"):  # posting skills + always behavioral
+            self.assertIn(track, r.data["sources"])
+        cats = {x["category"] for x in r.data["questions"]}
+        self.assertTrue({"coding", "technical", "behavioral"} <= cats)
+        self.assertTrue(any(str(x["id"]).startswith("lib:code-") for x in r.data["questions"]))
+        self.assertNotIn("ideal_answer", r.data["questions"][0])
+
+    def test_unknown_company_still_gets_role_questions(self):
+        app = JobApplication.objects.create(user=self.user, title="Product Manager", company="Nowhere Co")
+        r = self.c.get(f"/api/careers/practice/applications/{app.id}/")
+        self.assertFalse(r.data["company_bank"])
+        self.assertIn("lib:pm-prioritise", [x["id"] for x in r.data["questions"]])
+        self.assertIn("HR & Behavioral", r.data["sources"])
+
+    def test_other_users_application_is_404(self):
+        other = User.objects.create_user(username="o", email="o@ex.com", password="pw12345!")
+        app = JobApplication.objects.create(user=other, title="SDE", company="X")
+        self.assertEqual(self.c.get(f"/api/careers/practice/applications/{app.id}/").status_code, 404)
+
+    def test_validate_library_question(self):
+        r = self.c.post("/api/careers/practice/validate/",
+                        {"question_id": "lib:code-valid-parentheses",
+                         "answer": "def is_valid(s):\n    stack = []  # push openers, pop on matching closer"},
+                        format="json")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("stack", r.data["covered"])
+        self.assertIn("ideal_answer", r.data)
+        bad = self.c.post("/api/careers/practice/validate/", {"question_id": "lib:nope", "answer": "x"}, format="json")
+        self.assertEqual(bad.status_code, 404)
+        self.assertEqual(self.c.post("/api/careers/practice/validate/", {"question_id": "abc", "answer": "x"},
+                                     format="json").status_code, 404)

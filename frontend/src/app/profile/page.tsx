@@ -483,11 +483,12 @@ function ApplicationsTab() {
                     {a.job_id !== null && !a.is_live && " · posting closed"}
                   </p>
                 </div>
-                <div className="flex gap-2 items-center shrink-0">
+                <div className="flex flex-wrap gap-2 items-center shrink-0">
                   <select value={a.status} onChange={(e) => patch(a, { status: e.target.value as ApplicationStatus })}
                     className="ui-input !h-8 !w-auto !rounded-full !px-3 !text-[13px]">
                     {STATUSES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
                   </select>
+                  <Link href={`/practice?app=${a.id}`} className="btn btn-secondary btn-sm">Practice</Link>
                   <button onClick={() => remove(a)} className="btn btn-danger btn-sm">Remove</button>
                 </div>
               </div>

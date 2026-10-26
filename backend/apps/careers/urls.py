@@ -2,7 +2,7 @@ from django.urls import path
 
 from .views import (
     ApplicationDetailView, ApplicationListView, JobDetailView, JobListView, JobSaveView, PracticeQuestionListView,
-    PracticeValidateView, ProfileResumeView, ProfileView, ResumeCheckView, SavedJobListView,
+    PracticeValidateView, ProfileResumeView, ProfileView, ResumeCheckView, RolePracticeView, SavedJobListView,
 )
 
 urlpatterns = [
@@ -16,5 +16,6 @@ urlpatterns = [
     path("profile/", ProfileView.as_view(), name="careers-profile"),
     path("profile/resume/", ProfileResumeView.as_view(), name="careers-profile-resume"),
     path("practice/questions/", PracticeQuestionListView.as_view(), name="careers-practice-questions"),
+    path("practice/applications/<int:pk>/", RolePracticeView.as_view(), name="careers-practice-role"),
     path("practice/validate/", PracticeValidateView.as_view(), name="careers-practice-validate"),
 ]
