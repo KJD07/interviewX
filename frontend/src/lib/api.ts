@@ -1096,7 +1096,7 @@ export interface Job {
   exp_min: number | null; // years of experience asked for
   exp_max: number | null; // null = open-ended ("5+ years")
   skills: string[];
-  company_more: number; // this company's further openings hidden by the per-company cap
+  stack_more: number; // further postings of this same role at this company, stacked behind this one
   saved: boolean;
   application_status: ApplicationStatus | null;
   match: number | null; // 0-100 vs the candidate profile; null without a profile
@@ -1108,6 +1108,7 @@ export interface JobFilters {
   q?: string[]; // roles / skills / companies — a job matches any of them
   location?: string[]; // a job matches any of them
   company?: string;
+  exact_title?: string; // show every posting of one stacked role
   work_mode?: WorkMode[];
   level?: JobLevel[];
   exp_min?: number; // years range; exp_max === 15 means "15+"
@@ -1125,7 +1126,6 @@ export interface JobListResponse {
   page_size: number;
   sort: "recent" | "match";
   best_match: boolean;
-  company_cap: number | null; // max jobs shown per company; null when filtered to one company
   last_refreshed_at: string | null;
   refreshing: boolean;
   stats: { jobs: number; companies: number; india_jobs: number; india_companies: number };
@@ -1251,6 +1251,7 @@ function jobQuery(f: JobFilters): string {
   f.q?.forEach((t) => p.append("q", t));
   f.location?.forEach((t) => p.append("location", t));
   if (f.company) p.set("company", f.company);
+  if (f.exact_title) p.set("exact_title", f.exact_title);
   if (f.work_mode?.length) p.set("work_mode", f.work_mode.join(","));
   if (f.level?.length) p.set("level", f.level.join(","));
   if (f.exp_min !== undefined) p.set("exp_min", String(f.exp_min));

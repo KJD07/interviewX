@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from django.db import IntegrityError, transaction
 from django.db.models import Count, F, Q, Window
-from django.db.models.functions import RowNumber
+from django.db.models.functions import Lower, RowNumber
 from django.http import FileResponse
 from django.utils import timezone
 from rest_framework import status
@@ -29,7 +29,8 @@ from .serializers import (
 PAGE_SIZE = 20
 MATCH_POOL = 2000  # newest candidate jobs scored in Python for "Best match"
 POSTED_WITHIN = {"1", "3", "7", "30"}
-COMPANY_CAP = 3  # jobs per company per list, so one big employer can't fill whole pages
+# Postings of the same role at the same company (same title, usually many locations) are stacked
+# into one card so they can't fill whole pages; different roles still list separately.
 MAX_TERMS = 10   # roles / locations accepted per search
 EXP_TOP = 15     # the experience slider's last stop means "15+" (no upper bound)
 
@@ -97,17 +98,23 @@ def _filtered_jobs(params):
     return qs
 
 
-def _cap_per_company(qs):
-    """Newest COMPANY_CAP jobs of each company, still newest-first overall."""
-    ranked = qs.annotate(rn=Window(RowNumber(), partition_by=F("company"), order_by=F("posted_at").desc()))
-    return qs.model.objects.filter(pk__in=ranked.filter(rn__lte=COMPANY_CAP).values("pk")).defer("description")
+def _stack_key(job):
+    return job.company, job.title.strip().lower()
 
 
-def _more_by_company(qs, rows):
-    """{company: jobs beyond the cap} for the companies on this page (the "see all" count)."""
-    names = {j.company for _, j in rows}
-    totals = dict(qs.filter(company__in=names).order_by().values_list("company").annotate(n=Count("pk")))
-    return {c: max(0, n - COMPANY_CAP) for c, n in totals.items()}
+def _stack_same_role(qs):
+    """Newest posting of each (company, title), still newest-first overall."""
+    ranked = qs.annotate(rn=Window(RowNumber(), partition_by=[F("company"), Lower("title")],
+                                   order_by=F("posted_at").desc()))
+    return qs.model.objects.filter(pk__in=ranked.filter(rn=1).values("pk")).defer("description")
+
+
+def _stacked_counts(qs, rows):
+    """{(company, title): further postings of that role hidden behind the shown one} for this page."""
+    companies = {j.company for _, j in rows}
+    totals = qs.filter(company__in=companies).order_by().annotate(tkey=Lower("title")) \
+        .values_list("company", "tkey").annotate(n=Count("pk"))
+    return {(c, t.strip()): n - 1 for c, t, n in totals if n > 1}
 
 
 class JobListView(APIView):
@@ -128,34 +135,36 @@ class JobListView(APIView):
         best_match = params.get("best_match") == "1" and sig.usable
         if best_match or sort == "match":
             qs = qs.filter(candidate_filter(sig))
-        capped = not params.get("company", "").strip()  # drilling into one company lifts the cap
+        exact_title = params.get("exact_title", "").strip()
+        if exact_title:  # drilling into one stacked role shows all of its postings
+            qs = qs.filter(title__iexact=exact_title)
+        stacked = not exact_title
 
         if sort == "match":
             pool = list(qs[:MATCH_POOL])
             scored = sorted(((match_score(j, sig), j) for j in pool), key=lambda p: (-p[0], -p[1].posted_at.timestamp()))
-            if capped:
-                kept, per_company = [], {}
+            if stacked:
+                seen, kept = set(), []
                 for row in scored:
-                    per_company[row[1].company] = per_company.get(row[1].company, 0) + 1
-                    if per_company[row[1].company] <= COMPANY_CAP:
+                    if _stack_key(row[1]) not in seen:
+                        seen.add(_stack_key(row[1]))
                         kept.append(row)
                 scored = kept
             total = len(scored)
             page_rows = scored[start:end]
         else:
-            listing = _cap_per_company(qs) if capped else qs
+            listing = _stack_same_role(qs) if stacked else qs
             total = listing.count()
             page_rows = [(match_score(j, sig), j) for j in listing[start:end]]
-        more = _more_by_company(qs, page_rows) if capped else {}
+        more = _stacked_counts(qs, page_rows) if stacked else {}
 
         saved, applied = _tracking(request.user, [j.id for _, j in page_rows])
         state = JobFeedState.objects.filter(pk=1).first()
         limit, used = quota(request.user)
         return Response({
-            "results": [job_dict(j, saved=j.id in saved, application=applied.get(j.id), match=m, company_more=more.get(j.company, 0))
+            "results": [job_dict(j, saved=j.id in saved, application=applied.get(j.id), match=m, stack_more=more.get(_stack_key(j), 0))
                         for m, j in page_rows],
             "count": total, "page": page, "page_size": PAGE_SIZE, "sort": sort, "best_match": best_match,
-            "company_cap": COMPANY_CAP if capped else None,
             "last_refreshed_at": (state.last_finished_at or state.last_refreshed_at) if state else None,
             "refreshing": feeds.is_sweeping(state),
             "stats": {"jobs": state.jobs_count if state else 0, "companies": state.companies_count if state else 0,

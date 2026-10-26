@@ -980,17 +980,20 @@ class JobFilterAndMatchTests(TestCase):
         self.assertEqual(self._ids("?exp_min=6&exp_max=15"), [self.chef.id])  # open-ended job, 15 = no cap
         self.assertEqual(len(self._ids("?exp_min=0&exp_max=15")), 3)
 
-    def test_company_cap_and_see_all(self):
-        for i in range(5):
-            make_job(title=f"AI Native Engineer {i}", company="Accenture", skills=[],
+    def test_same_role_stacks_but_different_roles_list_separately(self):
+        for i in range(4):
+            make_job(title="AI Native Engineer", company="Accenture", skills=[], location=f"City {i}",
                      posted_at=timezone.now() - timedelta(days=i + 1))
+        make_job(title="Custom Software Engineer", company="Accenture", skills=[],
+                 posted_at=timezone.now() - timedelta(days=9))
         r = self.c.get("/api/careers/jobs/").data
         accenture = [j for j in r["results"] if j["company"] == "Accenture"]
-        self.assertEqual(len(accenture), 3)
-        self.assertEqual(accenture[0]["company_more"], 2)
-        self.assertEqual(r["count"], 6)
-        r = self.c.get("/api/careers/jobs/?company=Accenture").data
+        self.assertEqual(sorted(j["title"] for j in accenture), ["AI Native Engineer", "Custom Software Engineer"])
+        self.assertEqual({j["title"]: j["stack_more"] for j in accenture},
+                         {"AI Native Engineer": 3, "Custom Software Engineer": 0})
         self.assertEqual(r["count"], 5)
+        r = self.c.get("/api/careers/jobs/?exact_title=ai native engineer").data
+        self.assertEqual(r["count"], 4)
 
     def test_best_match_is_a_filter_and_keeps_recency_order(self):
         CandidateProfile.objects.create(user=self.user, skills=["Python", "Django"], target_roles=["Engineer"],

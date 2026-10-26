@@ -76,12 +76,12 @@ class CandidateProfileSerializer(serializers.ModelSerializer):
         return _entry_list(v, "projects")
 
 
-def job_dict(job, with_description=False, saved=False, application=None, match=None, company_more=0):
+def job_dict(job, with_description=False, saved=False, application=None, match=None, stack_more=0):
     d = {
         "id": job.id, "title": job.title, "company": job.company, "location": job.location,
         "url": job.url, "tags": [t for t in job.tags if t], "posted_at": job.posted_at, "source": job.source,
         "work_mode": job.work_mode, "level": job.level, "exp_min": job.exp_min, "exp_max": job.exp_max,
-        "skills": job.skills, "company_more": company_more,
+        "skills": job.skills, "stack_more": stack_more,
         "saved": saved, "application_status": application, "match": match,
     }
     if with_description:
