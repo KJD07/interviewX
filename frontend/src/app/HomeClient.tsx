@@ -8,12 +8,48 @@ import { FaLinkedin } from "react-icons/fa6";
 import { useAuth } from "@/context/AuthContext";
 import MarketingNav from "@/components/MarketingNav";
 import { OPERATOR_LEGAL_NAME } from "@/lib/legal";
+import { ATS_FREE_DAILY_LIMIT, PLANS } from "@/lib/plans";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import LiveCodeFeature from "@/components/LiveCodeFeature";
 import FaqSection from "@/components/FaqSection";
 import icon from "@/app/icon.png";
 
-const FEATURES = [
+/* The candidate portal, in the order a job search actually happens. */
+const PORTAL_FEATURES = [
+  {
+    n: "01",
+    title: "A profile from your resume",
+    body: "Upload your resume once. Skills, experience, education and projects fill themselves in, ready to edit.",
+  },
+  {
+    n: "02",
+    title: "Live jobs, ranked for you",
+    body: "Open roles from 1,100+ companies' own career boards, India-first, each with a match score against your profile.",
+  },
+  {
+    n: "03",
+    title: "Free ATS resume check",
+    body: `Check your resume against any job. See the score breakdown, the keywords you match, the ones you're missing and what to add. ${ATS_FREE_DAILY_LIMIT} checks a day, free.`,
+    highlight: true,
+  },
+  {
+    n: "04",
+    title: "A copy-ready apply kit",
+    body: "Your details as copy-ready fields beside the application form, in a panel that can float on top while you fill it in.",
+  },
+  {
+    n: "05",
+    title: "Every application, tracked",
+    body: "Saved jobs and applications in one place, with status and notes. Add roles you found elsewhere too.",
+  },
+  {
+    n: "06",
+    title: "Practice for each role",
+    body: "Questions likely for every job you track: the company's own bank, skill tracks and HR rounds, scored instantly.",
+  },
+];
+
+const INTERVIEW_FEATURES = [
   {
     title: "Questions from real insiders",
     body: "Curated by people working at that company, or candidates who interviewed there recently.",
@@ -25,59 +61,42 @@ const FEATURES = [
     icon: "◇",
   },
   {
-    title: "Interview-grade pressure",
-    body: "The AI paces, probes and pushes back the way a real panel does.",
-    icon: "○",
-  },
-  {
     title: "Voice mode",
     body: "Speak your answers naturally. It listens, transcribes and responds in real time.",
     icon: "▲",
   },
   {
-    title: "Dimension-level scoring",
-    body: "See where you stand on communication, technical depth, structure and confidence.",
+    title: "Honest, rubric-based scores",
+    body: "Communication, technical depth and problem solving on a strict 0–10 scale, with feedback on what to fix.",
     icon: "△",
-  },
-  {
-    title: "Progress you can see",
-    body: "A readiness score that tracks growth across companies, session over session.",
-    icon: "▢",
   },
 ];
 
 const STEPS = [
-  { n: "01", title: "Pick a company", body: "Real companies and roles, from entry-level to FAANG-scale." },
-  { n: "02", title: "Face verified questions", body: "Sourced from insiders and recent hires, vetted with proof." },
-  { n: "03", title: "Feel the pressure", body: "The session runs with the pace and scrutiny of a real panel." },
-  { n: "04", title: "Get scored & improve", body: "Instant rubric feedback and a readiness score that climbs." },
+  { n: "01", title: "Upload your resume", body: "Your candidate profile builds itself, and powers job matching." },
+  { n: "02", title: "Find jobs that fit", body: "Filter live roles by skill, location, experience and best match." },
+  { n: "03", title: "Check, apply, track", body: "Run the ATS check, apply with the kit, and track every application." },
+  { n: "04", title: "Practice & interview", body: "Rehearse that role's questions, then a full AI mock interview." },
 ];
 
-const SOURCES = [
-  { label: "Where questions come from", value: "Never scraped. Never guessed.", plain: true },
-  { label: "Sourced from", value: "Current employees" },
-  { label: "Sourced from", value: "Recent interviewees" },
-  { label: "Verified with", value: "Work email or offer" },
-];
-
-/* Illustrative session card — a picture of the product, not live data. */
-const WAVEFORM = [30, 62, 44, 88, 56, 100, 48, 72, 34, 52, 26, 40, 22, 58, 30, 44];
-const LIVE_SCORES = [
-  { label: "Structure", width: "74%", value: "7.4" },
-  { label: "Depth", width: "59%", value: "5.9" },
-  { label: "Confidence", width: "82%", value: "8.2" },
+const STATS = [
+  { label: "Live jobs from", value: "1,100+ career boards" },
+  { label: "ATS resume checks", value: `${ATS_FREE_DAILY_LIMIT} free every day` },
+  { label: "AI mock interviews", value: `${PLANS.max.monthlyLimit} a month` },
+  { label: "Price for candidates", value: "₹0 — no card needed" },
 ];
 
 export default function Home() {
   const { user } = useAuth();
   const router = useRouter();
+  const start = () => router.push(user ? "/dashboard" : "/register");
 
   return (
     <div className="relative min-h-screen bg-[var(--page)]">
       <MarketingNav />
 
       <section className="mx-auto max-w-[1180px] px-6 pt-32 sm:px-8 sm:pt-36">
-        <div className="grid items-end gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-[52px]">
+        <div className="grid items-center gap-12 lg:grid-cols-[0.95fr_1.05fr] lg:gap-[52px]">
           <div>
             <motion.span
               initial={{ opacity: 0, y: 10 }}
@@ -87,7 +106,7 @@ export default function Home() {
             >
               <span className="el-pulse h-[7px] w-[7px] rounded-full bg-[var(--success)]" />
               <span className="font-mono text-[11px] tracking-[0.06em] text-[var(--ink-dim)]">
-                VERIFIED QUESTION BANKS · REAL INTERVIEW QUESTIONS
+                FREE CANDIDATE PORTAL · LIVE JOBS · ATS · MOCK INTERVIEWS
               </span>
             </motion.span>
 
@@ -95,20 +114,20 @@ export default function Home() {
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
-              className="font-display text-[42px] font-bold leading-[0.92] tracking-[-0.035em] text-[var(--ink)] sm:text-[58px] lg:text-[72px]"
+              className="font-display text-[42px] font-bold leading-[0.95] tracking-[-0.035em] text-[var(--ink)] sm:text-[58px] lg:text-[68px]"
             >
-              Practice the questions people were <em className="font-accent">actually</em> asked.
+              Find the job. Beat the ATS. <em className="font-accent">Ace</em> the interview.
             </motion.h1>
 
             <motion.p
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="mt-[22px] max-w-[450px] text-[17px] leading-[1.55] text-[var(--ink-dim)]"
+              className="mt-[22px] max-w-[470px] text-[17px] leading-[1.55] text-[var(--ink-dim)]"
             >
-              Our bank is curated by people who sat in that room — current employees and
-              recent interviewees, each verified with a work email or an offer letter. Then
-              our AI interviewer applies the same pressure.
+              EvaluLabs takes you from resume to offer in one free portal: live jobs ranked for
+              your profile, an ATS check for every role, an apply kit and tracker, and AI mock
+              interviews on verified company questions.
             </motion.p>
 
             <motion.div
@@ -118,16 +137,16 @@ export default function Home() {
               className="mt-8 flex flex-wrap gap-2.5"
             >
               <button
-                onClick={() => router.push(user ? "/dashboard" : "/register")}
+                onClick={start}
                 className="rounded-full bg-[var(--ink)] px-[26px] py-[15px] text-[15px] font-semibold text-[var(--page)] hover:bg-[var(--accent-dim)]"
               >
-                {user ? "Go to dashboard" : "Start a mock interview"}
+                {user ? "Go to dashboard" : "Get started free"}
               </button>
               <Link
-                href="/pricing"
+                href="#product"
                 className="rounded-full border border-[var(--border-mid)] px-[26px] py-[15px] text-[15px] font-semibold text-[var(--ink)] hover:bg-[var(--surface)]"
               >
-                See pricing →
+                See what&apos;s inside ↓
               </Link>
             </motion.div>
           </div>
@@ -136,67 +155,44 @@ export default function Home() {
             initial={{ opacity: 0, y: 22 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.15 }}
-            className="relative overflow-hidden rounded-[24px] p-[26px]"
+            className="relative overflow-hidden rounded-[24px] p-3 sm:p-4"
             style={{ background: "var(--hero-bg)", color: "var(--hero-text)" }}
           >
             <div
               className="pointer-events-none absolute -right-[70px] -top-[70px] h-[190px] w-[190px] rounded-full opacity-[0.13]"
               style={{ background: "var(--lime)" }}
             />
-            <div className="relative mb-5 flex items-center justify-between gap-4">
-              <span className="font-mono text-[10px] tracking-[0.16em] text-[var(--lime)]">LIVE SESSION</span>
-              <span className="font-mono text-[10px] tracking-[0.09em] text-[#7E7D74]">SWE · ROUND 2</span>
+            <div className="relative mb-3 flex items-center justify-between gap-4 px-1.5 pt-1">
+              <span className="font-mono text-[10px] tracking-[0.16em] text-[var(--lime)]">CANDIDATE PORTAL TOUR</span>
+              <span className="font-mono text-[10px] tracking-[0.09em] text-[#7E7D74]">0:37 · SOUND ON</span>
             </div>
-            <p className="font-display relative m-0 mb-2.5 text-[22px] font-medium leading-[1.2] tracking-[-0.02em] sm:text-[25px]">
-              “Walk me through how you&apos;d keep two caches consistent across regions.”
-            </p>
-            <div className="mb-5 font-mono text-[10px] tracking-[0.07em] text-[#7E7D74]">
-              VERIFIED BY REAL CONTRIBUTORS
-            </div>
-            <div className="mb-5 flex h-9 items-end gap-[3px]">
-              {WAVEFORM.map((height, i) => (
-                <span
-                  key={i}
-                  className="flex-1 rounded-[2px]"
-                  style={{ height: `${height}%`, background: i < 8 ? "var(--lime)" : "#4A4941" }}
-                />
-              ))}
-            </div>
-            <div className="grid gap-2.5 border-t border-white/[0.12] pt-[18px]">
-              {LIVE_SCORES.map((row) => (
-                <div key={row.label} className="grid grid-cols-[94px_1fr_32px] items-center gap-3">
-                  <span className="text-[13px] text-[#A3A29A]">{row.label}</span>
-                  <span className="relative block h-[5px] rounded-[3px] bg-white/[0.13]">
-                    <span
-                      className="absolute inset-y-0 left-0 rounded-[3px]"
-                      style={{ width: row.width, background: "var(--lime)" }}
-                    />
-                  </span>
-                  <span className="text-right font-mono text-[13px]">{row.value}</span>
-                </div>
-              ))}
-            </div>
+            <video
+              className="relative block aspect-video w-full rounded-[14px] bg-black"
+              controls
+              playsInline
+              preload="metadata"
+              poster="/videos/candidate-portal-poster.jpg"
+              aria-label="38-second tour of the EvaluLabs candidate portal"
+            >
+              <source src="/videos/candidate-portal.webm" type="video/webm" />
+              <source src="/videos/candidate-portal.mp4" type="video/mp4" />
+              <track kind="captions" src="/videos/candidate-portal.vtt" srcLang="en" label="English" />
+            </video>
           </motion.div>
         </div>
 
-        <div className="mt-[70px] grid grid-cols-1 border-y border-[var(--border-mid)] lg:grid-cols-4">
-          {SOURCES.map((item, i) => (
+        <div className="mt-[70px] grid grid-cols-1 border-y border-[var(--border-mid)] sm:grid-cols-2 lg:grid-cols-4">
+          {STATS.map((item, i) => (
             <div
-              key={item.value}
-              className={`px-6 py-[22px] first:pl-0 last:pr-0 ${
-                i > 0 ? "border-t border-[var(--border-mid)] lg:border-l lg:border-t-0" : ""
-              }`}
+              key={item.label}
+              className={`px-6 py-[22px] lg:first:pl-0 lg:last:pr-0 ${
+                i > 0 ? "border-t border-[var(--border-mid)] sm:border-t-0 lg:border-l" : ""
+              } ${i > 1 ? "sm:border-t lg:border-t-0" : ""} ${i % 2 === 1 ? "sm:border-l" : ""}`}
             >
               <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--ink-faint)]">
                 {item.label}
               </div>
-              <div
-                className={
-                  item.plain
-                    ? "mt-2 text-sm text-[var(--ink-dim)]"
-                    : "font-display mt-2 text-[19px] font-semibold tracking-[-0.02em] text-[var(--ink)]"
-                }
-              >
+              <div className="font-display mt-2 text-[19px] font-semibold tracking-[-0.02em] text-[var(--ink)]">
                 {item.value}
               </div>
             </div>
@@ -204,63 +200,82 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="product" className="mx-auto max-w-[1180px] px-6 pt-[88px] sm:px-8">
+      <section id="product" className="mx-auto max-w-[1180px] scroll-mt-24 px-6 pt-[88px] sm:px-8">
         <ScrollReveal className="flex flex-wrap items-end justify-between gap-10">
-          <h2 className="font-display max-w-[600px] text-[34px] font-bold leading-[1.02] tracking-[-0.032em] text-[var(--ink)] sm:text-[46px]">
-            Real questions. Real pressure. No guesswork.
+          <h2 className="font-display max-w-[640px] text-[34px] font-bold leading-[1.02] tracking-[-0.032em] text-[var(--ink)] sm:text-[46px]">
+            Your whole job search, in one place.
           </h2>
-          <p className="max-w-[320px] text-[15px] leading-relaxed text-[var(--ink-dim)]">
-            Everything below exists because a generic question list can&apos;t tell you whether
-            you&apos;re ready.
+          <p className="max-w-[340px] text-[15px] leading-relaxed text-[var(--ink-dim)]">
+            No more ten open tabs. Every step from finding a role to rehearsing for it lives in the
+            same portal, and each one feeds the next.
           </p>
         </ScrollReveal>
 
-        <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[1.1fr_1fr_1fr]">
-          <ScrollReveal className="lg:row-span-2">
-            <LiveCodeFeature />
-          </ScrollReveal>
-          {FEATURES.slice(0, 4).map((f, i) => (
-            <ScrollReveal key={f.title} delay={(i % 3) * 0.08}>
+        <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {PORTAL_FEATURES.map((f, i) => (
+            <ScrollReveal key={f.n} delay={(i % 3) * 0.08}>
               <div
                 className={`card-hover flex h-full flex-col rounded-[20px] p-6 ${
-                  i === 1
+                  f.highlight
                     ? "bg-[var(--lime)] hover:brightness-95"
                     : "border border-[var(--border)] bg-[var(--surface)]"
                 }`}
               >
                 <div
-                  className="grid h-[27px] w-[27px] place-items-center rounded-lg text-xs"
-                  style={{ background: i === 1 ? "rgba(12,12,11,0.1)" : "var(--page)" }}
+                  className="w-fit rounded-lg px-2 py-1 font-mono text-[11px] font-bold"
+                  style={{
+                    background: f.highlight ? "rgba(12,12,11,0.1)" : "var(--page)",
+                    color: f.highlight ? "var(--ink)" : "var(--olive)",
+                  }}
                 >
-                  {f.icon}
+                  {f.n}
                 </div>
-                <h3 className="font-display mt-12 text-xl font-semibold tracking-[-0.02em] text-[var(--ink)]">
+                <h3 className="font-display mt-10 text-xl font-semibold tracking-[-0.02em] text-[var(--ink)]">
                   {f.title}
                 </h3>
                 <p
                   className="mt-2 text-sm leading-[1.55]"
-                  style={{ color: i === 1 ? "#3C4118" : "var(--ink-dim)" }}
+                  style={{ color: f.highlight ? "#3C4118" : "var(--ink-dim)" }}
                 >
                   {f.body}
                 </p>
               </div>
             </ScrollReveal>
           ))}
-          <ScrollReveal className="sm:col-span-2">
-            <div className="grid h-full grid-cols-1 gap-7 rounded-[20px] border border-[var(--border)] bg-[var(--surface)] p-6 sm:grid-cols-2">
-              {FEATURES.slice(4).map((f) => (
-                <div key={f.title}>
-                  <div className="grid h-[27px] w-[27px] place-items-center rounded-lg bg-[var(--page)] text-xs">
-                    {f.icon}
-                  </div>
-                  <h3 className="font-display mt-[18px] text-xl font-semibold tracking-[-0.02em] text-[var(--ink)]">
-                    {f.title}
-                  </h3>
-                  <p className="mt-2 text-sm leading-[1.55] text-[var(--ink-dim)]">{f.body}</p>
-                </div>
-              ))}
-            </div>
+        </div>
+      </section>
+
+      <section id="interviews" className="mx-auto max-w-[1180px] scroll-mt-24 px-6 pt-[88px] sm:px-8">
+        <ScrollReveal className="flex flex-wrap items-end justify-between gap-10">
+          <div>
+            <div className="font-label mb-3.5">AI mock interviews</div>
+            <h2 className="font-display max-w-[640px] text-[34px] font-bold leading-[1.02] tracking-[-0.032em] text-[var(--ink)] sm:text-[46px]">
+              Then rehearse the questions people were <em className="font-accent">actually</em> asked.
+            </h2>
+          </div>
+          <p className="max-w-[340px] text-[15px] leading-relaxed text-[var(--ink-dim)]">
+            Pick a company and role. An AI interviewer runs a full session from a verified question
+            bank, with that company&apos;s tone and pressure.
+          </p>
+        </ScrollReveal>
+
+        <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[1.1fr_1fr_1fr]">
+          <ScrollReveal className="sm:col-span-2 lg:col-span-1 lg:row-span-2">
+            <LiveCodeFeature />
           </ScrollReveal>
+          {INTERVIEW_FEATURES.map((f, i) => (
+            <ScrollReveal key={f.title} delay={(i % 2) * 0.08}>
+              <div className="card-hover flex h-full flex-col rounded-[20px] border border-[var(--border)] bg-[var(--surface)] p-6">
+                <div className="grid h-[27px] w-[27px] place-items-center rounded-lg bg-[var(--page)] text-xs">
+                  {f.icon}
+                </div>
+                <h3 className="font-display mt-10 text-xl font-semibold tracking-[-0.02em] text-[var(--ink)]">
+                  {f.title}
+                </h3>
+                <p className="mt-2 text-sm leading-[1.55] text-[var(--ink-dim)]">{f.body}</p>
+              </div>
+            </ScrollReveal>
+          ))}
         </div>
       </section>
 
@@ -268,7 +283,7 @@ export default function Home() {
         <ScrollReveal>
           <div className="font-label mb-3.5">How it works</div>
           <h2 className="font-display mb-9 text-[32px] font-bold leading-[1.04] tracking-[-0.032em] text-[var(--ink)] sm:text-[42px]">
-            Four steps, one honest score.
+            Four steps from resume to offer.
           </h2>
         </ScrollReveal>
 
@@ -299,17 +314,17 @@ export default function Home() {
             />
             <div className="relative max-w-[620px]">
               <div className="mb-[18px] font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--lime)]">
-                Stop guessing
+                Get prepared. Get hired.
               </div>
               <h2 className="font-display text-[36px] font-bold leading-none tracking-[-0.035em] sm:text-[52px]">
-                Find out what they&apos;ll actually ask.
+                Stop job hunting by guesswork.
               </h2>
               <p className="mt-[18px] max-w-[440px] text-base leading-relaxed text-[#A3A29A]">
-                Verified questions, real pressure, instant feedback. Your first session takes
-                under a minute to start.
+                Upload your resume and see jobs ranked for you in minutes. Free for candidates, no
+                card needed.
               </p>
               <button
-                onClick={() => router.push(user ? "/dashboard" : "/register")}
+                onClick={start}
                 className="mt-[30px] rounded-full px-[30px] py-4 text-[15px] font-bold text-[var(--ink)] hover:brightness-95"
                 style={{ background: "var(--lime)" }}
               >
@@ -328,13 +343,14 @@ export default function Home() {
               EvaluLabs
             </div>
             <p className="max-w-xs text-sm leading-relaxed text-[var(--ink-dim)]">
-              Practice with the questions people were actually asked.
+              Find the job, beat the ATS, ace the interview.
             </p>
           </div>
           <div>
             <p className="font-label mb-4">Product</p>
             <div className="flex flex-col gap-2.5 text-sm">
               <Link href="/#product" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">Features</Link>
+              <Link href="/jobs" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">Live jobs</Link>
               <Link href="/pricing" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">Pricing</Link>
               <Link href="/companies" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">Companies</Link>
               <Link href="/skills" className="text-[var(--ink-dim)] hover:text-[var(--olive)]">Skills</Link>
