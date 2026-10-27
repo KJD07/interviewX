@@ -4,9 +4,9 @@
 //
 // Needs Xvfb, ffmpeg and playwright, the app on BASE (default http://localhost:3000)
 // and a freshly reset demo user (reset_demo_user.py). Each scene's actions are timed
-// against its voiceover clip (<vo-dir>/<scene id>.mp3); a scene without a clip falls
-// back to its `authored` length, and when a clip later differs from that length the
-// scene's action times are stretched to fit. Writes <out-dir>/screen.mkv plus
+// against its voiceover clip (<vo-dir>/<scene id>.mp3, tightened by tighten.sh); action
+// times are written against the scene's `authored` length and stretched to the real
+// clip. A scene without a clip yet runs for its `line` at the tightened reading pace. Writes <out-dir>/screen.mkv plus
 // <out-dir>/timeline.json (scene start times, seconds after the sync flash).
 // STOP_AFTER=<scene id> ends the run after that scene (for checking one scene).
 const { chromium } = require('playwright');
@@ -19,9 +19,13 @@ const API = process.env.API || 'http://localhost:8000';
 const EMAIL = 'aarav.sharma@example.com';
 const PASSWORD = 'DemoPass#2026';
 const RESUME = path.join(__dirname, 'Aarav_Sharma_Resume.pdf');
+const ANSWERS = JSON.parse(fs.readFileSync(path.join(__dirname, 'practice_answers.json'), 'utf8'));
 const DISPLAY = ':99';
 const W = 1920, H = 1080, SCALE = 4 / 3; // 1440x810 CSS px, rendered at 1080p
-const LEAD = 0.3, TAIL = 0.7;              // silence before/after each clip
+const LEAD = 0.05, TAIL = 0.15;            // silence before/after each clip — keep it brisk
+// A scene without a clip yet runs at its line's expected length at the tightened pace
+// (tighten.sh: short pauses, 1.10x) — about 3.25 words a second.
+const WORDS_PER_SEC = 3.25;
 
 const [voDir = 'vo', outDir = 'out'] = process.argv.slice(2);
 fs.mkdirSync(outDir, { recursive: true });
@@ -164,9 +168,11 @@ const OUTRO = `${brand}<h1>Find the job. Beat the ATS.<br><em>Ace the interview.
 
   // ---- cursor + interaction helpers ----
   let cur = { x: 1500, y: 900 };
+  let pace = 1; // the current scene's stretch; movement speeds up with the read
   await page.mouse.move(cur.x, cur.y);
   const ease = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
   const moveTo = async (x, y, ms = 700) => {
+    ms *= pace;
     const s = { ...cur }, t0 = Date.now();
     for (;;) {
       const k = Math.min(1, (Date.now() - t0) / ms), e = ease(k);
@@ -191,7 +197,7 @@ const OUTRO = `${brand}<h1>Find the job. Beat the ATS.<br><em>Ace the interview.
   };
   // Cosmetic pointing: if the element isn't there (live data varies), log it and carry on.
   const soft = async (fn) => { try { await fn(); } catch (e) { console.error('  skipped:', e.message.split('\n')[0]); } };
-  const type = (text, delay = 55) => page.keyboard.type(text, { delay });
+  const type = (text, delay = 55) => page.keyboard.type(text, { delay: Math.round(delay * pace) });
   const scrollBy = (dy, ms = 1000) => page.evaluate(([dy, ms]) => new Promise((res) => {
     const s = window.scrollY, t0 = performance.now();
     const f = (t) => {
@@ -200,9 +206,9 @@ const OUTRO = `${brand}<h1>Find the job. Beat the ATS.<br><em>Ace the interview.
       if (k < 1) requestAnimationFrame(f); else res();
     };
     requestAnimationFrame(f);
-  }), [dy, ms]);
+  }), [dy, ms * pace]);
   const scrollTo = async (loc, top = 120, ms = 1000) => { const b = await loc.boundingBox(); await scrollBy(b.y - top, ms); };
-  const chip = async (step, text, ms = 3800) => {
+  const chip = async (step, text, ms = 3000) => {
     await page.evaluate(([s, t]) => window.__chip(s, t), [step, text]);
     setTimeout(() => page.evaluate(() => window.__chipOff()).catch(() => {}), ms);
   };
@@ -211,19 +217,22 @@ const OUTRO = `${brand}<h1>Find the job. Beat the ATS.<br><em>Ace the interview.
 
   // ---- scenes: action times are seconds into the scene's voiceover ----
   const SCENES = [
-    { id: 's01_intro', authored: 11.89, run: async ({ at }) => {
-      await at(6.4); await page.evaluate(() => window.__cardFade(0));
-      await at(7.6); await moveTo(900, 520, 1200);
-      await at(9.4); await soft(() => hover(page.getByRole('heading', { name: 'Dashboard' }), 900));
+    { id: 's01_intro', authored: 11.89,
+      line: "Here's a quick walkthrough of the EvaluLabs candidate portal. It's everything you need for your job search, from finding the right role to acing the interview, and it's free. Let's take a look.", run: async ({ at }) => {
+      await at(4.6); await page.evaluate(() => window.__cardFade(0));
+      await at(5.6); await moveTo(900, 520, 1100);
+      await at(8.6); await soft(() => hover(page.getByRole('heading', { name: 'Dashboard' }), 900));
     } },
-    { id: 's02_dashboard', authored: 7.2, run: async ({ at }) => {
+    { id: 's02_dashboard', authored: 7.2,
+      line: "After you sign in, you land on your dashboard. Start with your profile, because everything else builds on it.", run: async ({ at }) => {
       await at(0.2); await soft(() => hover(page.getByText('Mock interview', { exact: true }), 700));
       await at(1.4); await soft(() => hover(page.getByText('Typed practice', { exact: true }), 600));
       await at(2.4); await soft(() => hover(page.getByText('Live jobs', { exact: true }).last(), 600));
       await at(3.6); await click(nav('Profile'), 900);
       await page.waitForURL(/profile/);
     } },
-    { id: 's03_profile', authored: 15.31, run: async ({ at }) => {
+    { id: 's03_profile', authored: 15.31,
+      line: "Upload your resume once, as a PDF or Word file. EvaluLabs reads it and fills in your whole profile: contact details, skills, experience, education and projects. Anything it missed, you can edit right in place.", run: async ({ at }) => {
       await chip('STEP 1', 'Build your profile from your resume');
       await at(0.4); await soft(() => hover(page.getByText('Upload your resume', { exact: true }), 800));
       await at(1.4);
@@ -241,7 +250,8 @@ const OUTRO = `${brand}<h1>Find the job. Beat the ATS.<br><em>Ace the interview.
       await type('Bengaluru, India', 50);
       await at(14.4); await click(page.getByRole('button', { name: 'Save profile' }), 800);
     } },
-    { id: 's04_prefs', authored: 13.17, run: async ({ at }) => {
+    { id: 's04_prefs', authored: 13.17,
+      line: "Next, open Job preferences. Add the roles you're targeting, the cities you want to work in, and whether you prefer remote, hybrid or on-site. Together with your skills, these drive your job matches.", run: async ({ at }) => {
       await chip('STEP 2', 'Tell it what you want');
       await at(0.1); await scrollBy(-(await page.evaluate(() => window.scrollY)), 800);
       await at(0.9); await click(page.getByRole('button', { name: 'Job preferences' }), 800);
@@ -255,7 +265,8 @@ const OUTRO = `${brand}<h1>Find the job. Beat the ATS.<br><em>Ace the interview.
       await at(8.5); await click(page.getByRole('button', { name: 'Hybrid', exact: true }), 500);
       await at(10.8); await click(page.getByRole('button', { name: 'Save preferences' }), 800);
     } },
-    { id: 's05_jobs', authored: 19.6, run: async ({ at }) => {
+    { id: 's05_jobs', authored: 19.6,
+      line: "Now head to Live jobs. These are real openings, pulled straight from company career pages and refreshed every five hours, with India first. Because your profile is set up, every job is ranked by how well it matches you. And you can filter by role, location, work mode or experience at any time.", run: async ({ at }) => {
       await at(0.4); await click(nav('Live jobs'), 900);
       await page.waitForURL(/jobs/);
       await chip('STEP 3', 'Live jobs, ranked for you');
@@ -271,7 +282,8 @@ const OUTRO = `${brand}<h1>Find the job. Beat the ATS.<br><em>Ace the interview.
       await at(16.8); await soft(() => hover(page.getByRole('button', { name: 'Hybrid', exact: true }), 600));
       await at(17.7); await soft(() => hover(page.getByLabel('Maximum years of experience'), 700, 0.5));
     } },
-    { id: 's06_ats', authored: 13.32, run: async ({ at }) => {
+    { id: 's06_ats', authored: 13.32,
+      line: "Open a job to read the full description, then run a free ATS check against your resume. In seconds, you get a score out of a hundred, the keywords you already match, the ones you're missing, and clear tips to improve.", run: async ({ at }) => {
       await chip('STEP 4', 'Check your ATS score');
       await at(0.1); await scrollTo(firstCard(), 24, 1000);
       await at(1.2); await click(firstCard().getByRole('button', { name: 'Details & ATS' }), 800);
@@ -286,7 +298,8 @@ const OUTRO = `${brand}<h1>Find the job. Beat the ATS.<br><em>Ace the interview.
       await at(9.7); await soft(() => hover(page.getByText(/^Missing —/).first().locator('xpath=following-sibling::*[1]'), 700, 0.2));
       await at(11.4); await soft(() => hover(page.getByText('How to improve', { exact: true }).locator('xpath=following-sibling::*[1]'), 800, 0.4, 0.2));
     } },
-    { id: 's07_apply', authored: 20.4, run: async ({ at }) => {
+    { id: 's07_apply', authored: 20.4,
+      line: "Save jobs you want to come back to. When you're ready, hit Apply. The apply kit lays out your details as copy-ready fields, so filling in the company's form takes seconds. You can even float it next to the form. Open the application form, and the job is tracked for you automatically.", run: async ({ at }) => {
       await chip('STEP 5', 'Save, then apply with the apply kit');
       await at(0.1); await scrollTo(firstCard(), 24, 900);
       await at(1.0); await click(firstCard().getByRole('button', { name: /Save/ }), 700);
@@ -301,7 +314,8 @@ const OUTRO = `${brand}<h1>Find the job. Beat the ATS.<br><em>Ace the interview.
       if (await page.getByRole('button', { name: 'Close' }).isVisible()) await click(page.getByRole('button', { name: 'Close' }), 700);
       await at(17.0); await soft(() => hover(firstCard().getByText('Applied ✓'), 800));
     } },
-    { id: 's08_tracker', authored: 10.2, run: async ({ at }) => {
+    { id: 's08_tracker', authored: 10.2,
+      line: "Every application lands in your tracker. Update the status as you move from applied, to interviewing, to offer, and keep notes on dates and contacts.", run: async ({ at }) => {
       await at(0.2); await click(nav('Profile'), 800);
       await page.waitForURL(/profile/);
       await chip('STEP 6', 'Track every application');
@@ -314,7 +328,8 @@ const OUTRO = `${brand}<h1>Find the job. Beat the ATS.<br><em>Ace the interview.
       await at(7.0); await click(page.getByPlaceholder(/Notes/), 700);
       await type('Recruiter call Thu 11am · Priya (TA)', 40);
     } },
-    { id: 's09_practice', authored: 18.9, run: async ({ at }) => {
+    { id: 's09_practice', authored: 18.9,
+      line: "Then get ready for the interview. Practice builds a question set for every role you've applied to, with coding, technical, system design and behavioral questions drawn from that job's skills. Type your answer, and get an instant score, the ideas you didn't cover, and an ideal answer to compare against.", run: async ({ at }) => {
       await at(0.2); await click(page.locator('a[href^="/practice?app="]').first(), 800);
       await page.waitForURL(/practice/);
       await chip('STEP 7', 'Practice for that exact role');
@@ -325,16 +340,19 @@ const OUTRO = `${brand}<h1>Find the job. Beat the ATS.<br><em>Ace the interview.
       await at(7.0); await soft(() => hover(page.getByRole('button', { name: /^System design/ }), 500));
       await at(8.0); await soft(() => hover(page.getByRole('button', { name: /^Behavioral/ }), 500));
       await at(9.2); await click(page.getByRole('button', { name: /^System design/ }), 600);
-      await at(10.0); await click(page.locator('button, li').filter({ hasText: /^\d*\s*Design a URL shortener/ }).last(), 500);
-      await at(10.9); await click(page.getByPlaceholder(/Type your answer/), 500);
-      await type('Two APIs: shorten and redirect. Each link gets an id from an ID generator, base62-encoded into a short code. Store code to long URL in a key-value store, cache hot codes in Redis since reads dominate, and return a 301 redirect. Add rate limiting and replication.', 4);
+      // Type the prepared answer for whichever system design question is showing (practice_answers.json).
+      const shown = await page.locator('p.font-display').filter({ hasText: /^Design / }).first().innerText();
+      const prepared = ANSWERS.find((a) => shown.startsWith(a.question)) || ANSWERS[0];
+      await at(10.6); await click(page.getByPlaceholder(/Type your answer/), 500);
+      await type(prepared.answer, 4);
       await at(14.6); await click(page.getByRole('button', { name: 'Validate answer' }), 700);
       await page.getByText('YOUR SCORE', { exact: true }).or(page.getByText('Your score', { exact: true })).first().waitFor({ timeout: 15000 });
       await at(15.8); await scrollBy(330, 1000);
       await at(16.9); await soft(() => hover(page.getByText("Ideas you didn't cover"), 700, 0.5));
       await at(18.0); await click(page.getByText('Show ideal answer'), 700);
     } },
-    { id: 's10_outro', authored: 12.0, run: async ({ at }) => {
+    { id: 's10_outro', authored: 12.0,
+      line: "And when you're ready for the real thing, start a full AI mock interview from your dashboard. That's the EvaluLabs candidate portal. Find the job. Beat the ATS. Ace the interview.", run: async ({ at }) => {
       await at(0.3); await click(nav('Dashboard'), 900);
       await page.waitForURL(/dashboard/);
       await at(2.4); await soft(() => hover(page.getByRole('link', { name: /Start interview/ }).or(page.getByRole('button', { name: /Start interview/ })).first(), 900));
@@ -346,7 +364,7 @@ const OUTRO = `${brand}<h1>Find the job. Beat the ATS.<br><em>Ace the interview.
   for (const s of SCENES) {
     const f = path.join(voDir, `${s.id}.mp3`);
     s.vo = fs.existsSync(f) ? f : null;
-    s.dur = s.vo ? clipLength(f) : s.authored;
+    s.dur = s.vo ? clipLength(f) : s.line.split(/\s+/).length / WORDS_PER_SEC;
   }
 
   const ff = global.ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'x11grab', '-draw_mouse', '0', '-framerate', '30',
@@ -363,6 +381,7 @@ const OUTRO = `${brand}<h1>Find the job. Beat the ATS.<br><em>Ace the interview.
   for (const s of SCENES) {
     const start = Date.now();
     const stretch = s.dur / s.authored;
+    pace = Math.min(1, stretch);
     const at = async (t) => { const w = start + (LEAD + t * stretch) * 1000 - Date.now(); if (w > 0) await sleep(w); };
     timeline.push({ id: s.id, start: (start - t0) / 1000, vo: s.vo, dur: s.dur, voiced: !!s.vo });
     console.error(`${s.id} @ ${((start - t0) / 1000).toFixed(2)}s (${s.dur.toFixed(2)}s${s.vo ? '' : ', no clip yet'})`);

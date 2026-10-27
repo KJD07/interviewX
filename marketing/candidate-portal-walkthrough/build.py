@@ -12,7 +12,7 @@ import json
 import os
 import subprocess
 
-LEAD = 0.3  # must match record.js
+LEAD = 0.05  # must match record.js
 
 ap = argparse.ArgumentParser()
 ap.add_argument("out_dir")
