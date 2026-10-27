@@ -257,7 +257,7 @@ JOB_REFRESH_HOURS = int(os.environ.get("JOB_REFRESH_HOURS", "5"))
 # Jobs posted longer ago than this are skipped at ingest and deleted every sweep.
 JOB_MAX_AGE_DAYS = int(os.environ.get("JOB_MAX_AGE_DAYS", "60"))
 # Parallel HTTP fetches per sweep over the ~1000 company boards (apps.careers.feeds).
-JOB_FETCH_CONCURRENCY = int(os.environ.get("JOB_FETCH_CONCURRENCY", "16"))
+JOB_FETCH_CONCURRENCY = int(os.environ.get("JOB_FETCH_CONCURRENCY", "8"))
 # Run the sweep inline in the request that finds the feed stale (tests);
 # otherwise it runs on a background thread.
 JOB_REFRESH_SYNC = os.environ.get("JOB_REFRESH_SYNC", "").lower() in ("1", "true", "yes")

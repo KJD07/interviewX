@@ -16,6 +16,8 @@ pool; DB writes stay on the sweep thread). `manage.py refresh_jobs` runs the
 same sweep from a shell or an external scheduler.
 """
 
+import ctypes
+import gc
 import html
 import json
 import logging
@@ -527,24 +529,30 @@ def refresh_boards(boards=None) -> tuple[int, int]:
         for last_pass in (False, True):
             retry = []
             with ThreadPoolExecutor(max_workers=workers) as pool:
-                futures = {pool.submit(fetch_board, b, client): b for b in pending}
-                for fut in as_completed(futures):
-                    board = futures[fut]
-                    try:
-                        rows = fut.result()
-                    except Exception as exc:  # network/shape errors on one board never stop the sweep
-                        if not last_pass:
-                            retry.append(board)
+                # Submit in small batches: fetching outpaces the single DB-writing
+                # thread, and finished futures hold their whole payload in RAM
+                # until consumed. Batching keeps a sweep's footprint bounded.
+                for start in range(0, len(pending), workers * 2):
+                    futures = {pool.submit(fetch_board, b, client): b for b in pending[start:start + workers * 2]}
+                    for fut in as_completed(futures):
+                        board = futures.pop(fut)
+                        try:
+                            rows = fut.result()
+                        except Exception as exc:  # network/shape errors on one board never stop the sweep
+                            if not last_pass:
+                                retry.append(board)
+                                continue
+                            _save_board_result(board, None, f"{type(exc).__name__}: {exc}")
+                            failed += 1
                             continue
-                        _save_board_result(board, None, f"{type(exc).__name__}: {exc}")
-                        failed += 1
-                        continue
-                    try:
-                        _save_board_result(board, rows)
-                        ok += 1
-                    except Exception:
-                        logger.exception("saving board %s failed", board)
-                        failed += 1
+                        try:
+                            _save_board_result(board, rows)
+                            ok += 1
+                        except Exception:
+                            logger.exception("saving board %s failed", board)
+                            failed += 1
+                        finally:
+                            del rows, fut
             pending, workers = retry, 4
             if not pending:
                 break
@@ -565,8 +573,25 @@ def refresh_jobs() -> tuple[int, list[str]]:
     return count, errors
 
 
+def _release_memory() -> None:
+    """Hand a finished sweep's freed memory back to the OS. CPython/glibc keep
+    it resident otherwise, so RAM (what the host bills) ratchets up per sweep."""
+    gc.collect()
+    try:
+        ctypes.CDLL("libc.so.6").malloc_trim(0)
+    except (OSError, AttributeError):  # not glibc (macOS/Windows dev)
+        pass
+
+
 def run_sweep() -> None:
     """One full refresh: aggregator feeds + every company board, then stats."""
+    try:
+        _run_sweep()
+    finally:
+        _release_memory()
+
+
+def _run_sweep() -> None:
     _, errors = refresh_jobs()
     ok, failed = refresh_boards()
     Job.objects.filter(posted_at__lt=_max_age_cutoff()).delete()
