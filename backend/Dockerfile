@@ -2,6 +2,9 @@ FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+# glibc makes one malloc arena per thread; the sweep's thread pool otherwise
+# leaves ~1 GB of fragmented, never-returned RAM (billed per GB-minute).
+ENV MALLOC_ARENA_MAX=2
 
 WORKDIR /app
 
