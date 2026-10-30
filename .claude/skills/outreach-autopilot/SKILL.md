@@ -15,7 +15,7 @@ this loop owns email. When in doubt about a message, **draft, don't send**.
 | Sender | `Kanan Jindal <kanan@outreach.evalulabs.com>` |
 | Reply inbox (Resend) | `kanan@outreach.evalulabs.com` (inbox id `f9837878-b509-4ef7-977a-7f986c27bc56`) — replies land here, so no separate reply-to is set |
 | Booking | No booking link. Claude never books or proposes times itself — it asks the prospect for times and **notifies Kanan**, who books the meeting. |
-| Escalation address | `founder@evalulabs.com` (forward hot/weird threads here) |
+| Escalation address | `support@evalulabs.com` — Kanan's only real mailbox. Meeting alerts, weird threads and the daily report all go here. |
 | Ledger | Resend segment `outreach-ledger` (one contact per prospect, properties below) |
 | Opt-outs | Resend suppressions — always checked before any send |
 | Daily new-prospect cap | Trial (2–5 Nov 2026): 18/day, sized to the 75 Apollo credits. After the trial: week 1: 20 · week 2: 40 · week 3: 80 · then 100. |
@@ -87,7 +87,7 @@ Skip on weekends. Budget = daily cap − follow-ups sent today.
 ## Step 4 — Report
 
 End the run with a short summary (and send it to the escalation address with
-`send-email` from `founder@evalulabs.com`, subject `Outreach daily — <date>`):
+`send-email` from `kanan@outreach.evalulabs.com`, subject `Outreach daily — <date>`):
 new sent, follow-ups sent, replies by bucket, meetings booked, and a list of
 threads labelled `needs-kanan` with one line each. Kanan approves drafts by
 sending them from the Resend dashboard (or by telling Claude "send the drafts").
