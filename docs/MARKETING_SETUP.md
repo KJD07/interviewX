@@ -157,3 +157,19 @@ Two segments, one ICP each:
 
 Positioning, competitors and social proof are left blank on purpose. Fill those in
 yourself; they shouldn't be guessed.
+
+## 7. Daily outreach autopilot
+
+The `outreach-autopilot` skill (`.claude/skills/outreach-autopilot/SKILL.md`)
+holds the daily loop: triage replies, send follow-ups, email new Apollo
+prospects within the warm-up cap, then email a report. Positive replies get an
+automatic answer with the booking link. Objections, referrals and anything odd
+are left as drafts labelled `needs-kanan` in the Resend inbox.
+
+Before it can run end to end:
+1. Enable **receiving** on `outreach.evalulabs.com` in Resend and add the MX
+   record it shows (name `outreach`). Then create the inbox
+   `kanan@outreach.evalulabs.com`. Replies go there.
+2. Put a real booking link (Cal.com or Calendly) in the skill's Config table.
+   Until then every positive reply is drafted, not sent.
+3. Apollo enrichment needs credits. The free 75 last about 4 days at 20 a day.
