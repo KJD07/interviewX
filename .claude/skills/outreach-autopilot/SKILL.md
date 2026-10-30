@@ -11,6 +11,29 @@ forwards and the report to the escalation address) for scheduled runs, so
 don't stop to ask per message; anything outside these rules is a draft. Kanan only handles social media;
 this loop owns email. When in doubt about a message, **draft, don't send**.
 
+## Trial mode (2–5 Nov 2026) — read first
+
+All 75 first emails for the trial are **already scheduled** in Resend (sent
+with `send-email` + `scheduledAt`, 19/19/19/18 at 11:10–11:58 IST), to
+college placement cells verified by Apollo. The ledger for the trial is
+`docs/outreach/college_trial_2026_11.csv` (college, email, scheduled time,
+Resend email id), not the Resend segment. During the trial:
+
+- **Skip Step 3 (new prospects).** Apollo credits are spent and search isn't on the plan.
+- Because the first emails were sent with `send-email`, they are **not** in the
+  inbox. Replies still land in the inbox, as new threads: match a reply to the
+  ledger by sender address, or by sender domain for a different person at the same college.
+- Before triage, confirm today's scheduled emails went out (`get-email` on the
+  ids for today: status should be `delivered`/`sent`, not `bounced`). Add
+  bounces to suppressions and mention them in the report.
+- Follow-ups go out with `send-email` (from the sender, to the same address),
+  subject `Re: <original subject>`, headers `In-Reply-To` and `References` set
+  to the original `message_id` from `get-email`, so they thread in the
+  recipient's mail client. Use the college template (C1) below. Day-3
+  follow-ups fall on 5 Nov for the 2 Nov batch. Day-7 follow-ups land after the trial and aren't sent unless Kanan extends it.
+- Before any follow-up, check the inbox for anything from that address or
+  domain. Any reply at all (even "no" or an auto-reply) stops follow-ups to that college.
+
 ## Config (edit here, nowhere else)
 
 | Key | Value |
@@ -138,6 +161,17 @@ Hi {FirstName},
 Great, thanks for getting back. Could you send me two or three times that work for you this week or next (with your time zone)? I'll send over an invite.
 
 Kanan
+```
+
+**C1 — college follow-up (day 3, trial)**
+```
+Hello again,
+
+Bumping this in case it got buried. Happy to set up the 30-day pilot for one {College} batch. A 15-minute call is all it takes to get started. Would one this week or next work?
+
+Kanan
+
+If this isn't relevant, just reply "no" and I won't email again.
 ```
 
 **C — follow-up 1 (day 3)**
