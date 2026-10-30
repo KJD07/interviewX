@@ -5,7 +5,10 @@ description: Daily unattended EvaluLabs email outreach loop — triage replies i
 
 # Outreach autopilot
 
-One run = one day. Do the steps in order. Kanan only handles social media;
+One run = one day. Do the steps in order. Kanan has pre-approved every send
+this skill describes (first emails, follow-ups, positive auto-replies,
+forwards and the report to the escalation address) for scheduled runs, so
+don't stop to ask per message; anything outside these rules is a draft. Kanan only handles social media;
 this loop owns email. When in doubt about a message, **draft, don't send**.
 
 ## Config (edit here, nowhere else)
@@ -66,7 +69,7 @@ Product facts you may state (nothing else — never invent prices, customers, nu
 Skip on weekends. From the ledger, find contacts in stage `sent` with
 `first_sent_at` ≥ 3 days ago, and `followup1` ≥ 7 days after first send.
 Skip anyone whose thread has any inbound message. Reply **in the same
-thread** (template C/D), so it threads in their client. Update stage.
+thread** (`reply-to-inbox-thread-email` on our last sent message in `thread_id`) (template C/D), so it threads in their client. Update stage.
 
 ## Step 3 — New prospects
 
@@ -79,15 +82,16 @@ Skip on weekends. Budget = daily cap − follow-ups sent today.
    contacted in the last 30 days, without a verified work email, or with a
    personal-domain email (gmail/yahoo/outlook…).
 3. Max 2 people per company per run.
-4. Send each email **individually** with `send-email` (not batch, so each
-   gets its own thread), personalised with their first name, company, and one specific,
+4. Send each email **individually** with `send-new-inbox-email` from the reply
+   inbox (never `send-email` or batch: those don't appear in the inbox, so
+   replies and follow-ups can't thread), personalised with their first name, company, and one specific,
    true detail (role, city, hiring for X — from Apollo data only).
-5. Add each to the ledger with stage `sent`.
+5. Add each to the ledger with stage `sent` and the new thread's id in `thread_id`.
 
 ## Step 4 — Report
 
 End the run with a short summary (and send it to the escalation address with
-`send-email` from `kanan@outreach.evalulabs.com`, subject `Outreach daily — <date>`):
+`send-new-inbox-email` from the reply inbox, subject `Outreach daily — <date>`):
 new sent, follow-ups sent, replies by bucket, meetings booked, and a list of
 threads labelled `needs-kanan` with one line each. Kanan approves drafts by
 sending them from the Resend dashboard (or by telling Claude "send the drafts").
