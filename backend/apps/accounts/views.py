@@ -11,6 +11,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.subscriptions.plans import effective_monthly_limit, effective_plan, has_unlimited_ats
 
+from .attribution import apply_signup_attribution
 from .emails import send_otp_email, send_password_reset_email
 from .models import EmailOTP, PasswordResetOTP
 from .throttles import AuthRateThrottle
@@ -95,6 +96,9 @@ class RegisterView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         user = serializer.save()
+        changed = apply_signup_attribution(user, request.data.get("attribution"))
+        if changed:
+            user.save(update_fields=changed)
         _issue_otp(user)
 
         return Response(
@@ -384,6 +388,7 @@ class GoogleAuthView(APIView):
 
         google_sub = idinfo["sub"]
         email = idinfo["email"].lower()
+        is_new_user = False
 
         user = User.objects.filter(google_sub=google_sub).first()
         if user is None:
@@ -404,6 +409,8 @@ class GoogleAuthView(APIView):
                     username = f"{base_username}{suffix}"
                 user = User(username=username, email=email)
                 user.set_unusable_password()
+                apply_signup_attribution(user, request.data.get("attribution"))
+                is_new_user = True
 
             user.google_sub = google_sub
             user.auth_provider = "google"
@@ -416,7 +423,10 @@ class GoogleAuthView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        return Response(_token_response(user), status=status.HTTP_200_OK)
+        return Response(
+            {**_token_response(user), "is_new_user": is_new_user},
+            status=status.HTTP_200_OK,
+        )
 
 
 class AdminGoogleAuthView(GoogleAuthView):

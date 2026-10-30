@@ -10,6 +10,7 @@ import React, {
 } from "react";
 import { auth, tokens, AUTH_EXPIRED_EVENT } from "@/lib/api";
 import type { User } from "@/lib/api";
+import { trackEvent } from "@/lib/posthog";
 
 interface AuthContextValue {
   user: User | null;
@@ -84,6 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const data = await auth.login(email, password);
     tokens.set(data.access, data.refresh);
     persistUser(data.user);
+    trackEvent("login_completed", { method: "email" });
   }, []);
 
   const register = useCallback(
@@ -95,6 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     ) => {
       // No tokens yet — the account isn't usable until the OTP is verified.
       const data = await auth.register(email, username, password, password2);
+      trackEvent("signup_started", { method: "email" });
       return { email: data.email };
     },
     []
@@ -104,6 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const data = await auth.verifyEmail(email, code);
     tokens.set(data.access, data.refresh);
     persistUser(data.user);
+    trackEvent("signup_completed", { method: "email" });
   }, []);
 
   const resendOtp = useCallback(async (email: string) => {
@@ -132,6 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const data = await auth.google(idToken);
     tokens.set(data.access, data.refresh);
     persistUser(data.user);
+    trackEvent(data.is_new_user ? "signup_completed" : "login_completed", { method: "google" });
   }, []);
 
   const loginWithGoogleAdmin = useCallback(async (idToken: string) => {

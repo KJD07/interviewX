@@ -25,6 +25,10 @@ class UserAdmin(BaseUserAdmin):
             "Verification",
             {"fields": ("is_email_verified", "auth_provider", "google_sub")},
         ),
+        (
+            "Marketing attribution",
+            {"fields": ("signup_source", "signup_attribution")},
+        ),
     )
     list_display = (
         "username",
@@ -33,6 +37,7 @@ class UserAdmin(BaseUserAdmin):
         "interviews_this_month",
         "is_email_verified",
         "auth_provider",
+        "signup_source",
         "is_staff",
         "can_view_analytics",
     )
@@ -40,6 +45,7 @@ class UserAdmin(BaseUserAdmin):
         "subscription_plan",
         "is_email_verified",
         "auth_provider",
+        "signup_source",
         "can_view_analytics",
     )
     fieldsets = fieldsets + (

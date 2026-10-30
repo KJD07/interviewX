@@ -3,6 +3,7 @@ import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import ReferralTracker from "@/components/ReferralTracker";
 import PostHogProvider from "@/components/PostHogProvider";
+import GoogleAnalytics from "@/components/GoogleAnalytics";
 import SupportChatGate from "@/components/SupportChatGate";
 import StructuredData from "@/components/StructuredData";
 import {
@@ -73,6 +74,13 @@ export const metadata: Metadata = {
     images: [`${SITE_URL}/og.png`],
   },
   category: "education",
+  // Search Console / Bing Webmaster "HTML tag" ownership verification.
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
+    other: process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION
+      ? { "msvalidate.01": process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION }
+      : undefined,
+  },
 };
 
 export const viewport: Viewport = {
@@ -99,6 +107,7 @@ export default function RootLayout({
             <SupportChatGate />
           </PostHogProvider>
         </AuthProvider>
+        <GoogleAnalytics />
       </body>
     </html>
   );

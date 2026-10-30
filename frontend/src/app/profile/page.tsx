@@ -6,6 +6,7 @@ import AppShell from "@/components/AppShell";
 import { Skeleton } from "@/components/Skeleton";
 import { PageContainer, PageHeader, EmptyState, Notice, Segmented, StatTile, IconBriefcase, IconDoc } from "@/components/ui";
 import { careers, ApiError } from "@/lib/api";
+import { trackEvent } from "@/lib/posthog";
 import type {
   ApplicationStatus, CandidateProfile, EducationEntry, ExperienceEntry, JobApplication, JobLevel, ProjectEntry,
   SavedJob, WorkMode,
@@ -174,6 +175,7 @@ function ResumeCard({ profile, onProfile }: { profile: CandidateProfile; onProfi
     try {
       const p = await careers.uploadResume(file);
       onProfile(p);
+      trackEvent("resume_uploaded");
       setMsg("Profile filled in from your resume — review each section below and save any edits.");
     } catch (e) {
       setErr(errText(e, "Could not read that resume."));
@@ -430,6 +432,7 @@ function ApplicationsTab() {
     try {
       const a = await careers.addApplication({ title: form.title, company: form.company, url: form.url || undefined });
       setApps((xs) => [a, ...(xs ?? [])]);
+      trackEvent("application_tracked");
       setForm({ title: "", company: "", url: "" });
       setAdding(false);
     } catch (e2) {

@@ -188,6 +188,18 @@ section is a catch-up, not a phase-by-phase log like the ones above.
   and FAQ JSON-LD live on the server page. Brand copy, `llms.txt`, and
   `llms-full.txt` cover practice and enterprise screening, coding, and
   proctoring without claiming a hidden test runner or gaze/low-light checks.
+- Marketing analytics + attribution (2026-10-30). `lib/attribution.ts` keeps a
+  first-touch (never overwritten) and last-touch snapshot of UTM params, ad
+  click ids, external referrer and landing page in localStorage; it's sent with
+  register and Google sign-in and stored on `User.signup_source` /
+  `User.signup_attribution` (sanitized by `accounts/attribution.py`, filterable
+  in Django admin). GA4 (`lib/gtag.ts`, `components/GoogleAnalytics.tsx`) loads
+  only when `NEXT_PUBLIC_GA_MEASUREMENT_ID` is set, queues on `dataLayer`, and
+  receives every `trackEvent()`/page view alongside PostHog. New events:
+  `signup_started`, `signup_completed` (GA `sign_up`), `login_completed` (GA
+  `login`), `ats_check_completed`, `job_saved`, `resume_uploaded`,
+  `application_tracked`. Search Console/Bing verification meta tags come from
+  env. Setup checklist and UTM naming rules: `docs/MARKETING_SETUP.md`.
 
 ## Next
 Open GitHub issues:

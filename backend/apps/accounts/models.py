@@ -53,6 +53,17 @@ class User(AbstractUser):
         ),
     )
 
+    # --- Marketing attribution (first/last-touch UTM, click ids, referrer) ---
+    # Captured by the frontend and sent once at signup; see attribution.py.
+    signup_source = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        db_index=True,
+        help_text="First-touch utm_source (or referrer host / 'direct') at signup.",
+    )
+    signup_attribution = models.JSONField(default=dict, blank=True)
+
     def sync_subscription_state(self):
         """Lazily downgrade lapsed subscriptions, roll the monthly interview
         counter over every 30 days, and attach/expire/roll any institutional

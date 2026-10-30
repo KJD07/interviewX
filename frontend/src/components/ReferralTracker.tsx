@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { captureAttribution } from "@/lib/attribution";
 
 const MARKETING_SOURCES = ["linkedin", "reddit", "instagram", "chatgpt", "direct", "other"];
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -27,6 +28,7 @@ async function capturePartnerCode(code: string) {
 
 export default function ReferralTracker() {
   useEffect(() => {
+    captureAttribution();
     const params = new URLSearchParams(window.location.search);
     const refParam = (params.get("ref") || "").trim();
 
