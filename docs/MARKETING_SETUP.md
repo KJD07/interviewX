@@ -167,7 +167,7 @@ automatic answer with the booking link. Objections, referrals and anything odd
 are left as drafts labelled `needs-kanan` in the Resend inbox.
 
 Setup state: receiving is enabled on `outreach.evalulabs.com` and the inbox
-`kanan@outreach.evalulabs.com` exists. Replies only arrive once the MX record
-`outreach` → `receive-apne1.forge.rmta.net` (priority 10) is live in DNS.
+`kanan@outreach.evalulabs.com` exists. The receiving MX record
+`outreach` → `receive-apne1.forge.rmta.net` (priority 10) is verified (30 Oct 2026).
 There is no booking link: positive replies are asked for times and Kanan is
 notified by email and sends the invite.
