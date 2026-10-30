@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/Skeleton";
 import { PageContainer, PageHeader, Card, EmptyState, Notice, ScoreBar, IconBriefcase, IconSearch } from "@/components/ui";
 import Link from "next/link";
 import { careers, ApiError } from "@/lib/api";
+import { trackEvent } from "@/lib/posthog";
 import type { AtsKeyword, AtsQuota, CandidateProfile, Job, JobFilters, ResumeCheckResult, WorkMode } from "@/lib/api";
 
 const WORK_MODES: { id: WorkMode; label: string }[] = [
@@ -175,6 +176,7 @@ function CheckPanel({ job, profile, onQuota }: { job: Job; profile: CandidatePro
       const r = await careers.checkResume(job.id, useOther ? { file, text: resume } : {});
       setResult(r);
       onQuota(r.ats_quota);
+      trackEvent("ats_check_completed", { job_id: job.id, own_resume: useOther });
     } catch (e) {
       setError(e instanceof ApiError ? e.detail : "Something went wrong.");
       setLimitHit(e instanceof ApiError && e.code === "ats_daily_limit");
@@ -354,7 +356,10 @@ function JobCard({
     onChange({ ...job, saved: !job.saved });
     try {
       if (job.saved) await careers.unsaveJob(job.id);
-      else await careers.saveJob(job.id);
+      else {
+        await careers.saveJob(job.id);
+        trackEvent("job_saved", { job_id: job.id });
+      }
     } catch {
       onChange(job);
     }

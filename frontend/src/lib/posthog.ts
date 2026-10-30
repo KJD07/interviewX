@@ -2,6 +2,8 @@
 
 import type { PostHogInterface } from "posthog-js";
 import type { User } from "@/lib/api";
+import { attributionProperties } from "@/lib/attribution";
+import { gaEvent, gaPageView, gaSetUser } from "@/lib/gtag";
 
 let client: PostHogInterface | null = null;
 let initStarted = false;
@@ -41,6 +43,7 @@ function scheduleInit() {
           if (referral) {
             ph.register({ initial_referral_source: referral });
           }
+          ph.register(attributionProperties());
         },
       });
       client = posthog;
@@ -60,6 +63,7 @@ export function ensurePostHog() {
 
 export function identifyUser(user: User | null) {
   if (!user) return;
+  gaSetUser(String(user.id));
   ensurePostHog();
   const run = () => {
     client?.identify(String(user.id), {
@@ -82,6 +86,7 @@ export function trackEvent(
       ? productAreaFromPath(window.location.pathname)
       : "marketing";
   const payload = { product_area: area, ...properties };
+  gaEvent(event, payload);
   if (client) {
     client.capture(event, payload);
     return;
@@ -95,6 +100,7 @@ export function trackPageView(pathname: string) {
     product_area: productAreaFromPath(pathname),
     path: pathname,
   };
+  gaPageView(pathname);
   if (client) {
     client.capture("$pageview", payload);
     return;

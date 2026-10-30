@@ -586,3 +586,90 @@ class ProductAnalyticsAccessTests(TestCase):
         self.assertIn("revenue", resp.data)
         self.assertIn("users", resp.data)
         self.assertIn("features", resp.data)
+
+
+@override_settings(GOOGLE_CLIENT_ID="test-client-id")
+class SignupAttributionTests(TestCase):
+    """UTM/referrer attribution sent by the frontend is stored on new users."""
+
+    ATTRIBUTION = {
+        "first_touch": {
+            "utm_source": "LinkedIn",
+            "utm_medium": "social",
+            "utm_campaign": "launch",
+            "landing_page": "/companies",
+            "evil": "dropped",
+        },
+        "last_touch": {"utm_source": "newsletter", "gclid": "x" * 1000},
+        "junk": {"utm_source": "nope"},
+    }
+
+    def setUp(self):
+        cache.clear()
+
+    def _register(self, email="new@example.com", attribution=None):
+        body = {
+            "username": email.split("@")[0],
+            "email": email,
+            "password": "Str0ng-pass-123",
+            "password2": "Str0ng-pass-123",
+        }
+        if attribution is not None:
+            body["attribution"] = attribution
+        with self.settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend"):
+            return APIClient().post(reverse("auth-register"), body, format="json")
+
+    def test_register_stores_sanitized_attribution(self):
+        resp = self._register(attribution=self.ATTRIBUTION)
+        self.assertEqual(resp.status_code, 201)
+
+        user = User.objects.get(email="new@example.com")
+        self.assertEqual(user.signup_source, "linkedin")
+        self.assertEqual(set(user.signup_attribution), {"first_touch", "last_touch"})
+        self.assertNotIn("evil", user.signup_attribution["first_touch"])
+        self.assertEqual(len(user.signup_attribution["last_touch"]["gclid"]), 300)
+
+    def test_register_without_attribution_is_direct(self):
+        self._register(email="plain@example.com")
+        user = User.objects.get(email="plain@example.com")
+        self.assertEqual(user.signup_source, "direct")
+        self.assertEqual(user.signup_attribution, {})
+
+    def test_referrer_host_used_when_no_utm(self):
+        self._register(
+            email="ref@example.com",
+            attribution={"first_touch": {"referrer": "https://www.reddit.com/r/developersIndia"}},
+        )
+        self.assertEqual(User.objects.get(email="ref@example.com").signup_source, "reddit.com")
+
+    def test_garbage_attribution_does_not_break_signup(self):
+        resp = self._register(email="junk@example.com", attribution="not-a-dict")
+        self.assertEqual(resp.status_code, 201)
+
+    def _google(self, sub, email, attribution=None):
+        from unittest import mock
+
+        idinfo = {
+            "iss": "accounts.google.com",
+            "email_verified": True,
+            "sub": sub,
+            "email": email,
+        }
+        with mock.patch(
+            "apps.accounts.views.google_id_token.verify_oauth2_token", return_value=idinfo
+        ):
+            return APIClient().post(
+                reverse("auth-google"),
+                {"id_token": "t", "attribution": attribution or {}},
+                format="json",
+            )
+
+    def test_google_signup_stores_attribution_and_flags_new_user(self):
+        resp = self._google("g-1", "g1@example.com", self.ATTRIBUTION)
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.data["is_new_user"])
+        self.assertEqual(User.objects.get(email="g1@example.com").signup_source, "linkedin")
+
+        again = self._google("g-1", "g1@example.com", {"first_touch": {"utm_source": "ads"}})
+        self.assertFalse(again.data["is_new_user"])
+        self.assertEqual(User.objects.get(email="g1@example.com").signup_source, "linkedin")

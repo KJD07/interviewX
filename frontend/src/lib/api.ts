@@ -2,6 +2,8 @@
 // Full API client for EvaluLabs Django backend.
 // Handles JWT access/refresh tokens, typed responses, and auto-refresh on 401.
 
+import { getAttribution } from "@/lib/attribution";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 // ── Token storage ─────────────────────────────────────────────────────────────
@@ -56,6 +58,8 @@ export interface AuthResponse {
   access: string;
   refresh: string;
   user: User;
+  /** Google sign-in only: true when this request created the account. */
+  is_new_user?: boolean;
 }
 
 export interface AdminField {
@@ -428,7 +432,16 @@ export const auth = {
   register: (email: string, username: string, password: string, password2: string) =>
     request<RegisterResponse>(
       "/api/auth/register/",
-      { method: "POST", body: JSON.stringify({ email, username, password, password2 }) },
+      {
+        method: "POST",
+        body: JSON.stringify({
+          email,
+          username,
+          password,
+          password2,
+          attribution: getAttribution(),
+        }),
+      },
       true,
       false
     ),
@@ -460,7 +473,7 @@ export const auth = {
   google: (id_token: string) =>
     request<AuthResponse>(
       "/api/auth/google/",
-      { method: "POST", body: JSON.stringify({ id_token }) },
+      { method: "POST", body: JSON.stringify({ id_token, attribution: getAttribution() }) },
       true,
       false
     ),
