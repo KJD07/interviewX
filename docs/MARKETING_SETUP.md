@@ -157,3 +157,17 @@ Two segments, one ICP each:
 
 Positioning, competitors and social proof are left blank on purpose. Fill those in
 yourself; they shouldn't be guessed.
+
+## 7. Daily outreach autopilot
+
+The `outreach-autopilot` skill (`.claude/skills/outreach-autopilot/SKILL.md`)
+holds the daily loop: triage replies, send follow-ups, email new Apollo
+prospects within the warm-up cap, then email a report. Positive replies get an
+automatic answer with the booking link. Objections, referrals and anything odd
+are left as drafts labelled `needs-kanan` in the Resend inbox.
+
+Setup state: receiving is enabled on `outreach.evalulabs.com` and the inbox
+`kanan@outreach.evalulabs.com` exists. The receiving MX record
+`outreach` → `receive-apne1.forge.rmta.net` (priority 10) is verified (30 Oct 2026).
+There is no booking link: positive replies are asked for times and Kanan is
+notified by email and sends the invite.
